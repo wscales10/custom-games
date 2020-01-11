@@ -1,0 +1,404 @@
+rule("Choose Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Player Variable(Event Player, P) == Null;
+		Is Alive(Event Player) == True;
+		Is True For Any(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), And(And(Is Alive(
+			Current Array Element), Is In View Angle(Event Player, Eye Position(Current Array Element), 51.500)), Or(Is Using Ultimate(
+			Event Player), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+			Barriers Do Not Block LOS)))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, L, Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player), And(And(Is Alive(Current Array Element), Is In View Angle(Event Player, Eye Position(Current Array Element),
+			51.500)), Or(Is Using Ultimate(Event Player), Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Barriers Do Not Block LOS)))));
+		Skip If(Is True For All(Player Variable(Event Player, L), Not(Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Barriers Do Not Block LOS))), 1);
+		Set Player Variable(Event Player, L, Filtered Array(Player Variable(Event Player, L), Is In Line of Sight(Eye Position(
+			Event Player), Eye Position(Current Array Element), Barriers Do Not Block LOS)));
+		Set Player Variable(Event Player, P, First Of(Sorted Array(Player Variable(Event Player, L), Health(Current Array Element))));
+	}
+}
+
+rule("Target Attacker")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Attacker != Player Variable(Event Player, P);
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Attacker), Barriers Do Not Block LOS) == True;
+		Or(Compare(Player Variable(Event Player, P), ==, Null), Not(Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Player Variable(Event Player, P)), Barriers Do Not Block LOS))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, P, Attacker);
+	}
+}
+
+rule("Spawn bot")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Interact) == True;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Hero Of(Host Player), Opposite Team Of(Team Of(Host Player)), -1.000, Nearest Walkable Position(
+			Ray Cast Hit Position(Eye Position(Host Player), Add(Eye Position(Host Player), Multiply(1000, Facing Direction Of(
+			Host Player))), Null, Null, False)), Forward);
+	}
+}
+
+rule("Stop Targeting on Death")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Dead(Player Variable(Event Player, P)), Is Dead(Event Player)) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, P, Null);
+	}
+}
+
+rule("Update Target Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, P) != Null;
+		Or(Is Using Ultimate(Event Player), Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P)),
+			Barriers Do Not Block LOS)) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, O, Eye Position(Player Variable(Event Player, P)));
+		Wait(0.250, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Respawn All")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Communicating(Host Player, Voice Line Left) == True;
+	}
+
+	actions
+	{
+		Respawn(All Players(All Teams));
+	}
+}
+
+rule("Setup (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, A, 0, 1, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, B, 0, 1, Destination and Rate);
+	}
+}
+
+rule("Switch to Short Range Mode (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, P) != Null;
+		Distance Between(Event Player, Player Variable(Event Player, P)) < 10;
+		And(Has Status(Player Variable(Event Player, P), Frozen), Compare(Health(Player Variable(Event Player, P)), >, 22)) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, S, 1);
+		Stop Holding Button(Event Player, Secondary Fire);
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Player Variable(Event Player, O)), 200, To World,
+			Direction and Turn Rate);
+	}
+}
+
+rule("Switch to Long Range Mode (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, P) != Null;
+		Or(Compare(Distance Between(Event Player, Player Variable(Event Player, P)), >, 10), And(Has Status(Player Variable(Event Player,
+			P), Frozen), Compare(Health(Player Variable(Event Player, P)), >, 22))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, S, 2);
+		Stop Holding Button(Event Player, Primary Fire);
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Player Variable(Event Player, O)), 60, To World,
+			Direction and Turn Rate);
+		Start Holding Button(Event Player, Secondary Fire);
+	}
+}
+
+rule("Start Firing (Short Range) (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, S) == 1;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P)), Barriers Do Not Block LOS) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("Stop Firing (Short Range) (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, S) == 1;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P)), Barriers Do Not Block LOS)
+			== False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Primary Fire);
+	}
+}
+
+rule("Start Firing (Long Range) (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, S) == 2;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P)), Barriers Do Not Block LOS) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Secondary Fire);
+	}
+}
+
+rule("Stop Firing (Long Range) (Mei)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, S) == 2;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P)), Barriers Do Not Block LOS)
+			== False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Secondary Fire);
+	}
+}
+
+rule("Cryo-Freeze")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Health(Event Player) < 175;
+		Player Variable(Event Player, A) == 0;
+		Player Variable(Event Player, B) > 0;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(Compare(Player Variable(Current Array Element, P), ==,
+			Event Player), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+			Barriers Do Not Block LOS))) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Ability 1);
+	}
+}
+
+rule("Exit Cryo")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Normalized Health(Event Player) == 1;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Primary Fire);
+	}
+}
+
+rule("Rule 16")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, A, 12);
+	}
+}
+
+rule("Rule 16")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, B, 10);
+	}
+}
+
+rule("Rule 18")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Health(Event Player) < 175;
+		Player Variable(Event Player, B) == 0;
+		Is Using Ability 1(Event Player) == False;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(Compare(Player Variable(Current Array Element, P), ==,
+			Event Player), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+			Barriers Do Not Block LOS))) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Ability 2);
+		Press Button(Event Player, Primary Fire);
+	}
+}
