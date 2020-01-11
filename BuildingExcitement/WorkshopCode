@@ -1,0 +1,86 @@
+variables
+{
+	player:
+		19: SpawnTime
+}
+
+rule("Respawn Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, SpawnTime, Match Time);
+	}
+}
+
+rule("Loop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, SpawnTime) != 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, M, Add(0.750, Multiply(2.250, Subtract(1, Divide(Match Time, Player Variable(Event Player,
+			SpawnTime))))));
+		Set Move Speed(Event Player, Multiply(100, Player Variable(Event Player, M)));
+		Set Healing Received(Event Player, Multiply(100, Player Variable(Event Player, M)));
+		Set Damage Dealt(Event Player, Multiply(100, Square Root(Player Variable(Event Player, M))));
+		Set Damage Received(Event Player, Multiply(100, Square Root(Player Variable(Event Player, M))));
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Quick Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, SpawnTime, 0);
+	}
+}
