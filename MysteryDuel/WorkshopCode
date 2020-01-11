@@ -1,0 +1,103 @@
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Bastion;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Add(Number of Players(Team 1), Number of Players(Team 2)) != Number of Players(All Teams);
+		Hero Of(Event Player) != Hero Of(Host Player);
+		Event Player != Host Player;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero Of(Host Player));
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Host Player == Event Player;
+	}
+
+	actions
+	{
+		Stop Forcing Player To Be Hero(Event Player);
+	}
+}
