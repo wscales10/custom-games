@@ -1,0 +1,148 @@
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, M, 300);
+		Create HUD Text(Event Player, String("{0} / {1}", Player Variable(Event Player, M), 300, Null), Null, Null, Left, 0, White, White,
+			White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("disable built-in primary fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("custom primary fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Player Variable(Event Player, M) > 0;
+		Player Variable(Event Player, R) != True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, M, Subtract, 1);
+		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 10);
+		Set Player Variable(Event Player, B, Direction From Angles(Add(Horizontal Facing Angle Of(Event Player), Random Real(Multiply(
+			-1.000, Player Variable(Event Player, A)), Player Variable(Event Player, A))), Add(Vertical Facing Angle Of(Event Player),
+			Random Real(Multiply(-1.000, Player Variable(Event Player, A)), Player Variable(Event Player, A)))));
+		Set Player Variable(Event Player, T, Ray Cast Hit Player(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(1000,
+			Player Variable(Event Player, B))), All Players(Opposite Team Of(Team Of(Event Player))), Event Player, False));
+		Set Player Variable(Event Player, P, Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			1000, Player Variable(Event Player, B))), All Players(Opposite Team Of(Team Of(Event Player))), Event Player, False));
+		Set Player Variable(Event Player, S, Distance Between(Eye Position(Event Player), Player Variable(Event Player, P)));
+		Skip If(Compare(Player Variable(Event Player, S), >, 35), 2);
+		Set Player Variable(Event Player, D, 15);
+		Skip(4);
+		Skip If(Compare(Player Variable(Event Player, S), <, 55), 2);
+		Set Player Variable(Event Player, D, 7.500);
+		Skip(1);
+		Set Player Variable(Event Player, D, Subtract(28.125, Multiply(0.375, Player Variable(Event Player, S))));
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, Player Variable(Event Player, P), 0.010);
+		disabled Skip If(Or(Compare(Hero Of(Player Variable(Event Player, T)), !=, Hero(Genji)), Not(Is Using Ability 2(Player Variable(
+			Event Player, T)))), 2);
+		disabled Modify Player Variable(Player Variable(Event Player, T), L, Append To Array, 0);
+		disabled Skip(1);
+		Damage(Player Variable(Event Player, T), Event Player, Player Variable(Event Player, D));
+		Wait(0.033, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("decrease spread")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, A, 2, 0.500, Destination and Rate);
+	}
+}
+
+rule("increase spread")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+	}
+
+	actions
+	{
+		Wait(0.160, Abort When False);
+		Chase Player Variable At Rate(Event Player, A, 3, 4, Destination and Rate);
+	}
+}
+
+rule("reload")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Button Held(Event Player, Interact), Compare(Player Variable(Event Player, M), ==, 0)) == True;
+		Player Variable(Event Player, M) < 300;
+		Player Variable(Event Player, R) != True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, R, True);
+		Wait(2.100, Ignore Condition);
+		Set Player Variable(Event Player, M, 300);
+		Set Player Variable(Event Player, R, False);
+	}
+}
