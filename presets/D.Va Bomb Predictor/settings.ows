@@ -1,0 +1,209 @@
+settings
+{
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Expanse
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			D.Va
+			{
+				Spawn With Ultimate Ready: On
+			}
+
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: Acceleration
+		1: Velocity
+		3: Direction
+		13: Normal
+		15: Position
+		17: RayCastPosition
+		18: Displacement
+		19: Time1
+		20: Time2
+		21: Speed
+		22: TimeDiff
+		23: PredictedPos
+}
+
+rule("Set T (Boosters)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Time1 = Total Time Elapsed;
+	}
+}
+
+rule("UIt")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Position = Position Of(Event Player) + Up;
+		Event Player.Direction = Normalize(Event Player.Velocity);
+		Event Player.Speed = Square Root(Dot Product(Event Player.Velocity, Event Player.Velocity));
+		If(Event Player.Time1 != 0);
+			Event Player.Time1 += 2 - Total Time Elapsed;
+			Event Player.Time2 = Event Player.Time1;
+			While(Event Player.Time2 > 0);
+				Event Player.RayCastPosition = Ray Cast Hit Position(Event Player.Position, Event Player.Position + (
+					Event Player.Speed * Event Player.Time2 + 1) * Event Player.Direction, Null, Null, False) - Event Player.Direction;
+				Event Player.TimeDiff = Distance Between(Event Player.Position, Event Player.RayCastPosition) / Event Player.Speed;
+				Wait(Event Player.TimeDiff, Ignore Condition);
+				Event Player.Time2 -= Event Player.TimeDiff;
+				Event Player.Normal = Ray Cast Hit Normal(Event Player.Position, Event Player.Position + 1000 * Event Player.Direction, Null, Null,
+					False);
+				If(Event Player.Time2 > 0);
+					Event Player.Direction -= Dot Product(Event Player.Direction, Event Player.Normal) * Event Player.Normal;
+				End;
+				Event Player.Position = Event Player.RayCastPosition;
+			End;
+		End;
+		Event Player.Time1 = 3 - Event Player.Time1;
+		Event Player.H = Event Player.Speed * Square Root(Absolute Value(X Component Of(Event Player.Direction)) ^ 2 + Absolute Value(
+			Z Component Of(Event Player.Direction)) ^ 2);
+		If(Event Player.H < 2.750 * Event Player.Time1);
+			Event Player.C = True;
+			Event Player.Displacement = Up * (Y Component Of(Event Player.Speed * Event Player.Direction) - 8.750 * Event Player.Time1)
+				* Event Player.Time1;
+			Event Player.Displacement += Event Player.H ^ 2 / 5.500 * Direction From Angles(Horizontal Angle From Direction(
+				Event Player.Direction), 0);
+		Else;
+			Event Player.C = False;
+			Event Player.Speed *= Event Player.Direction;
+			Event Player.Acceleration = -2.750 * Direction From Angles(Horizontal Angle From Direction(Event Player.Direction), 0)
+				+ 17.500 * Down;
+			Event Player.Displacement = Event Player.Speed * Event Player.Time1 + Event Player.Acceleration * Event Player.Time1 ^ 2 / 2;
+		End;
+		Event Player.PredictedPos = Event Player.Position + Event Player.Displacement;
+		Event Player.RayCastPosition = Ray Cast Hit Position(Event Player.Position, Event Player.PredictedPos + Direction Towards(
+			Event Player.Position, Event Player.PredictedPos), Null, Null, False) - Direction Towards(Event Player.Position,
+			Event Player.PredictedPos);
+		Event Player.Time1 = 0;
+	}
+}
+
+rule("Reset T")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Is Using Ultimate(Event Player));
+		Event Player.Time1 = 0;
+		Event Player.Velocity = Vector(0, 0, 0);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Orb, Color(Red), Event Player.PredictedPos, 1, Visible To Position and Radius);
+		Create Icon(All Players(All Teams), Event Player.PredictedPos, Skull, Visible To and Position, Color(Red), True);
+		Create HUD Text(Event Player, Custom String("Speed: {0} Dir: {1} Distance: {2}", Event Player.Speed, Event Player.Direction,
+			Distance Between(Event Player.Position, Event Player.RayCastPosition)), Null, Null, Left, 0, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Hits Zero: {0}", Event Player.C), Null, Null, Left, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Create Effect(All Players(All Teams), Orb, Color(Lime Green), Event Player.RayCastPosition, 1, Visible To Position and Radius);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		If(!Is Using Ultimate(Event Player));
+			Event Player.Velocity = Velocity Of(Event Player);
+		End;
+		Wait(0.016, Ignore Condition);
+		Loop;
+	}
+}
