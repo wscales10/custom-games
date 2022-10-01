@@ -1,0 +1,71 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 6
+		Return To Lobby: After A Game
+	}
+
+	modes
+	{
+		Elimination
+		{
+			enabled maps
+			{
+				Castillo
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Ana
+				Soldier: 76
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Sombra
+			}
+		}
+
+		General
+		{
+			Ana
+			{
+				Ammunition Clip Size Scalar: 25%
+				Biotic Grenade Cooldown Time: 500%
+				Damage Dealt: 10%
+				Sleep Dart Cooldown Time: 50%
+			}
+
+			Soldier: 76
+			{
+				Damage Dealt: 500%
+				Health: 10%
+				Helix Rockets: Off
+				Primary Fire: Off
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			Sombra
+			{
+				Health: 250%
+				Stealth: Off
+			}
+		}
+	}
+}
