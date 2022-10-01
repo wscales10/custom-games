@@ -1,0 +1,586 @@
+settings
+{
+	main
+	{
+		Description: "Press Interact (Default is F) to start a game. Shoot the Torbs out of the sky before they hit the ground; you and your team will take damage as long as there is a Torb on the ground somewhere. The more Torbs on the ground at once and the longer you leave them there, the more damage you and your team take. Also, beware: the ground below a certain level is hot, so don't stay on it for too long. See how long your team can last! Hacking a Torb stops his damage over time for the duration of the hack."
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Numbani
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			No Ammunition Requirement: On
+
+			Bastion
+			{
+				Damage Dealt: 12%
+				Infinite Ultimate Duration: On
+				Primary Fire: Off
+				Reconfigure: Off
+				Spawn With Ultimate Ready: On
+			}
+
+			Brigitte
+			{
+				Primary Fire: Off
+				Quick Melee: Off
+				Whip Shot Cooldown Time: 0%
+			}
+
+			Cassidy
+			{
+				Secondary Fire: Off
+			}
+
+			Hanzo
+			{
+				Storm Arrows Cooldown Time: 500%
+				Storm Arrows Quantity: 12
+			}
+
+			Lúcio
+			{
+				Damage Dealt: 75%
+			}
+
+			Mei
+			{
+				Primary Fire: Off
+			}
+
+			Mercy
+			{
+				Damage Dealt: 75%
+			}
+
+			Orisa
+			{
+				Damage Dealt: 36%
+			}
+
+			Reinhardt
+			{
+				Charge Cooldown Time: 0%
+				Charge Knockback Scalar: 300%
+				Fire Strike Cooldown Time: 0%
+			}
+
+			Roadhog
+			{
+				Chain Hook Cooldown Time: 0%
+				Damage Dealt: 40%
+				Jump Vertical Speed: 75%
+				Movement Speed: 75%
+				Take a Breather Cooldown Time: 150%
+			}
+
+			Soldier: 76
+			{
+				Damage Dealt: 30%
+				Helix Rockets Cooldown Time: 25%
+			}
+
+			Sombra
+			{
+				Damage Dealt: 50%
+			}
+
+			Symmetra
+			{
+				Health: 150%
+				Sentry Turret: Off
+			}
+
+			Torbjörn
+			{
+				Damage Dealt: 30%
+				Deploy Turret: Off
+			}
+
+			Tracer
+			{
+				Recall Cooldown Time: 75%
+			}
+
+			Widowmaker
+			{
+				Damage Dealt: 30%
+			}
+
+			Winston
+			{
+				Jump Pack Cooldown Time: 33%
+			}
+
+			Zenyatta
+			{
+				Damage Dealt: 50%
+			}
+
+			disabled heroes
+			{
+				D.Va
+				Doomfist
+				Reaper
+			}
+		}
+
+		Team 2
+		{
+			Health: 12%
+			Ultimate Ability: Off
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Weapons Enabled: Forge Hammer Only
+			}
+		}
+
+		General
+		{
+			disabled heroes
+			{
+				Echo
+				Sigma
+			}
+		}
+	}
+}
+
+rule("global setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(Team 1), String("{0} sec", Global.T), Null, Null, Top, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create Effect(All Players(All Teams), Ring, Color(Green), Vector(91.200, 0.050, 6.200), 1.200, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Ring, Color(Green), Vector(91.200, 0.050, 6.200), 1.400, Visible To Position and Radius);
+		Global.A = 1;
+		Global.U = 0.500;
+	}
+}
+
+rule("temporary game start button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Global.G == False;
+		Global.S == False;
+		Is Alive(All Players(Team 1)) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Global.S = True;
+	}
+}
+
+rule("Team 1 spawn location")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Vector(93.450, 6.250, 7.900) + Random Real(0, 1) * Vector(3.600, 0, -3.700));
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Status(Event Player, Null, Phased Out, 9999);
+	}
+}
+
+rule("game start")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.S == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(All Players(Team 1));
+		Set Ultimate Charge(Remove From Array(All Players(All Teams), Players On Hero(Hero(Bastion), All Teams)), 0);
+		Global.T = 0;
+		Respawn(All Players(Team 2));
+		Press Button(All Players(Team 2), Button(Ability 1));
+		Big Message(All Players(Team 1), 3);
+		Wait(1, Ignore Condition);
+		Big Message(All Players(Team 1), 2);
+		Wait(1, Ignore Condition);
+		Big Message(All Players(Team 1), 1);
+		Wait(1, Ignore Condition);
+		Big Message(All Players(Team 1), String("{0}!", String("Go")));
+		Global.S = False;
+		Clear Status(All Players(All Teams), Rooted);
+		Clear Status(All Players(All Teams), Phased Out);
+		Global.G = True;
+		Chase Global Variable At Rate(T, 9999, 1, None);
+	}
+}
+
+rule("bot spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Global.G == True;
+	}
+
+	actions
+	{
+		Event Player.V = Global.U;
+		Event Player.P = Vector(84.259, 17.400, 14.612) + Random Real(0, 1) * Vector(-12.707, 0, -13.506) + Random Real(0, 1) * Vector(
+			12.707, 0, -13.506);
+		Play Effect(All Players(Team 1), Bad Explosion, Color(White), Event Player.P, 1.500);
+		Teleport(Event Player, Event Player.P);
+	}
+}
+
+rule("Increase difficulty")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.G == True;
+	}
+
+	actions
+	{
+		Set Gravity(All Players(Team 2), 500 - 1157625 / (Global.T + 2362.500));
+		Set Respawn Max Time(All Players(Team 2), 90 / (Global.T + 30));
+		Set Move Speed(All Players(Team 2), 250 - 210000 / (Global.T + 960));
+		Wait(5, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("is falling")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Global.G == True;
+	}
+
+	actions
+	{
+		Event Player.F = True;
+	}
+}
+
+rule("no longer falling")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		All;
+	}
+
+	actions
+	{
+		Event Player.F = False;
+	}
+}
+
+rule("start damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Global.G == True;
+		Event Player.F == True;
+		Has Status(Event Player, Hacked) == False;
+	}
+
+	actions
+	{
+		Event Player.U = Event Player.V;
+		Skip If(Event Player.U != Global.U, 1);
+		Damage(All Players(Team 1), Null, 5);
+		Event Player.D = 0;
+		Event Player.O = Total Time Elapsed;
+		Create Icon(All Players(Team 1), Event Player, Exclamation Mark, Visible To and Position, Color(Team 2), True);
+		Event Player.I = Last Created Entity;
+	}
+}
+
+rule("enemy leaves floor or dies or is hacked")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Global.G == True;
+		(Is Dead(Event Player) || Is In Air(Event Player) || Has Status(Event Player, Hacked)) == True;
+	}
+
+	actions
+	{
+		Event Player.O = 0;
+		Destroy Icon(Event Player.I);
+	}
+}
+
+rule("game end")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.G == True;
+		Number Of Living Players(Team 1) == 0;
+	}
+
+	actions
+	{
+		Destroy All Icons;
+		Global.G = False;
+		Stop All Damage Over Time(All Players(All Teams));
+		Stop Chasing Global Variable(T);
+		All Players(Team 2).O = 0;
+		All Players(Team 2).F = False;
+		Respawn(All Players(Team 1));
+	}
+}
+
+rule("jump pad")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player), Vector(91.200, 0.060, 6.200)) <= 1.400;
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Explosion Sound, Color(White), Event Player, 100);
+		Apply Impulse(Event Player, Up, 17, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("the floor is hot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.L == Null;
+		Global.G == True;
+		Is On Ground(Event Player) == True;
+		Y Component Of(Position Of(Event Player)) < 4.250;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Burning, 9999);
+		Damage(Event Player, Null, 5);
+		Start Damage Over Time(Event Player, Null, 9999, 20);
+		Event Player.L = Last Damage Over Time ID;
+	}
+}
+
+rule("stop floor damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.L != Null;
+		(!Global.G || Is In Air(Event Player) || Y Component Of(Position Of(Event Player)) >= 4.250 || Is Dead(Event Player)) == True;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Burning);
+		Stop Damage Over Time(Event Player.L);
+		Event Player.L = Null;
+	}
+}
+
+rule("alert sound")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Living Players(Team 2), Current Array Element.O > 0)) > 0;
+	}
+
+	actions
+	{
+		Create Effect(Event Player, Decal Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Event Player.S = Last Created Entity;
+		Wait(0.333, Ignore Condition);
+		Destroy Effect(Event Player.S);
+		Wait(0.333, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Damage Over Time")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.O > 0;
+	}
+
+	actions
+	{
+		Event Player.T = Total Time Elapsed;
+		Event Player.T -= Event Player.O;
+		Event Player.V = Event Player.U + Global.A * Event Player.T;
+		Event Player.S = (Event Player.U + Event Player.V) * Event Player.T / 2;
+		Event Player.S -= Event Player.D;
+		Damage(All Living Players(Team 1), Event Player, Event Player.S);
+		Event Player.D += Event Player.S;
+		Wait(0.016, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("prevent team 2 horizontal movement on game start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Global.S == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("make torbs look for health packs")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) >= 100;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 5);
+	}
+}
