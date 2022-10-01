@@ -1,0 +1,231 @@
+settings
+{
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				Kanezaka
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Malevento
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Skirmish
+		{
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Tower Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ammunition Clip Size Scalar: 25%
+			Damage Dealt: 150%
+
+			Ashe
+			{
+				No Automatic Fire: On
+				Ultimate Duration: 25%
+			}
+
+			Baptiste
+			{
+				Ammunition Clip Size Scalar: 27%
+			}
+
+			Brigitte
+			{
+				Healing Dealt: 25%
+				Health: 200%
+			}
+
+			D.Va
+			{
+				Damage Dealt: 500%
+				Micro Missiles: Off
+				Primary Fire: Off
+			}
+
+			Doomfist
+			{
+				Ammunition Clip Size Scalar: 99%
+				Ammunition Regeneration Time Scalar: 400%
+			}
+
+			Genji
+			{
+				Primary Fire: Off
+			}
+
+			Hanzo
+			{
+				Storm Arrows: Off
+			}
+
+			Lúcio
+			{
+				Ammunition Clip Size Scalar: 40%
+				Healing Dealt: 110%
+				Movement Speed: 110%
+			}
+
+			Mei
+			{
+				Cryo-Freeze Cooldown Time: 166%
+				Healing Dealt: 500%
+				Spawn With Ultimate Ready: On
+				Weapon Freeze Rate Scalar: 67%
+			}
+
+			Moira
+			{
+				Biotic Orb Max Damage Scalar: 20%
+				Damage Dealt: 500%
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			Orisa
+			{
+				Damage Dealt: 200%
+				Halt! Cooldown Time: 0%
+				Primary Fire: Off
+				Ultimate Generation - Combat Supercharger: 500%
+			}
+
+			Reaper
+			{
+				Ammunition Clip Size Scalar: 500%
+				Healing Dealt: 400%
+				Ultimate Ability Death Blossom: Off
+				Wraith Form: Off
+			}
+
+			Reinhardt
+			{
+				Damage Dealt: 105%
+				Movement Speed: 110%
+				Primary Fire: Off
+			}
+
+			Roadhog
+			{
+				Ammunition Clip Size Scalar: 40%
+				Damage Dealt: 250%
+			}
+
+			Sigma
+			{
+				Accretion Cooldown Time: 0%
+				Primary Fire: Off
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 200%
+			}
+
+			Sombra
+			{
+				Damage Dealt: 200%
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Projectile Gravity: 484%
+				Projectile Speed: 220%
+				Ultimate Duration: 25%
+			}
+
+			Widowmaker
+			{
+				Venom Mine Cooldown Time: 500%
+			}
+
+			Zarya
+			{
+				Damage Dealt: 300%
+				Primary Fire: Off
+			}
+
+			Zenyatta
+			{
+				Primary Fire: Off
+			}
+
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Mercy;
+	}
+
+	conditions
+	{
+		Array Contains(Append To Array(All Players(All Teams), 0), 0) == Event Damage;
+	}
+}
