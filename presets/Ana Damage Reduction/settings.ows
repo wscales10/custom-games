@@ -1,0 +1,133 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 3
+		Max Team 2 Players: 3
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ana
+			{
+				Healing Dealt: 10%
+			}
+
+			disabled heroes
+			{
+				Moira
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		3: DamageReductionTime
+}
+
+rule("Ana Damage Reduction")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		Ana;
+	}
+
+	actions
+	{
+		Healee.DamageReductionTime += 0.250 * Event Healing + 2 / (Healee.DamageReductionTime + 1);
+		Event Player.U += 3 / 7 * Event Healing;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, DamageReductionTime, 0, 1, Destination and Rate);
+		Start Damage Modification(Event Player, All Players(All Teams), 60 + 40 * 0.800 ^ Event Player.DamageReductionTime,
+			Receivers Damagers and Damage Percent);
+		Start Healing Modification(Event Player, All Players(All Teams), 100 * 0.600 ^ Event Player.DamageReductionTime,
+			Receivers Healers and Healing Percent);
+		Create HUD Text(Filtered Array(Event Player, Event Player.DamageReductionTime > 0), Custom String("Damage Reduction: {0}%", 40 * (
+			1 - 0.800 ^ Event Player.DamageReductionTime)), Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create In-World Text(Filtered Array(Players On Hero(Hero(Ana), Team Of(Event Player)), Event Player.DamageReductionTime > 0),
+			String("{0}%", 40 * (1 - 0.800 ^ Event Player.DamageReductionTime)), Event Player, 3, Clip Against Surfaces,
+			Visible To Position and String, Color(White), Default Visibility);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Crouch)) == True;
+		Event Player != Host Player;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, Health(Event Player) - 1);
+	}
+}
+
+rule("Ultimate Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.U >= 1;
+	}
+
+	actions
+	{
+		Event Player.V = Round To Integer(Event Player.U, Down);
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) + Event Player.V);
+		Event Player.U -= Event Player.V;
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}
