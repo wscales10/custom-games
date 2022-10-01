@@ -1,0 +1,41 @@
+settings
+{
+	modes
+	{
+		Capture the Flag
+		{
+			Flag Carrier Abilities: All
+			Flag Pickup Time: 5.0
+
+			disabled maps
+			{
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Hero Limit: Off
+			Respawn Time Scalar: 50%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Wrecking Ball
+			{
+				Health: 50%
+			}
+
+			enabled heroes
+			{
+				Wrecking Ball
+			}
+		}
+	}
+}
