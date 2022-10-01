@@ -1,0 +1,60 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 6
+		Return To Lobby: After A Game
+	}
+
+	modes
+	{
+		Elimination
+		{
+			enabled maps
+			{
+				Black Forest
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Wrecking Ball
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Torbjörn
+			}
+		}
+
+		General
+		{
+			Torbjörn
+			{
+				Movement Speed: 50%
+				No Ammunition Requirement: On
+				Primary Fire: Off
+			}
+
+			Wrecking Ball
+			{
+				Ammunition Clip Size Scalar: 50%
+				Movement Speed: 300%
+			}
+		}
+	}
+}
