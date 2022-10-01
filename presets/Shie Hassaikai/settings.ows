@@ -1,0 +1,1030 @@
+settings
+{
+	modes
+	{
+		Skirmish
+		{
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Damage Received: 500%
+
+			Doomfist
+			{
+				Movement Speed: 70%
+				Primary Fire: Off
+				Rising Uppercut: Off
+				Rocket Punch Cooldown Time: 0%
+				Rocket Punch Knockback Scalar: 70%
+				Ultimate Ability Meteor Strike: Off
+			}
+
+			enabled heroes
+			{
+				Cassidy
+				Mei
+				Roadhog
+			}
+		}
+
+		Team 2
+		{
+			Damage Dealt: 20%
+
+			Doomfist
+			{
+				Primary Fire: Off
+				Rocket Punch Cooldown Time: 0%
+				Seismic Slam: Off
+				Spawn With Ultimate Ready: On
+				Ultimate Duration: 25%
+				Ultimate Generation - Combat Meteor Strike: 0%
+				Ultimate Generation - Passive Meteor Strike: 500%
+				Ultimate Generation Meteor Strike: 500%
+			}
+
+			enabled heroes
+			{
+				Moira
+				Reaper
+				Sombra
+				Torbjörn
+			}
+		}
+
+		General
+		{
+			Cassidy
+			{
+				Combat Roll: Off
+				Flashbang: Off
+				Secondary Fire: Off
+				Ultimate Ability Deadeye: Off
+			}
+
+			Moira
+			{
+				Biotic Energy Maximum: 500%
+				Biotic Orb: Off
+				Fade: Off
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			Reaper
+			{
+				Damage Dealt: 60%
+				Movement Speed: 150%
+				Primary Fire: Off
+				Shadow Step: Off
+				Ultimate Ability Death Blossom: Off
+				Wraith Form Cooldown Time: 0%
+			}
+
+			Roadhog
+			{
+				Chain Hook: Off
+				Healing Dealt: 25%
+				Health: 75%
+				Primary Fire: Off
+				Secondary Fire: Off
+				Take a Breather Cooldown Time: 50%
+				Ultimate Ability Whole Hog: Off
+			}
+
+			Sombra
+			{
+				Damage Dealt: 30%
+				Damage Received: 50%
+				Hack: Off
+				Primary Fire: Off
+				Stealth: Off
+				Translocator: Off
+				Ultimate Generation - Passive EMP: 300%
+			}
+
+			Torbjörn
+			{
+				Damage Dealt: 10%
+				Deploy Turret: Off
+				Overload Cooldown Time: 500%
+				Overload Duration Scalar: 300%
+				Ultimate Ability Molten Core: Off
+				Weapons Enabled: Forge Hammer Only
+			}
+
+			Winston
+			{
+				Barrier Projector Cooldown Time: 0%
+				Jump Pack: Off
+				Primary Fire: Off
+				Ultimate Ability Primal Rage: Off
+			}
+
+			enabled heroes
+			{
+				Doomfist
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		1: SecondaryFireButton
+		2: Charge
+		11: List
+		12: MVP
+		15: TargetPlayer
+		18: Score
+		19: Time
+}
+
+rule("Fat Gum Max Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sombra;
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 1000);
+	}
+}
+
+rule("Not Fat Gum Max Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sombra;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Sombra);
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 100);
+	}
+}
+
+rule("Fat Gum Damage Absorbtion")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		Sombra;
+	}
+
+	actions
+	{
+		Event Player.Charge += Event Damage / 20;
+		Modify Player Variable(Event Player, Charge, Min, 100);
+	}
+}
+
+rule("Fat Gum Energy Release 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sombra;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.List = Filtered Array(All Players(All Teams), Has Status(Current Array Element, Hacked));
+		Damage(Event Player.List, Event Player, Event Player.Charge * 1.600);
+		Wait(1, Ignore Condition);
+		Event Player.Charge = 0;
+	}
+}
+
+rule("Rappa Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, Time, 1.400, 1, Destination and Rate);
+	}
+}
+
+rule("Rappa Disallow Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Time = 0;
+		Disallow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Rappa Allow Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		(Is Firing Secondary(Event Player) && Hero Of(Event Player) == Hero(Doomfist)) == False;
+	}
+
+	actions
+	{
+		Wait(Event Player.Time * 0.350 + 0.035, Abort When False);
+		Allow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Sloshed Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Roadhog;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, Charge, 0, 1, Destination and Rate);
+		Event Player.List = Event Player;
+		Start Damage Modification(All Players(Team 2), Event Player, 1 * (100 - Event Player.Charge),
+			Receivers Damagers and Damage Percent);
+	}
+}
+
+rule("Sloshed Drink")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.Charge += 15;
+	}
+}
+
+rule("Enter Sloshed Quirk Range")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Roadhog), Team 1), Current Array Element.Charge > 0 && Is In Line of Sight(Eye Position(
+			Event Player), Eye Position(Current Array Element), Barriers Do Not Block LOS) && Distance Between(Event Player,
+			Current Array Element) <= 12) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(First Of(Players On Hero(Hero(Roadhog), Team 1)), List, Append To Array, Event Player);
+	}
+}
+
+rule("Exit Sloshed Quirk Range")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Roadhog), Team 1), Current Array Element.Charge > 0 && Is In Line of Sight(Eye Position(
+			Event Player), Eye Position(Current Array Element), Barriers Do Not Block LOS) && Distance Between(Event Player,
+			Current Array Element) <= 12) == False;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Modify Player Variable(First Of(Players On Hero(Hero(Roadhog), Team 1)), List, Remove From Array By Value, Event Player);
+		Set Move Speed(Event Player, 100);
+		Set Aim Speed(Event Player, 100);
+	}
+}
+
+rule("Sloshed Quirk")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Event Player.Charge > 0;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player.List, 100 - Event Player.Charge);
+		Set Aim Speed(Event Player.List, 100 + Event Player.Charge);
+		Wait(0.250, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Nemoto Ult 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Cassidy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Event Player.List = Filtered Array(Remove From Array(All Living Players(All Teams), Event Player), !(Has Status(
+			Current Array Element, Knocked Down) || Has Status(Current Array Element, Asleep) || Has Status(Current Array Element, Frozen)
+			|| Has Status(Current Array Element, Stunned)) && Distance Between(Event Player, Current Array Element) <= 25 && Dot Product(
+			Vector Towards(Eye Position(Current Array Element), Eye Position(Event Player)) - Dot Product(Vector Towards(Eye Position(
+			Current Array Element), Eye Position(Event Player)), Facing Direction Of(Event Player)) * Facing Direction Of(Event Player),
+			Vector Towards(Eye Position(Current Array Element), Eye Position(Event Player)) - Dot Product(Vector Towards(Eye Position(
+			Current Array Element), Eye Position(Event Player)), Facing Direction Of(Event Player)) * Facing Direction Of(Event Player))
+			<= 4);
+		Event Player.TargetPlayer = First Of(Sorted Array(Event Player.List, Distance Between(Eye Position(Event Player), Eye Position(
+			Current Array Element))));
+		Abort If(Event Player.TargetPlayer == Null);
+		Skip If(Is True For All(All Players(Team Of(Event Player.TargetPlayer)), Ultimate Charge Percent(Event Player) < 90), 2);
+		Small Message(Event Player, Custom String("{0} {1}: These people's ultimate moves are ready:", Hero Icon String(Hero Of(
+			Event Player.TargetPlayer)), Event Player.TargetPlayer, Filtered Array(All Players(Team 2), Ultimate Charge Percent(
+			Event Player) >= 90)));
+		Abort;
+		Small Message(Event Player, Custom String("{0} {1}: None of my team's ultimate moves are ready.", Hero Icon String(Hero Of(
+			Event Player.TargetPlayer)), Event Player.TargetPlayer, Filtered Array(All Players(Team 2), Ultimate Charge Percent(
+			Event Player) >= 90)));
+	}
+}
+
+rule("Nemoto Ult 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Living Players(Team Of(Event Player)), First Of(Players On Hero(Hero(Cassidy), Team 1))
+			.TargetPlayer == Current Array Element) == True;
+		Ultimate Charge Percent(Event Player) >= 90;
+	}
+
+	actions
+	{
+		Wait(0.300, Ignore Condition);
+		Small Message(Filtered Array(All Living Players(All Teams), Distance Between(Current Array Element, First Of(Players On Hero(Hero(
+			Cassidy), Team 1)).TargetPlayer) < Distance Between(First Of(Players On Hero(Hero(Cassidy), Team 1)).TargetPlayer, First Of(
+			Players On Hero(Hero(Cassidy), Team 1))) + 1), String("{0} {1}", Hero Icon String(Hero Of(Event Player)), Event Player));
+	}
+}
+
+rule("Nemoto MVP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Cassidy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+	}
+
+	actions
+	{
+		Event Player.List = Filtered Array(Remove From Array(All Living Players(All Teams), Event Player), !(Has Status(
+			Current Array Element, Knocked Down) || Has Status(Current Array Element, Asleep) || Has Status(Current Array Element, Frozen)
+			|| Has Status(Current Array Element, Stunned)) && Distance Between(Event Player, Current Array Element) <= 25 && Dot Product(
+			Vector Towards(Eye Position(Current Array Element), Eye Position(Event Player)) - Dot Product(Vector Towards(Eye Position(
+			Current Array Element), Eye Position(Event Player)), Facing Direction Of(Event Player)) * Facing Direction Of(Event Player),
+			Vector Towards(Eye Position(Current Array Element), Eye Position(Event Player)) - Dot Product(Vector Towards(Eye Position(
+			Current Array Element), Eye Position(Event Player)), Facing Direction Of(Event Player)) * Facing Direction Of(Event Player))
+			<= 4);
+		Event Player.TargetPlayer = First Of(Sorted Array(Event Player.List, Distance Between(Eye Position(Event Player), Eye Position(
+			Current Array Element))));
+		Abort If(Event Player.TargetPlayer == Null);
+		Event Player.MVP = Last Of(Sorted Array(All Players(Team Of(Event Player.TargetPlayer)), Current Array Element.Score));
+		Skip If(Event Player.MVP == Event Player.TargetPlayer, 2);
+		Small Message(Filtered Array(All Living Players(All Teams), Distance Between(Current Array Element, Event Player.TargetPlayer)
+			< Distance Between(Event Player, Event Player.TargetPlayer) + 1), Custom String("{0} {1}: Our MVP is {2}!", Hero Icon String(
+			Hero Of(Event Player.TargetPlayer)), Event Player.TargetPlayer, String("{0} {1}", Hero Icon String(Event Player.MVP),
+			Event Player.MVP)));
+		Abort;
+		Small Message(Filtered Array(All Living Players(All Teams), Distance Between(Current Array Element, Event Player.TargetPlayer)
+			< Distance Between(Event Player, Event Player.TargetPlayer) + 1), Custom String("{0} {1}: I am the MVP!", Hero Icon String(
+			Hero Of(Event Player.TargetPlayer)), Event Player.TargetPlayer));
+	}
+}
+
+rule("Healing Score Update")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.Score += Event Healing;
+	}
+}
+
+rule("Damage Score Update")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.Score += Event Damage / 2;
+	}
+}
+
+rule("Elimination Score Update")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.Score += Max Health(Victim) / 2;
+	}
+}
+
+rule("Red Riot Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Torbjörn;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, Time, 0, 1, Destination and Rate);
+	}
+}
+
+rule("Red Riot Hardened")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Health(Event Player) > 200;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 6);
+		Set Healing Received(Event Player, 10);
+		Set Damage Dealt(Event Player, 130);
+	}
+}
+
+rule("Red Riot Hardening Limit")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Health(Event Player) > 200;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 70);
+	}
+}
+
+rule("Red Riot Hardened Damage Correction")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Health(Event Player) > 200;
+		Attacker != Null;
+	}
+
+	actions
+	{
+		Event Player.Time = 0.400;
+		Damage(Event Player, Null, 0.750 * ((Event Player.Charge + Event Damage) ^ 4 - Event Player.Charge ^ 4));
+		Event Player.Charge += Event Damage;
+	}
+}
+
+rule("Red Riot Hardened Charge Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Event Player.Time == 0;
+	}
+
+	actions
+	{
+		Event Player.Charge = 0;
+	}
+}
+
+rule("Red Riot Unhardened")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Health(Event Player) <= 200 || Hero Of(Event Player) != Hero(Torbjörn)) == True;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 100);
+		Set Healing Received(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+	}
+}
+
+rule("Red Riot Active Heal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, 200 - 250 * Normalized Health(Event Player));
+	}
+}
+
+rule("Mirio Phase into Floor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+		Is On Ground(Event Player) == True;
+		Event Player.I == 0;
+	}
+
+	actions
+	{
+		Teleport(Event Player, World Vector Of(2 * Down, Event Player, Rotation And Translation));
+		Event Player.I = 1;
+	}
+}
+
+rule("Mirio Repelled from Floor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		(Is Using Ability 1(Event Player) && Is Button Held(Event Player, Button(Crouch))) == False;
+		Distance Between(Event Player, Ray Cast Hit Position(Event Player, World Vector Of(20 * Down, Event Player,
+			Rotation And Translation), Null, Null, False)) >= 15;
+	}
+
+	actions
+	{
+		Abort If(Event Player.I == 0);
+		Start Accelerating(Event Player, Up, 30, 60, To World, Direction Rate and Max Speed);
+		Event Player.I = 2;
+	}
+}
+
+rule("Mirio Stop Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Ray Cast Hit Position(Event Player, World Vector Of(20 * Down, Event Player,
+			Rotation And Translation), Null, Null, False)) < 15;
+		Event Player.I > 0;
+	}
+
+	actions
+	{
+		Wait(0.250, Abort When False);
+		Stop Accelerating(Event Player);
+		Set Gravity(Event Player, 100);
+		Apply Impulse(Event Player, Down, Vertical Speed Of(Event Player) - 6, To World, Incorporate Contrary Motion);
+		Event Player.I = 0;
+	}
+}
+
+rule("Mirio Teleport back")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		(Is Using Ability 1(Event Player) && Is Button Held(Event Player, Button(Crouch))) == False;
+		Distance Between(Event Player, Ray Cast Hit Position(Event Player, World Vector Of(20 * Down, Event Player,
+			Rotation And Translation), Null, Null, False)) >= 15;
+		Distance Between(Event Player, Ray Cast Hit Position(Event Player, World Vector Of(3 * Up, Event Player, Rotation And Translation),
+			Null, Null, False)) < 2.100;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Nearest Walkable Position(Event Player));
+	}
+}
+
+rule("Mirio Wall Phase")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Speed Of In Direction(Event Player, World Vector Of(Throttle Of(Event Player), Event Player, Rotation)) < 4;
+		Throttle Of(Event Player) != Vector(0, 0, 0);
+	}
+
+	actions
+	{
+		Teleport(Event Player, Nearest Walkable Position(World Vector Of(2.500 * Normalize(Throttle Of(Event Player)), Event Player,
+			Rotation And Translation)));
+	}
+}
+
+rule("Mirio Gravity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Distance Between(Event Player, Ray Cast Hit Position(Event Player, World Vector Of(20 * Down, Event Player,
+			Rotation And Translation), Null, Null, False)) >= 15;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 50);
+	}
+}
+
+rule("Mirio Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.I != 1);
+		Event Player.I = 0;
+	}
+}
+
+rule("Deku Charge Up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+	}
+
+	actions
+	{
+		Event Player.Charge = Min(100, Event Player.Charge + 1);
+		Event Player.Time += 0.200;
+		Wait(0.150 / (Event Player.Time + 1), Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Deku Charge Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.Charge = Max(5, Event Player.Charge - 1);
+		Event Player.Time += 0.200;
+		Wait(0.150 / (Event Player.Time + 1), Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Deku Charge HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(Event Player, Team Of(Event Player) == Team 2 && Hero Of(Event Player) == Hero(Doomfist)), String(
+			"{0}%", Event Player.Charge), Null, Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+	}
+}
+
+rule("Deku Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	actions
+	{
+		Event Player.Charge = 100;
+		Event Player.Time = 0;
+	}
+}
+
+rule("Deku Stop Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 2)) == False;
+	}
+
+	actions
+	{
+		Event Player.Time = 0;
+	}
+}
+
+rule("Deku Stop Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == False;
+	}
+
+	actions
+	{
+		Event Player.Time = 0;
+	}
+}
+
+rule("Deku Uppercut")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.100, Ignore Condition);
+		Apply Impulse(Event Player, Down, 30, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.750 * (Event Player.Charge - 5));
+	}
+}
+
+rule("Deku 2nd Fire Button Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Secondary Fire)) == False;
+	}
+
+	actions
+	{
+		Event Player.SecondaryFireButton = Total Time Elapsed;
+	}
+}
+
+rule("Deku Rocket Punch Self Damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Is In Spawn Room(Event Player));
+		Abort If(Total Time Elapsed - Event Player.SecondaryFireButton > 0.150);
+		Damage(Event Player, Null, 0.750 * (Event Player.Charge - 5));
+	}
+}
