@@ -1,0 +1,82 @@
+settings
+{
+	modes
+	{
+		Assault
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Control
+		{
+			Limit Valid Control Points: Second
+
+			enabled maps
+			{
+				Lijiang Tower
+			}
+		}
+
+		Escort
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Hybrid
+		{
+			enabled maps
+			{
+			}
+		}
+
+		General
+		{
+			Hero Limit: Off
+			Respawn Time Scalar: 0%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Wrecking Ball
+			}
+		}
+
+		General
+		{
+			Ultimate Ability: Off
+
+			Widowmaker
+			{
+				Ammunition Clip Size Scalar: 25%
+				Grappling Hook: Off
+				No Automatic Fire: On
+				Quick Melee: Off
+				Venom Mine: Off
+			}
+
+			Wrecking Ball
+			{
+				Adaptive Shield: Off
+				Health: 50%
+				Primary Fire: Off
+			}
+		}
+	}
+}
