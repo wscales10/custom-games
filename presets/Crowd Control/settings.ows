@@ -1,0 +1,146 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 2
+		Max Team 2 Players: 1
+	}
+
+	modes
+	{
+		Assault
+		{
+			disabled maps
+			{
+				Hanamura Winter
+				Paris
+			}
+		}
+
+		Control
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Damage Dealt: 10%
+			Primary Fire: Off
+			Quick Melee: Off
+
+			enabled heroes
+			{
+				Ashe
+				Bastion
+				D.Va
+				Doomfist
+				Junkrat
+				Lúcio
+				Mei
+				Pharah
+				Soldier: 76
+				Wrecking Ball
+			}
+		}
+
+		Team 2
+		{
+			Movement Speed: 90%
+
+			enabled heroes
+			{
+				Ana
+				Brigitte
+				Cassidy
+				Moira
+				Orisa
+				Reinhardt
+				Roadhog
+				Torbjörn
+				Tracer
+				Zarya
+				Zenyatta
+			}
+		}
+
+		General
+		{
+			Ashe
+			{
+				Coach Gun Knockback Scalar Enemy: 300%
+				Dynamite: Off
+				No Scope: On
+				Ultimate Ability B.O.B.: Off
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 400%
+				Reconfigure: Off
+			}
+
+			D.Va
+			{
+				Boosters Knockback Scalar: 400%
+				Micro Missiles: Off
+				Ultimate Ability Self-Destruct: Off
+			}
+
+			Doomfist
+			{
+				Rising Uppercut Knockback Scalar: 300%
+				Rocket Punch: Off
+				Seismic Slam: Off
+				Ultimate Ability Meteor Strike: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 200%
+				Steel Trap: Off
+				Ultimate Ability RIP-Tire: Off
+			}
+
+			Lúcio
+			{
+				Soundwave Knockback Scalar: 300%
+			}
+
+			Mei
+			{
+				Blizzard Freeze Rate Scalar: 500%
+				Cryo-Freeze Cooldown Time: 0%
+				Damage Dealt: 500%
+				Ice Wall Cooldown Time: 0%
+				Secondary Fire: Off
+				Ultimate Generation - Combat Blizzard: 0%
+				Ultimate Generation - Passive Blizzard: 125%
+			}
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 300%
+				Ultimate Ability Barrage: Off
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 400%
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			Winston
+			{
+				Jump Pack Knockback Scalar: 400%
+				Ultimate Ability Primal Rage: Off
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 400%
+				Piledriver: Off
+				Ultimate Ability Minefield: Off
+			}
+		}
+	}
+}
