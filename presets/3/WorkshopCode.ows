@@ -1,0 +1,545 @@
+settings
+{
+	modes
+	{
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Havana
+				Hollywood Halloween
+				Kanezaka
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Malevento
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		Skirmish
+		{
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Tower Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ammunition Clip Size Scalar: 108%
+			Movement Speed: 120%
+
+			Ana
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Ashe
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Baptiste
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Bastion
+			{
+				Ammunition Clip Size Scalar: 110%
+			}
+
+			Doomfist
+			{
+				Ammunition Clip Size Scalar: 125%
+			}
+
+			Genji
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Lúcio
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Mei
+			{
+				Ammunition Clip Size Scalar: 110%
+			}
+
+			Mercy
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Orisa
+			{
+				Ammunition Clip Size Scalar: 110%
+			}
+
+			Reaper
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Soldier: 76
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Sombra
+			{
+				Ammunition Clip Size Scalar: 110%
+			}
+
+			Symmetra
+			{
+				Ammunition Clip Size Scalar: 114%
+			}
+
+			Torbjörn
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Tracer
+			{
+				Ammunition Clip Size Scalar: 135%
+			}
+
+			Widowmaker
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			Winston
+			{
+				Ammunition Clip Size Scalar: 210%
+			}
+
+			Wrecking Ball
+			{
+				Ammunition Clip Size Scalar: 110%
+			}
+
+			Zarya
+			{
+				Ammunition Clip Size Scalar: 150%
+			}
+
+			Zenyatta
+			{
+				Ammunition Clip Size Scalar: 99%
+			}
+
+			disabled heroes
+			{
+				Echo
+				Sigma
+			}
+		}
+	}
+}
+
+rule("setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Event Player.F > 0), Sphere, Color(Yellow), Event Player.H, Event Player.F,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Event Player.F > 0), Sphere, Color(Red), Event Player.H, Event Player.F, Visible To Position and Radius);
+		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Event Player.F == 5), Bad Aura, Color(Yellow), Event Player.H, 0.300,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Event Player.F == 5), Bad Aura, Color(Red), Event Player.H, 0.300, Visible To Position and Radius);
+		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Event Player.F == 5), Light Shaft, Color(Yellow), Event Player.H, 0.100,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Event Player.F == 5), Light Shaft, Color(Red), Event Player.H, 0.100, Visible To Position and Radius);
+		Create Icon(Filtered Array(Event Player, Event Player.F == 5), Event Player.H + 0.500 * Up, Plus, Visible To and Position, Color(
+			White), True);
+		Create HUD Text(Event Player, Event Player.S, Null, Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+	}
+}
+
+rule("place healing station")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Event Player.F != 0.200;
+	}
+
+	actions
+	{
+		Event Player.F = 0.200;
+		Event Player.E = Position Of(Event Player) - Up * Altitude Of(Event Player);
+		Event Player.H = Position Of(Event Player);
+		Event Player.V = 0;
+		Chase Player Variable At Rate(Event Player, V, 9999, 17.500, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, H, Event Player.E, Event Player.V, Destination and Rate);
+	}
+}
+
+rule("healing station placed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.F == 0.200;
+		Event Player.E == Event Player.H;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, H);
+		Stop Chasing Player Variable(Event Player, V);
+		Play Effect(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)), Bad Explosion, Color(Yellow), Event Player.H + Up * 0.500, 5);
+		Play Effect(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Bad Explosion, Color(Red),
+			Event Player.H + Up * 0.500, 5);
+		Event Player.F = 5;
+	}
+}
+
+rule("healing station hot and invincibility")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)), Current Array Element.F == 5 && Distance Between(Event Player, Current Array Element.H) <= 5) == True;
+	}
+
+	actions
+	{
+		Start Heal Over Time(Event Player, Null, 9999, 400);
+		Set Status(Event Player, Null, Invincible, 9999);
+	}
+}
+
+rule("stop hot and invincibility")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)), Current Array Element.F == 5 && Distance Between(Event Player, Current Array Element.H) <= 5) == False;
+	}
+
+	actions
+	{
+		Stop All Heal Over Time(Event Player);
+		Clear Status(Event Player, Invincible);
+	}
+}
+
+rule("damage points")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Victim != Attacker;
+	}
+
+	actions
+	{
+		Event Player.S += Event Damage + 1;
+		Heal(Event Player, Event Player, Event Damage / 10);
+	}
+}
+
+rule("damage victory (Player)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Event Player.S >= 10000;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("damage victory (Team 1)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is True For Any(All Players(Team 1), Current Array Element.S >= 10000 * Number Of Players(Team 1)) == True;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team 1);
+	}
+}
+
+rule("damage victory (Team 2)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is True For Any(All Players(Team 2), Current Array Element.S >= 10000 * Number Of Players(Team 2)) == True;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team 2);
+	}
+}
+
+rule("ffa eliminations victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Is True For All(Remove From Array(All Players(All Teams), Event Player), Is Dead(Current Array Element)) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("get vertical speed before hitting ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Altitude Of(Event Player) < 2.240;
+	}
+
+	actions
+	{
+		Event Player.V = Vertical Speed Of(Event Player);
+	}
+}
+
+rule("piledriver speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Vertical Speed Of(Event Player) < -90;
+	}
+
+	actions
+	{
+		Event Player.V = -98;
+	}
+}
+
+rule("fall damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 5 * Round To Integer((0.008 * Absolute Value(Event Player.V) ^ 2 + 3 * Event Player.V + 18) / -5,
+			To Nearest));
+		Wait(0.016, Ignore Condition);
+		Event Player.V = 0;
+	}
+}
+
+rule("ult ready debuffs")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) == 100;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 70);
+		Set Damage Dealt(Event Player, 70);
+	}
+}
+
+rule("remove ult ready debuffs")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) < 100;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+	}
+}
+
+rule("d.Va ult slow motion")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(D.Va), All Teams), Is Using Ultimate(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(75);
+	}
+}
+
+rule("end slow motion")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(D.Va), All Teams), Is Using Ultimate(Current Array Element)) == False;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+	}
+}
