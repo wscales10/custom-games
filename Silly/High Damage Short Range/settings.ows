@@ -1,0 +1,441 @@
+sort out heroes from widow onward on select screen
+settings
+{
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+
+		General
+		{
+			Respawn Time Scalar: 40%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 500%
+			Healing Received: 50%
+			Projectile Speed: 0%
+
+			Ana
+			{
+				No Scope: On
+			}
+
+			Ashe
+			{
+				Coach Gun: Off
+				Dynamite Cooldown Time: 0%
+				Dynamite Fuse Time Scalar: 1%
+				Primary Fire: Off
+				Ultimate Ability B.O.B.: Off
+			}
+
+			Baptiste
+			{
+				Primary Fire: Off
+			}
+
+			Bastion
+			{
+				Primary Fire: Off
+				Ultimate Duration: 250%
+				Ultimate Generation - Combat Configuration: Tank: 300%
+			}
+
+			D.Va
+			{
+				Primary Fire: Off
+			}
+
+			Doomfist
+			{
+				Primary Fire: Off
+				Rising Uppercut Cooldown Time: 116%
+				Seismic Slam Cooldown Time: 116%
+			}
+
+			Hanzo
+			{
+				Storm Arrows Quantity: 6
+				Ultimate Generation - Combat Dragonstrike: 500%
+				Ultimate Generation Dragonstrike: 115%
+			}
+
+			Junkrat
+			{
+				Concussion Mine Cooldown Time: 75%
+				Concussion Mine Knockback Scalar: 130%
+				Jump Vertical Speed: 130%
+				Movement Gravity: 169%
+				Movement Speed: 130%
+			}
+
+			McCree
+			{
+				Combat Roll Cooldown Time: 0%
+				Flashbang Cooldown Time: 0%
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Ability Deadeye: Off
+			}
+
+			Mei
+			{
+				Healing Dealt: 500%
+			}
+
+			Mercy
+			{
+				Ultimate Generation - Combat Valkyrie: 500%
+			}
+
+			Moira
+			{
+				Biotic Orb Cooldown Time: 10%
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast Cooldown Time: 75%
+				Concussive Blast Knockback Scalar: 300%
+				Movement Speed: 110%
+			}
+
+			Reaper
+			{
+				Primary Fire: Off
+				Ultimate Generation Death Blossom: 115%
+				Wraith Form Cooldown Time: 50%
+			}
+
+			Roadhog
+			{
+				Chain Hook: Off
+				Ultimate Ability Whole Hog: Off
+			}
+
+			Sigma
+			{
+				Experimental Barrier Recharge Rate: 50%
+			}
+
+			Soldier: 76
+			{
+				Biotic Field Cooldown Time: 40%
+				Healing Dealt: 500%
+				Helix Rockets Cooldown Time: 0%
+				Movement Speed: 110%
+				Primary Fire: Off
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			Sombra
+			{
+				Primary Fire: Off
+			}
+
+			Symmetra
+			{
+				Primary Fire: Off
+				Teleporter Cooldown Time: 25%
+			}
+
+			Torbjörn
+			{
+				Overload Duration Scalar: 140%
+			}
+
+			Tracer
+			{
+				Blink Cooldown Time: 50%
+				Primary Fire: Off
+				Recall Cooldown Time: 50%
+			}
+
+			Widowmaker
+			{
+				Primary Fire: Off
+			}
+
+			Winston
+			{
+				Jump Pack Cooldown Time: 50%
+				Primary Fire: Off
+			}
+
+			Wrecking Ball
+			{
+				Adaptive Shield Cooldown Time: 80%
+				Grappling Claw Cooldown Time: 140%
+				Primary Fire: Off
+			}
+
+			Zarya
+			{
+				Particle Barrier Cooldown Time: 60%
+				Primary Fire: Off
+			}
+		}
+	}
+}
+
+rule("Sigma Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 300);
+		Start Facing(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player), 0), 100, To World,
+			Direction and Turn Rate);
+		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 0.700);
+	}
+}
+
+rule("Sigma Charge Stop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		And(Compare(Hero Of(Event Player), ==, Hero(Sigma)), Is Firing Secondary(Event Player)) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Stop Facing(Event Player);
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Sigma Punch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Melee);
+	}
+}
+
+rule("Sigma Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Press Button(Event Player, Primary Fire);
+	}
+}
+
+rule("Bastion Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Bastion;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("Bastion No Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		And(Compare(Hero Of(Event Player), ==, Hero(Bastion)), Is Using Ultimate(Event Player)) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("McCree Stun")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		McCree;
+	}
+
+	actions
+	{
+		Set Status(Victim, Event Player, Stunned, 0.500);
+	}
+}
+
+rule("Mei Leap")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+		Wait(0.200, Ignore Condition);
+		Apply Impulse(Event Player, Vector(0, 1, 2), 12.500, To Player, Cancel Contrary Motion);
+		Wait(0.200, Ignore Condition);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Reaper Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.750, Abort When False);
+		Set Status(Event Player, Null, Stunned, 0.001);
+	}
+}
+
+rule("Soldier Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Soldier: 76;
+	}
+
+	actions
+	{
+		Set Projectile Gravity(Event Player, 200);
+	}
+}
+
+rule("Not Soldier Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Soldier: 76);
+	}
+
+	actions
+	{
+		Set Projectile Gravity(Event Player, 0);
+	}
+}
+
+rule("Rule 12")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Closest Player To(Event Player,
+			Opposite Team Of(Team Of(Event Player))))), To World);
+		Press Button(Event Player, Ability 1);
+	}
+}

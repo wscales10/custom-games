@@ -1,0 +1,198 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Brigitte
+			{
+				Barrier Shield Recharge Rate: 40%
+				Damage Dealt: 40%
+				Damage Received: 250%
+				Healing Dealt: 154%
+				Ultimate Generation Rally: 110%
+			}
+
+			enabled heroes
+			{
+				Brigitte
+			}
+		}
+	}
+}
+
+rule("Whip Shot Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Brigitte;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.180, Ignore Condition);
+		Event Player.T = Total Time Elapsed;
+		Event Player.F = Facing Direction Of(Event Player);
+		Wait(0.176, Ignore Condition);
+		Event Player.T = 0;
+	}
+}
+
+rule("Impulse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Brigitte;
+	}
+
+	conditions
+	{
+		Event Player.T != 0;
+		80 * (Total Time Elapsed - (Event Player.T - 0.080)) >= Distance Between(Eye Position(Event Player), Ray Cast Hit Position(
+			Eye Position(Event Player), Eye Position(Event Player) + 20 * Event Player.F, All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player, True));
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, -1 * Event Player.F, 19, To World, Incorporate Contrary Motion);
+		Event Player.T = 0;
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Set Match Time(0);
+	}
+}
+
+rule("Game in Progress")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Stun Duration")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Stunned) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Event Player.A, Stunned, 0.900);
+	}
+}
+
+rule("Track Last Damager")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Victim.A = Event Player;
+	}
+}

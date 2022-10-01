@@ -1,0 +1,216 @@
+player g 17.54
+
+
+100: 4.128
+90: 4.576
+80: 5.152
+140: 2.944?
+
+1.25
+
+s=-1.25
+u=U
+v=?
+a=-G
+t=T
+
+2(25T+1.25)/TT=G
+
+proj g is about 12.27?
+
+settings
+{
+	modes
+	{
+		Assault
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Control
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Escort
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Hybrid
+		{
+			enabled maps
+			{
+				Numbani
+			}
+		}
+
+		General
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ultimate Ability: Off
+
+			Junkrat
+			{
+				Concussion Mine: Off
+				Steel Trap: Off
+			}
+		}
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Global Variable(G, 12.250);
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Subtract(Vector(Player Variable(Event Player, X), Player Variable(Event Player, Y), Player Variable(
+			Event Player, Z)), Facing Direction Of(Event Player)), Vector(Player Variable(Event Player, X), Player Variable(Event Player,
+			Y), Player Variable(Event Player, Z)), 0);
+		Set Player Variable(Event Player, X, X Component Of(Eye Position(Event Player)));
+		Set Player Variable(Event Player, Y, Y Component Of(Eye Position(Event Player)));
+		Set Player Variable(Event Player, Z, Z Component Of(Eye Position(Event Player)));
+		Set Player Variable(Event Player, A, Multiply(-1.000, Vertical Facing Angle Of(Event Player)));
+		Set Player Variable(Event Player, U, Multiply(Multiply(25, Global Variable(U)), Direction From Angles(Horizontal Facing Angle Of(
+			Event Player), Multiply(Vertical Facing Angle Of(Event Player), Divide(90, 89)))));
+		Set Player Variable(Event Player, T, Divide(Add(Y Component Of(Player Variable(Event Player, U)), Square Root(Add(Raise To Power(
+			Absolute Value(Y Component Of(Player Variable(Event Player, U))), 2), Multiply(2.500, Global Variable(G))))), Global Variable(
+			G)));
+		Set Player Variable(Event Player, S, Subtract(Multiply(Subtract(Player Variable(Event Player, U), Multiply(Y Component Of(
+			Player Variable(Event Player, U)), Up)), Player Variable(Event Player, T)), Multiply(1.250, Up)));
+		Chase Player Variable At Rate(Event Player, X, Add(X Component Of(Eye Position(Event Player)), Multiply(9999, X Component Of(
+			Player Variable(Event Player, U)))), Absolute Value(X Component Of(Player Variable(Event Player, U))), Destination and Rate);
+		Chase Player Variable At Rate(Event Player, Z, Add(Z Component Of(Eye Position(Event Player)), Multiply(9999, Z Component Of(
+			Player Variable(Event Player, U)))), Absolute Value(Z Component Of(Player Variable(Event Player, U))), Destination and Rate);
+		Set Player Variable(Event Player, D, 0);
+		Chase Player Variable At Rate(Event Player, D, Player Variable(Event Player, T), 1, Destination and Rate);
+		Press Button(Event Player, Primary Fire);
+		While(Compare(Player Variable(Event Player, D), <, Player Variable(Event Player, T)));
+			Set Player Variable(Event Player, Y, Add(Y Component Of(Eye Position(Event Player)), Subtract(Multiply(Y Component Of(
+				Player Variable(Event Player, U)), Player Variable(Event Player, D)), Divide(Multiply(Global Variable(G), Raise To Power(
+				Player Variable(Event Player, D), 2)), 2))));
+			Wait(0.016, Ignore Condition);
+		End;
+		Stop Chasing Player Variable(Event Player, X);
+		Stop Chasing Player Variable(Event Player, Y);
+		Stop Chasing Player Variable(Event Player, Z);
+		Set Player Variable(Event Player, P, Add(Eye Position(Event Player), Player Variable(Event Player, S)));
+		Stop Camera(Event Player);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Purple, Player Variable(Event Player, P), 0.100, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Red, Position Of(Event Player), 0.100, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Blue, Vector(Player Variable(Event Player, X), Player Variable(Event Player, Y),
+			Player Variable(Event Player, Z)), 0.200, Visible To Position and Radius);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Has Spawned(Host Player) == True;
+	}
+
+	actions
+	{
+		Set Global Variable(U, 1);
+		Set Projectile Speed(Host Player, Multiply(100, Global Variable(U)));
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(10);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 2) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(100);
+	}
+}
+
+i DON'T KNOW

@@ -1,0 +1,324 @@
+settings
+{
+	main
+	{
+		Description: "All players play the same hero, picked at random. All cooldowns reduced by 50%. Some heroes and abilities disabled. Ultimates charge much faster. Most heroes have increased health. Health packs (where available) take a lot longer to respawn."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Return To Lobby: After A Game
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+
+		Elimination
+		{
+			Hero Selection: Random Mirrored
+			Restrict Previously Used Heroes: After Round Played
+			Score To Win: 5
+
+			disabled maps
+			{
+				Black Forest Winter
+				Ecopoint: Antarctica Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Health Pack Respawn Time Scalar: 500%
+			Hero Limit: Off
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 50%
+			Healing Dealt: 50%
+			Health: 500%
+			Spawn With Ultimate Ready: On
+			Ultimate Generation - Combat: 500%
+			Ultimate Generation - Passive: 500%
+
+			Ashe
+			{
+				Dynamite: Off
+				No Automatic Fire: On
+				No Scope: On
+				Ultimate Generation B.O.B.: 448%
+			}
+
+			Bastion
+			{
+				Ultimate Generation Configuration: Tank: 462%
+			}
+
+			Doomfist
+			{
+				Health: 130%
+				Primary Fire: Off
+				Ultimate Generation Meteor Strike: 336%
+			}
+
+			Genji
+			{
+				Health: 425%
+				Primary Fire: Off
+				Secondary Fire: Off
+				Ultimate Generation Dragonblade: 336%
+			}
+
+			Hanzo
+			{
+				Ultimate Generation Dragonstrike: 336%
+			}
+
+			Junkrat
+			{
+				Health: 325%
+				Steel Trap: Off
+				Ultimate Generation RIP-Tire: 385%
+			}
+
+			McCree
+			{
+				Flashbang: Off
+				Ultimate Generation Deadeye: 336%
+			}
+
+			Mei
+			{
+				Health: 50%
+				Secondary Fire: Off
+				Ultimate Generation Blizzard: 322%
+			}
+
+			Moira
+			{
+				Biotic Orb: Off
+				Health: 300%
+				Ultimate Generation Coalescence: 476%
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Ultimate Generation Barrage: 420%
+			}
+
+			Reaper
+			{
+				Health: 210%
+				Ultimate Generation Death Blossom: 420%
+			}
+
+			Reinhardt
+			{
+				Charge: Off
+				Health: 50%
+				Ultimate Generation Earthshatter: 308%
+			}
+
+			Roadhog
+			{
+				Chain Hook: Off
+				Health: 325%
+				Ultimate Generation Whole Hog: 448%
+			}
+
+			Sigma
+			{
+				Health: 50%
+				Primary Fire: Off
+				Ultimate Generation Gravitic Flux: 434%
+			}
+
+			Soldier: 76
+			{
+				Ultimate Generation Tactical Visor: 462%
+			}
+
+			Tracer
+			{
+				Health: 250%
+				Primary Fire: Off
+				Ultimate Generation Pulse Bomb: 252%
+			}
+
+			Winston
+			{
+				Barrier Projector: Off
+				Health: 125%
+				Primary Fire: Off
+				Ultimate Generation Primal Rage: 308%
+			}
+
+			Wrecking Ball
+			{
+				Health: 125%
+				Ultimate Generation Minefield: 308%
+			}
+
+			Zarya
+			{
+				Health: 50%
+				Ultimate Generation Graviton Surge: 420%
+			}
+
+			disabled heroes
+			{
+				Ana
+				Baptiste
+				Brigitte
+				D.Va
+				Lúcio
+				Mercy
+				Orisa
+				Sombra
+				Symmetra
+				Torbjörn
+				Widowmaker
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Bastion;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), 0.900));
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Add(Number of Players(Team 1), Number of Players(Team 2)) != Number of Players(All Teams);
+		Hero Of(Event Player) != Hero Of(Host Player);
+		Event Player != Host Player;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero Of(Host Player));
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Host Player == Event Player;
+	}
+
+	actions
+	{
+		Stop Forcing Player To Be Hero(Event Player);
+	}
+}

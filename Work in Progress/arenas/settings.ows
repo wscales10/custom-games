@@ -1,0 +1,265 @@
+settings
+{
+	lobby
+	{
+		Max FFA Players: 8
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+		{
+			Hero Limit: Off
+			Score To Win: 20
+
+			enabled maps
+			{
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ammunition Clip Size Scalar: 25%
+			Movement Speed: 300%
+			Projectile Speed: 0%
+			Spawn With Ultimate Ready: On
+
+			Doomfist
+			{
+				Ultimate Ability Meteor Strike: Off
+			}
+
+			Genji
+			{
+				Ammunition Clip Size Scalar: 30%
+				Primary Fire: Off
+			}
+
+			Hanzo
+			{
+				Ultimate Ability Dragonstrike: Off
+			}
+
+			Lúcio
+			{
+				Ammunition Clip Size Scalar: 40%
+			}
+
+			Mei
+			{
+				Secondary Fire: Off
+			}
+
+			Soldier: 76
+			{
+				Primary Fire: Off
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			Symmetra
+			{
+				Ammunition Clip Size Scalar: 29%
+				Ultimate Ability Photon Barrier: Off
+			}
+
+			Torbjörn
+			{
+				Ammunition Clip Size Scalar: 33%
+				Deploy Turret: Off
+			}
+
+			disabled heroes
+			{
+				Ashe
+				Baptiste
+				Bastion
+				D.Va
+				McCree
+				Pharah
+				Reaper
+				Sigma
+				Sombra
+				Tracer
+				Widowmaker
+				Wrecking Ball
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("Ray Cast HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Altitude Of(Event Player), Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Event Player.O = Vector(0, 0, 0);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Allowed Heroes(Event Player)[(Index Of Array Value(Allowed Heroes(Event Player),
+			Hero Of(Event Player)) + 1) % Count Of(Allowed Heroes(Event Player))]);
+		Wait(0.250, Ignore Condition);
+		Stop Forcing Player To Be Hero(Event Player);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		disabled Create Beam Effect(All Players(All Teams), Bad Beam, Vector(-16, 0, -16), Vector(-16, 0, 16), Red, Visible To Position and Radius);
+		disabled Create Beam Effect(All Players(All Teams), Bad Beam, Vector(-16, 0, 16), Vector(16, 0, 16), Red, Visible To Position and Radius);
+		disabled Create Beam Effect(All Players(All Teams), Bad Beam, Vector(16, 0, 16), Vector(16, 0, -16), Red, Visible To Position and Radius);
+		disabled Create Beam Effect(All Players(All Teams), Bad Beam, Vector(16, 0, -16), Vector(-16, 0, -16), Red, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Ring, Blue, Vector(0, 0, 0), Global.R + 1.500, Visible To Position and Radius);
+		Global.R = 20;
+		Global.Z = 0.500;
+		Global.W = 6;
+	}
+}
+
+rule("Set Acceleration")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Vector(X Component Of(Position Of(Event Player)), 0, Z Component Of(Position Of(Event Player))), Event Player.O)
+			> Global.R;
+	}
+
+	actions
+	{
+		Event Player.A = (20 * Square Root(35 * (0.500 - Altitude Of(Event Player))) - Vertical Speed Of(Event Player)) * Up + (
+			-2 * Global.W * Global.Z * Vector(X Component Of(Velocity Of(Event Player)), 0, Z Component Of(Velocity Of(Event Player)))
+			- Global.W ^ 2 * (Distance Between(Vector(X Component Of(Position Of(Event Player)), 0, Z Component Of(Position Of(
+			Event Player))), Event Player.O) - (Global.R - 1)) * Direction Towards(Event Player.O, Vector(X Component Of(Position Of(
+			Event Player)), 0, Z Component Of(Position Of(Event Player)))));
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+		Event Player.A = Vector(0, 0, 0);
+	}
+}
+
+rule("Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		disabled Distance Between(Vector(X Component Of(Position Of(Event Player)), 0, Z Component Of(Position Of(Event Player))), Event Player.O)
+			> Global.R;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Event Player.A, Square Root(Dot Product(Event Player.A, Event Player.A)), 60, To World,
+			Direction Rate and Max Speed);
+	}
+}
+
+disabled rule("Stop Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Vector(X Component Of(Position Of(Event Player)), 0, Z Component Of(Position Of(Event Player))), Event Player.O)
+			<= Global.R;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Rule 7")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, World Vector Of(2 * Down, Event Player, Rotation And Translation));
+	}
+}

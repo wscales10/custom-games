@@ -1,0 +1,289 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Eichenwalde
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Reinhardt
+			{
+				Charge Cooldown Time: 30%
+			}
+
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		11: LateralPower
+		18: LateralSpeed
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Global.LateralSpeed = 5.500;
+		Global.LateralPower = 1;
+		Create HUD Text(All Players(All Teams), Custom String("New Controls during Charge"), Null, Null, Left, 1, Orange, White, White,
+			Visible To and String, Visible Never);
+		Create HUD Text(All Players(All Teams), Custom String("Reverse: {0}", Input Binding String(Button(Crouch))), Null, Null, Left, 2,
+			White, White, White, Visible To and String, Visible Always);
+		Create HUD Text(All Players(All Teams), Custom String("Left/Right: {0}/{1}", Input Binding String(Button(Primary Fire)),
+			Input Binding String(Button(Secondary Fire))), Null, Null, Left, 3, White, White, White, Visible To and String,
+			Visible Always);
+		Create HUD Text(All Players(All Teams), Custom String("Jump: {0}", Input Binding String(Button(Jump))), Null, Null, Left, 4, White,
+			White, White, Visible To and String, Visible Always);
+		Set Match Time(0);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+	}
+}
+
+rule("Ability On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.600, Abort When False);
+		Event Player.A = True;
+	}
+}
+
+rule("Ability Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Hero Of(Event Player) == Hero(Reinhardt) && Is Using Ability 1(Event Player)) == False;
+	}
+
+	actions
+	{
+		Event Player.A = False;
+	}
+}
+
+rule("Start Reverse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.A == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Backward, 565, 14.850, To Player, Direction Rate and Max Speed);
+	}
+}
+
+rule("Stop Reverse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.A && Is Button Held(Event Player, Crouch)) == False;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Abort If(Altitude Of(Event Player) > 0.600 || Vertical Speed Of(Event Player) > 0 || !Is Using Ability 1(Event Player));
+		Apply Impulse(Event Player, Up, 5.700, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("Left")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Event Player.A == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Up, Square Root(35 * (0.500 - Altitude Of(Event Player))) - Vertical Speed Of(Event Player), To World,
+			Incorporate Contrary Motion);
+		Wait(0.025, Abort When False);
+		Apply Impulse(Event Player, Backward, Max(0, 4 + Global.LateralPower * (Speed Of In Direction(Event Player, World Vector Of(
+			Forward, Event Player, Rotation)) - 0.700)), To Player, Incorporate Contrary Motion);
+		If(Speed Of In Direction(Event Player, World Vector Of(Left, Event Player, Rotation)) < Global.LateralSpeed);
+			Apply Impulse(Event Player, Left, Global.LateralSpeed, To Player, Cancel Contrary Motion);
+		End;
+		Wait(0.025, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Right")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Event Player.A == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Up, Square Root(35 * (0.500 - Altitude Of(Event Player))) - Vertical Speed Of(Event Player), To World,
+			Incorporate Contrary Motion);
+		Wait(0.025, Abort When False);
+		Apply Impulse(Event Player, Backward, Max(0, 4 + Global.LateralPower * (Speed Of In Direction(Event Player, World Vector Of(
+			Forward, Event Player, Rotation)) - 0.700)), To Player, Incorporate Contrary Motion);
+		If(Speed Of In Direction(Event Player, World Vector Of(Right, Event Player, Rotation)) < Global.LateralSpeed);
+			Apply Impulse(Event Player, Right, Global.LateralSpeed, To Player, Cancel Contrary Motion);
+		End;
+		Wait(0.025, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("Rule 9")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Speed Of In Direction(Event Player, World Vector Of(Forward, Event Player, Rotation)), Null, Null,
+			Left, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Distance Between(Event Player, Vector(0, 0, 0)) / 3, Null, Null, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+	}
+}
+
+disabled rule("Rule 10")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Vector(0, 0, 0));
+	}
+}

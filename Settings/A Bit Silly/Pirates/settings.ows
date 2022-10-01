@@ -1,0 +1,142 @@
+settings
+{
+	modes
+	{
+		Escort
+		{
+			Payload Speed Modifier: 250%
+		}
+
+		Hybrid
+		{
+			Capture Speed Modifier: 250%
+			Payload Speed Modifier: 250%
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Limit Roles: 2 Of Each Role Per Team
+			Respawn Time Scalar: 50%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Health: 200%
+			Ultimate Duration: 500%
+		}
+
+		Team 2
+		{
+			Ultimate Duration: 400%
+		}
+
+		General
+		{
+			Ability Cooldown Time: 300%
+			Movement Speed: 137%
+			Spawn With Ultimate Ready: On
+			Ultimate Generation - Passive: 500%
+		}
+	}
+}
+
+rule("Root players during ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("Unroot players when ultimate ends")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+	}
+}
+
+rule("Fast hero select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(10);
+	}
+}
+
+rule("Reduced setup time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Set Match Time(5);
+	}
+}
+
+disabled rule("Attractive Payload?")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Team On Defense(Team Of(Event Player)) == True;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Direction From Angles(Horizontal Angle From Direction(Vector Towards(Payload Position,
+			Event Player)), 0), 500 / Distance Between(Payload Position, Event Player), 60, To World, Direction Rate and Max Speed);
+	}
+}

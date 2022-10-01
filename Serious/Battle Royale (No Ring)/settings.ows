@@ -1,0 +1,562 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Spectators: 0
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+
+		Elimination
+		{
+			Hero Selection: Random Mirrored
+			Score To Win: 5
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Health Pack Respawn Time Scalar: 300%
+			Kill Cam: Off
+			Spawn Health Packs: Enabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ammunition Clip Size Scalar: 50%
+			Damage Dealt: 250%
+			Healing Dealt: 10%
+			Health: 250%
+			Movement Speed: 120%
+			Ultimate Generation: 50%
+		}
+	}
+}
+
+variables
+{
+	global:
+		22: WaitForSpawn
+
+	player:
+		5: FreezeState
+}
+
+subroutines
+{
+	0: Freeze
+}
+
+disabled rule("**GLOBAL**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		If(Compare(Current Game Mode, ==, Game Mode(Deathmatch)));
+			Set Global Variable(H, Empty Array);
+			Disable Built-In Game Mode Completion;
+		End;
+		Create HUD Text(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, T)), Custom String(
+			"Jump button disabled mid-air", Null, Null, Null), Null, Custom String("Hold to jump repeatedly", Null, Null, Null), Left, 0,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, T)), Custom String(
+			"Healing: Health packs only", Null, Null, Null), Null, Null, Left, 1, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, T)), Custom String(
+			"Ammo: -50% | Speed: +20%", Null, Null, Null), Null, Null, Left, 2, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Compare(Global Variable(G), ==, 1)), Custom String("Waiting for game", Null,
+			Null, Null), Null, Null, Top, 0, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, T)), Custom String(
+			"Players surrounded with a red cloud are inactive", Null, Null, Null), Null, Null, Left, 2, Red, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Compare(Global Variable(G), ==, 4)), Custom String("{0} Players Left",
+			Count Of(Filtered Array(All Living Players(All Teams), Player Variable(Current Array Element, G))), Null, Null), Null, Null,
+			Right, 0, White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("Unfreeze")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Absolute Value(Subtract(Global Variable(G), 2)) < 2;
+	}
+
+	actions
+	{
+		Set Player Variable(All Players(All Teams), G, True);
+	}
+}
+
+rule("1: Waiting for Players")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Global Variable(G) == 1;
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+		Reset Player Hero Availability(All Players(All Teams));
+		Enable Built-In Game Mode Respawning(All Players(All Teams));
+	}
+}
+
+rule("Stop Waiting")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Is Game In Progress == True;
+		Global Variable(G) == 1;
+		Or(And(Not(Global Variable(WaitForSpawn)), Compare(Number of Players(All Teams), >, 1)), Compare(Count Of(Filtered Array(
+			All Players(All Teams), Has Spawned(Current Array Element))), >, 1)) == True;
+	}
+
+	actions
+	{
+		Set Global Variable(WaitForSpawn, False);
+		Go To Assemble Heroes;
+	}
+}
+
+rule("2: Pick Hero")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) == 2;
+	}
+
+	actions
+	{
+		If(Compare(Count Of(Global Variable(H)), ==, 0));
+			Set Global Variable(H, Sorted Array(All Heroes, Random Real(0, 1)));
+		Else;
+			Modify Global Variable(H, Remove From Array By Index, 0);
+		End;
+		Set Player Allowed Heroes(All Players(All Teams), First Of(Global Variable(H)));
+		Set Global Variable(G, 3);
+	}
+}
+
+rule("Hero Select Screen")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		If(Compare(Current Game Mode, ==, Game Mode(Deathmatch)));
+			If(Compare(Global Variable(G), ==, 0));
+				If(Compare(Number of Players(All Teams), >, 1));
+					Set Match Time(20);
+					Enable Built-In Game Mode Announcer;
+					Set Global Variable(G, 2);
+				Else;
+					Set Match Time(0);
+					Set Global Variable(G, 1);
+				End;
+			Else;
+				Set Match Time(10);
+				Set Global Variable(G, 2);
+				Wait(6, Ignore Condition);
+				Enable Built-In Game Mode Announcer;
+			End;
+		Else;
+			Set Match Time(20);
+		End;
+	}
+}
+
+rule("Game in progress (Deathmatch): 1 or 4")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Announcer;
+		If(Compare(Global Variable(G), ==, 3));
+			If(Compare(Count Of(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, G))), >, 1));
+				Disable Built-In Game Mode Respawning(All Players(All Teams));
+				Set Match Time(10);
+				Disable Built-In Game Mode Music;
+			Else;
+				Set Global Variable(G, 1);
+			End;
+		End;
+	}
+}
+
+rule("Exclude inactive")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) == 3;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Filtered Array(All Players(All Teams), Not(Has Spawned(Current Array Element))), G, False);
+		Wait(1, Ignore Condition);
+		Set Global Variable(G, 4);
+		Enable Built-In Game Mode Music;
+	}
+}
+
+rule("5: Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Count Of(Filtered Array(All Living Players(All Teams), Player Variable(Current Array Element, G))) == 1;
+		Global Variable(G) == 4;
+	}
+
+	actions
+	{
+		Set Global Variable(V, Filtered Array(All Living Players(All Teams), Player Variable(Current Array Element, G)));
+		Set Global Variable(G, 5);
+		Set Slow Motion(50);
+		Big Message(All Players(All Teams), Custom String("{0} wins!", Global Variable(V), Null, Null));
+		Wait(3, Ignore Condition);
+		Set Slow Motion(100);
+		If(Compare(Number of Players(All Teams), >, 1));
+			Go To Assemble Heroes;
+		Else;
+			Set Global Variable(G, 1);
+		End;
+	}
+}
+
+rule("Cancel Match")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) == 4;
+		Count Of(Filtered Array(All Players(All Teams), Player Variable(Current Array Element, G))) == 0;
+	}
+
+	actions
+	{
+		Set Global Variable(WaitForSpawn, True);
+		Set Global Variable(G, 1);
+	}
+}
+
+disabled rule("**PLAYER**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create In-World Text(Filtered Array(Event Player, And(Compare(Global Variable(G), ==, 4), Not(Player Variable(Event Player, G)))),
+			Custom String("WAIT UNTIL NEXT GAME", Null, Null, Null), Add(Eye Position(Event Player), Multiply(2, Facing Direction Of(
+			Event Player))), 4, Do Not Clip, Visible To Position and String, Red, Visible Never);
+		If(Compare(Current Game Mode, ==, Game Mode(Deathmatch)));
+			Enable Death Spectate All Players(Event Player);
+		End;
+		Create Effect(Filtered Array(All Players(All Teams), Compare(Player Variable(Event Player, FreezeState), !=, 0)), Cloud, Red,
+			Event Player, 2, Visible To Position and Radius);
+	}
+}
+
+rule("Player Joined Match")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		If(Compare(Absolute Value(Subtract(Global Variable(G), 2)), <, 2));
+			Set Player Variable(Event Player, G, True);
+		End;
+		If(Compare(Global Variable(G), >, 2));
+			Set Player Allowed Heroes(Event Player, First Of(Global Variable(H)));
+		End;
+	}
+}
+
+rule("Player Spawns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Compare(Player Variable(Event Player, G), !=, True));
+			disabled Big Message(Event Player, Custom String("Please msg match chat if you notice any bugs :-)", Null, Null, Null));
+			Start Rule(Freeze, Restart Rule);
+		End;
+	}
+}
+
+rule("Unfreeze")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, FreezeState) == 2;
+		Player Variable(Event Player, G) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, FreezeState, 1);
+		Set Player Variable(Event Player, T, False);
+		Clear Status(Event Player, Phased Out);
+		Allow Button(Event Player, Primary Fire);
+		Allow Button(Event Player, Secondary Fire);
+		Allow Button(Event Player, Ability 1);
+		Allow Button(Event Player, Ability 2);
+		Allow Button(Event Player, Interact);
+		Allow Button(Event Player, Ultimate);
+		Allow Button(Event Player, Melee);
+		Clear Status(Event Player, Rooted);
+		Clear Status(Event Player, Rooted);
+		Set Player Variable(Event Player, FreezeState, 0);
+	}
+}
+
+rule("Show tips")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Event Player) == True;
+		Global Variable(G) != 5;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Set Player Variable(Event Player, T, True);
+	}
+}
+
+rule("Hide tips")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, T, False);
+	}
+}
+
+rule("Freeze Rule")
+{
+	event
+	{
+		Subroutine;
+		Freeze;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, FreezeState, 1);
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Set Player Variable(Event Player, T, True);
+		Disallow Button(Event Player, Primary Fire);
+		Disallow Button(Event Player, Secondary Fire);
+		Disallow Button(Event Player, Ability 1);
+		Disallow Button(Event Player, Ability 2);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Ultimate);
+		Disallow Button(Event Player, Melee);
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Player Variable(Event Player, FreezeState, 2);
+	}
+}
+
+disabled rule("**GAME MECHANIC**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Disallow Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == False;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Jump);
+	}
+}
+
+rule("Allow Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Allow Button(Event Player, Jump);
+	}
+}
+
+rule("Disable Active Healing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Healing Dealt(Event Player, 0);
+	}
+}

@@ -1,0 +1,144 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Assault
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Mercy
+			{
+				Damage Dealt: 500%
+				Ultimate Ability Valkyrie: Off
+				Weapons Enabled: Caduceus Staff Only
+			}
+
+			enabled heroes
+			{
+				Mercy
+			}
+		}
+
+		Team 2
+		{
+			Health: 10%
+		}
+	}
+}
+
+rule("Freeze")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Living Players(Team 2), And(Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Barriers Do Not Block LOS), Is In View Angle(Current Array Element, Event Player, 52))) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Frozen, 9999);
+	}
+}
+
+rule("Unfreeze")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Living Players(Team 2), And(Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Barriers Do Not Block LOS), Is In View Angle(Current Array Element, Event Player, 52))) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Frozen);
+	}
+}
+
+rule("Angel Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 500);
+		Set Status(Event Player, Null, Invincible, 9999);
+	}
+}
+
+rule("Quick Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Throttle Of(Event Player) != Player Variable(Event Player, T);
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, World Vector Of(Throttle Of(Event Player), Event Player, Rotation), Speed Of In Direction(Event Player,
+			Multiply(-1, World Vector Of(Throttle Of(Event Player), Event Player, Rotation))), To World, Incorporate Contrary Motion);
+		Set Player Variable(Event Player, T, Throttle Of(Event Player));
+	}
+}

@@ -1,0 +1,192 @@
+settings
+{
+	main
+	{
+		Description: "25% speed increase, but every time you kill someone it slows down everyone apart from you a little bit and fully heals you. No health packs. Ultimate abilities charge 50% faster."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Max Team 1 Players: 6
+		Max Team 2 Players: 6
+		Return To Lobby: Never
+		Team Balancing: After A Game
+		Use Experimental Update If Available: Yes
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Eichenwalde
+				Necropolis
+			}
+		}
+
+		Elimination
+		{
+			Restrict Previously Used Heroes: After Round Won
+
+			enabled maps
+			{
+				Castillo
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Movement Speed: 125%
+			Ultimate Generation: 150%
+		}
+	}
+}
+
+rule("Global Setup (Deathmatch)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("Game in Progress (Deathmatch)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Current Game Mode == Game Mode(Deathmatch);
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		If(Current Game Mode == Game Mode(Deathmatch));
+			Set Match Time(0);
+		Else;
+			Set Match Time(15);
+		End;
+	}
+}
+
+rule("Elimination")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+		Remove From Array(All Players(All Teams), Event Player).S *= 0.800;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, S, 100, 20, Destination and Rate);
+	}
+}
+
+rule("Speed Loop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.S < 100;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Event Player.S);
+		Wait(0.250, Abort When False);
+		Loop If Condition Is True;
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Victory (Deathmatch)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Deathmatch);
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}

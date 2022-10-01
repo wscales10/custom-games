@@ -1,0 +1,3450 @@
+settings
+{
+	main
+	{
+		Description: "As an assassin, aim to eliminate all your targets before they escape and avoid killing fellow assassins unless you're sure you'll succeed. As an innocent, aim to get all innocents out alive or - failing that - get revenge on the assassins."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max FFA Players: 9
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hanamura
+				Hollywood
+				Horizon Lunar Colony
+				Ilios Lighthouse
+				Ilios Ruins
+				Ilios Well
+				King's Row
+				Lijiang Garden
+				Lijiang Night Market
+				Nepal Sanctum
+				Nepal Shrine
+				Nepal Village
+				Oasis City Center
+				Oasis Gardens
+				Paris
+				Temple of Anubis
+			}
+		}
+
+		General
+		{
+			Hero Limit: 1 Per Game
+			Kill Cam: Off
+			Kill Feed: Off
+			Score To Win: 50
+			Skins: Off
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Pharah
+			{
+				Hover Jets Unlimited Fuel: On
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: NumberOfAssassins
+		1: MysteryHeroes
+		2: TestMode
+		3: Extraction
+		4: ExtractionWindow
+		5: PortalRadius
+		6: Classes
+		7: Primary
+		8: Secondary
+		9: Ability1
+		10: Ability2
+		11: Ultimate
+		12: Maps
+		13: CameraPosition
+		14: CameraAngle
+		15: PortalLocations
+		16: Bots
+		17: j
+		18: GameStage
+		19: Assassins
+		20: Heroes
+		21: PossibleSpawns
+		22: CurrentPlayer
+		23: Portal
+		24: Portal2
+		25: Victor
+
+	player:
+		0: Team
+		1: Setup
+		2: SpawnPosition
+		3: StartText
+		4: SkipStartText
+		5: ScoringEtc
+		6: StahpStage
+		7: Stahppers
+		8: CanAim
+		9: Active
+		10: Facing
+		11: Class
+		12: Power
+		13: Assassin
+		14: Classic
+		15: InvisibleCastTime
+		16: Illusionist
+		17: DecoyBot
+		18: Weights
+		19: Walls
+		20: k
+		21: Isolator
+		22: ActiveIndex
+		23: Leech
+		24: Leech2
+		25: Leech3
+		26: Brainwasher
+		27: Brainwashee
+		28: Stunner
+}
+
+subroutines
+{
+	0: Classes
+	1: AddBot
+	2: Clear
+	3: AssignRoles
+	4: NewBrainwasher
+	5: CreateGlobalHUDs
+	6: SetGlobalVariables
+	7: NewPortal
+}
+
+disabled rule("ALL PLAYERS")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Call Subroutine(SetGlobalVariables);
+		Disable Built-In Game Mode Scoring;
+		Disable Built-In Game Mode Completion;
+		Call Subroutine(CreateGlobalHUDs);
+		If(Global.MysteryHeroes);
+			Disable Built-In Game Mode Announcer;
+		End;
+	}
+}
+
+rule("Set Global Variables")
+{
+	event
+	{
+		Subroutine;
+		SetGlobalVariables;
+	}
+
+	actions
+	{
+		Global.Bots = Empty Array;
+		Call Subroutine(Classes);
+		Global.TestMode = Workshop Setting Toggle(Custom String("General"), Custom String("Test Mode"), False);
+		Global.NumberOfAssassins = Workshop Setting Integer(Custom String("General"), Custom String("Maximum number of assassins"), 3, 1,
+			3);
+		Global.MysteryHeroes = Workshop Setting Toggle(Custom String("General"), Custom String("Mystery Heroes"), False);
+		Global.PortalRadius = Workshop Setting Integer(Custom String("Extraction"), Custom String("Portal Radius"), 4, 1, 12);
+		Global.Maps = Array(Map(Ilios Lighthouse), Map(Ilios Ruins), Map(Ilios Well), Map(Lijiang Garden), Map(Lijiang Night Market), Map(
+			Nepal Sanctum), Map(Nepal Shrine), Map(Nepal Village), Map(Oasis City Center), Map(Oasis Gardens), Map(Eichenwalde), Map(
+			Château Guillard), Map(Hanamura), Map(Temple of Anubis), Map(Horizon Lunar Colony), Map(Paris), Map(Blizzard World), Map(
+			Hollywood), Map(King's Row), Map(Dorado));
+		Global.CameraPosition = Array(Vector(335, 65, -40), Vector(30, 155, -165), Vector(-206, 85, -14), Vector(0, 180, 150), Vector(0,
+			85, -50), Vector(95, 255, 0), Vector(-50, 105, 0), Vector(-185, -15, 0), Vector(145, 90, 250), Vector(135, 75, -240), Vector(
+			59, 74, -98), Vector(189, 88, 88), Vector(-4, 76, -39), Vector(-19, 71, 75), Vector(36, 108, -106), Vector(-94, 97, -70),
+			Vector(-52, 97, 95), Vector(3, 75, -52), Vector(-55, 59, -25), Vector(120, 85, 11))[Index Of Array Value(Global.Maps,
+			Current Map)];
+		Global.CameraAngle = Array(110, 0, -135, 0, 0, 90, 90, 90, -135, -45, -165, -90, -90, -85, 147, 116, -135, 149, -7, 56)
+			[Index Of Array Value(Global.Maps, Current Map)];
+		Global.Primary = Array(Hero(Mei), Hero(Symmetra));
+		Global.Secondary = Array();
+		Global.Ability1 = Array(Hero(Hanzo), Hero(Torbjörn), Hero(Zenyatta), Hero(Lúcio));
+		Global.Ability2 = Array(Hero(Hanzo), Hero(Junkrat), Hero(Mei), Hero(Soldier: 76), Hero(Sombra), Hero(Symmetra), Hero(Widowmaker),
+			Hero(Wrecking Ball), Hero(Zenyatta));
+		Global.Ultimate = Array(Hero(Ashe), Hero(Baptiste), Hero(D.Va), Hero(Genji), Hero(Mei), Hero(Orisa), Hero(Reinhardt), Hero(Sombra),
+			Hero(Symmetra), Hero(Zarya));
+		Global.Extraction = Workshop Setting Toggle(Custom String("Extraction"), Custom String("Enabled"), True);
+		Global.PortalLocations = Array Slice(Array(Vector(351, -25, -9), Vector(353, -28, -12), Vector(298, -25, -74), Vector(338, -28,
+			-85), Vector(324, -19, -63), Vector(367, -29, -60), Vector(326, -24, -43), Vector(265, -22, -75), Vector(301, -26, -97),
+			Vector(260, -24, -90), Vector(308, -22, 31), Vector(333, -19, -67), Vector(312, -25, -82), Vector(316, -24, 42), Vector(314,
+			-24, -23), Vector(319, -24, -31), Vector(350, -26, 21), Vector(342, -19, -19), Vector(335, -28, -78), Vector(332, -28, -97),
+			Vector(331, -25, 7), Vector(360, -28, -17), Vector(61, 60, -140), Vector(-37, 58, -182), Vector(-63, 60, -158), Vector(33, 57,
+			-142), Vector(129, 65, -180), Vector(94, 58, -182), Vector(50, 60, -160), Vector(-74, 63, -154), Vector(4, 60, -140), Vector(
+			72, 58, -178), Vector(53, 60, -140), Vector(118, 61, -146), Vector(-15, 58, -178), Vector(-10, 60, -164), Vector(-4, 60, -140),
+			Vector(-72, 65, -180), Vector(121, 60, -158), Vector(20, 61, -143), Vector(62, 60, -178), Vector(131, 63, -154), Vector(88, 58,
+			-166), Vector(-29, 58, -143), Vector(-153, -3, -59), Vector(-288, -3, 35), Vector(-231, 5, 13), Vector(-183, 1, -20), Vector(
+			-199, 1, -38), Vector(-268, -1, 54), Vector(-265, -5, 14), Vector(-156, 0, -47), Vector(-171, -1, -39), Vector(-215, -1, -42),
+			Vector(-179, 5, -39), Vector(-177, -5, -73), Vector(-230, 1, -7), Vector(-240, 0, 37), Vector(-178, -5, -73), Vector(-189, 5,
+			-51), Vector(-187, 1, -6), Vector(-282, -3, 47), Vector(-248, -1, -5), Vector(-197, -1, -56), Vector(-283, 0, 12), Vector(-231,
+			-1, 21), Vector(-7, 98, 184), Vector(-59, 98, 159), Vector(-34, 94, 142), Vector(-70, 94, 138), Vector(-9, 96, 112), Vector(-6,
+			94, 156), Vector(5, 94, 156), Vector(-48, 94, 164), Vector(44, 95, 139), Vector(34, 98, 180), Vector(34, 94, 164), Vector(-59,
+			94, 169), Vector(-51, 95, 132), Vector(8, 96, 112), Vector(-34, 94, 164), Vector(51, 95, 132), Vector(-45, 95, 139), Vector(48,
+			94, 164), Vector(89, 97, 134), Vector(-80, 98, 166), Vector(79, 98, 166), Vector(90, 97, 154), Vector(-76, 6, -4), Vector(-37,
+			6, -42), Vector(-29, -3, -58), Vector(5, 0, -10), Vector(-85, 5, -36), Vector(-85, 5, -17), Vector(29, 6, -22), Vector(-63, 6,
+			-3), Vector(65, 6, 0), Vector(10, -1, -49), Vector(30, 6, -8), Vector(-61, 2, -44), Vector(19, 0, -10), Vector(7, -2, -81),
+			Vector(77, 6, -4), Vector(-32, -1, -13), Vector(-25, 0, -12), Vector(34, -1, -13), Vector(31, -3, -58), Vector(29, 0, -44),
+			Vector(-4, 0, -10), Vector(65, 2, -14), Vector(91, 132, -27), Vector(72, 132, -39), Vector(61, 130, 27), Vector(62, 130, -27),
+			Vector(113, 133, -43), Vector(99, 128, 4), Vector(112, 133, 42), Vector(72, 130, 78), Vector(107, 134, -85), Vector(49, 130,
+			4), Vector(92, 132, 95), Vector(75, 132, -28), Vector(99, 132, 79), Vector(71, 132, -95), Vector(90, 132, -95), Vector(105,
+			132, 56), Vector(56, 128, -35), Vector(75, 132, 28), Vector(91, 132, 27), Vector(61, 128, -66), Vector(56, 128, 34), Vector(71,
+			132, 95), Vector(-22, 17, 11), Vector(-73, 12, -34), Vector(-82, 8, 4), Vector(-24, 16, 41), Vector(-53, 17, 99), Vector(-25,
+			16, -41), Vector(-31, 12, -47), Vector(-28, 15, -81), Vector(-53, 17, -100), Vector(-57, 13, -6), Vector(-28, 17, 23), Vector(
+			-50, 11, -49), Vector(-36, 10, -11), Vector(-56, 13, 6), Vector(-50, 11, 50), Vector(-73, 12, 34), Vector(-20, 22, 54), Vector(
+			-31, 10, 21), Vector(-15, 22, 77), Vector(-35, 17, 100), Vector(-70, 15, -68), Vector(-55, 15, -81), Vector(-160, -88, -25),
+			Vector(-156, -99, 72), Vector(-155, -88, 3), Vector(-186, -94, 37), Vector(-182, -102, -87), Vector(-136, -94, 74), Vector(
+			-175, -97, -48), Vector(-221, -92, 23), Vector(-182, -90, -37), Vector(-170, -92, -6), Vector(-161, -97, -96), Vector(-161,
+			-97, 95), Vector(-217, -88, -2), Vector(-181, -102, 88), Vector(-147, -98, 86), Vector(-156, -90, -37), Vector(-200, -94, 5),
+			Vector(-155, -89, 37), Vector(-147, -97, -86), Vector(-161, -88, 24), Vector(-221, -92, -23), Vector(-217, -88, 2), Vector(206,
+			1, 226), Vector(178, 2, 213), Vector(161, 4, 219), Vector(145, 4, 215), Vector(163, 4, 279), Vector(126, 4, 276), Vector(105,
+			1, 252), Vector(183, 2, 247), Vector(145, 4, 264), Vector(99, 1, 319), Vector(151, 4, 282), Vector(86, 1, 298), Vector(214, 1,
+			203), Vector(97, 1, 311), Vector(171, 4, 275), Vector(115, 4, 265), Vector(179, 4, 254), Vector(121, 4, 241), Vector(137, 4,
+			225), Vector(109, 2, 282), Vector(138, 2, 234), Vector(142, 2, 286), Vector(166, 6, -257), Vector(107, 8, -270), Vector(176, 8,
+			-213), Vector(155, 6, -195), Vector(188, 8, -218), Vector(101, 8, -239), Vector(100, 3, -239), Vector(110, 12, -216), Vector(
+			170, 6, -247), Vector(140, 2, -182), Vector(136, 8, -264), Vector(151, 6, -273), Vector(77, 5, -259), Vector(72, 8, -282),
+			Vector(107, 8, -282), Vector(176, 8, -178), Vector(135, 6, -287), Vector(119, 3, -200), Vector(107, 5, -213), Vector(126, 8,
+			-202), Vector(88, 6, -261), Vector(153, 8, -259), Vector(100, 11, -97), Vector(95, 13, -117), Vector(51, 18, -83), Vector(52,
+			12, -82), Vector(60, 5, -95), Vector(105, 13, -72), Vector(51, 11, -121), Vector(107, 13, -108), Vector(62, 5, -82), Vector(36,
+			13, -106), Vector(57, 11, -124), Vector(33, 6, -73), Vector(62, 7, -110), Vector(56, 18, -112), Vector(52, 21, -69), Vector(38,
+			5, -48), Vector(34, 5, -57), Vector(97, 13, -71), Vector(62, 12, -58), Vector(32, 10, -94), Vector(29, 8, -86), Vector(103, 13,
+			-113), Vector(176, 9, 108), Vector(170, 7, 69), Vector(208, 9, 89), Vector(234, 2, 100), Vector(210, 0, 72), Vector(209, 8,
+			73), Vector(190, 9, 110), Vector(210, 8, 73), Vector(177, 0, 52), Vector(172, 7, 56), Vector(181, 1, 83), Vector(204, 9, 89),
+			Vector(222, 9, 64), Vector(225, 1, 75), Vector(231, 4, 115), Vector(224, 1, 81), Vector(219, 12, 45), Vector(238, 2, 86),
+			Vector(189, 8, 98), Vector(168, 5, 77), Vector(194, 1, 67), Vector(228, 2, 99), Vector(-10, 1, -107), Vector(-14, -1, 9),
+			Vector(13, -2, -69), Vector(35, 3, -21), Vector(14, -2, -69), Vector(22, 1, 27), Vector(10, 4, 17), Vector(-11, 4, 18), Vector(
+			-31, 1, -84), Vector(-8, -1, -45), Vector(45, -2, -73), Vector(3, -1, -94), Vector(-3, -1, -50), Vector(19, -1, 36), Vector(-1,
+			-2, -50), Vector(-11, 1, -21), Vector(2, -1, -15), Vector(4, -1, -96), Vector(-16, -5, -69), Vector(-38, 1, -63), Vector(21, 6,
+			-11), Vector(-16, -5, -71), Vector(-26, 2, 66), Vector(-44, 10, 29), Vector(-1, 1, 96), Vector(1, 5, 106), Vector(20, 4, 116),
+			Vector(9, 4, 74), Vector(-54, 2, 39), Vector(-32, 4, 128), Vector(-33, 4, 104), Vector(-34, 2, 71), Vector(-6, 2, 57), Vector(
+			-42, 2, 71), Vector(-18, 5, 87), Vector(-30, 4, 129), Vector(-9, 0, 99), Vector(-1, 1, 21), Vector(-34, 2, 60), Vector(-56, 2,
+			53), Vector(-38, 10, 20), Vector(-20, 5, 128), Vector(-31, 2, 51), Vector(-54, 2, 38), Vector(65, 7, -39), Vector(-18, 5,
+			-147), Vector(-54, 5, -114), Vector(71, 7, -45), Vector(85, 7, -72), Vector(35, 8, -67), Vector(-3, 10, -120), Vector(-7, 7,
+			-150), Vector(36, 14, -52), Vector(-3, 2, -129), Vector(-39, 5, -88), Vector(1, 6, -81), Vector(-27, 3, -129), Vector(101, 13,
+			-81), Vector(-47, 10, -129), Vector(80, 10, -87), Vector(71, 14, -62), Vector(87, 7, -33), Vector(60, 8, -102), Vector(-47, 5,
+			-132), Vector(-8, 9, -112), Vector(17, 7, -80), Vector(-89, 11, -49), Vector(-115, 10, -52), Vector(-100, 12, -66), Vector(
+			-126, 13, -90), Vector(-63, 10, -52), Vector(-117, 11, -37), Vector(-73, 13, -81), Vector(-89, 11, -48), Vector(-82, 13, -106),
+			Vector(-44, 9, -52), Vector(-102, 12, -60), Vector(-80, 13, -106), Vector(-52, 13, -77), Vector(-62, 10, -34), Vector(-74, 13,
+			-80), Vector(-62, 10, -51), Vector(-94, 12, -99), Vector(-109, 12, -91), Vector(-127, 10, -63), Vector(-52, 13, -78), Vector(
+			-89, 10, -20), Vector(-81, 12, -77), Vector(-16, 2, 91), Vector(-44, 0, 134), Vector(-40, 0, 127), Vector(-70, 1, 115), Vector(
+			-42, 0, 128), Vector(-95, 1, 93), Vector(-68, 0, 82), Vector(-58, 0, 60), Vector(-65, 2, 158), Vector(-25, 0, 57), Vector(-80,
+			5, 64), Vector(-33, -2, 152), Vector(-25, 0, 111), Vector(-82, 0, 67), Vector(-77, 0, 61), Vector(-17, 2, 67), Vector(-87, 1,
+			82), Vector(-33, 6, 100), Vector(-73, 1, 114), Vector(-75, 1, 134), Vector(-32, 6, 100), Vector(-78, 2, 155), Vector(-19, 4,
+			-76), Vector(6, 2, -64), Vector(7, 2, -66), Vector(-30, 6, -43), Vector(-19, 2, -77), Vector(-10, 2, -19), Vector(16, 2, -40),
+			Vector(-4, 2, -7), Vector(22, 2, -94), Vector(11, 2, -69), Vector(-9, 2, -10), Vector(42, 3, -33), Vector(-30, 6, -42), Vector(
+			42, 2, -68), Vector(-31, 6, -44), Vector(33, 3, -55), Vector(4, 2, -33), Vector(51, 3, -62), Vector(34, 2, -90), Vector(-12, 2,
+			-57), Vector(15, 2, -9), Vector(-19, 2, -76), Vector(-30, 9, -11), Vector(-91, -2, -48), Vector(-58, 0, -23), Vector(-97, 1,
+			-12), Vector(-98, 7, -6), Vector(-33, 9, -39), Vector(-62, 0, 9), Vector(-49, 2, -51), Vector(-85, 1, -6), Vector(-93, -2,
+			-42), Vector(-64, 0, -51), Vector(-44, 0, 5), Vector(-63, 0, -16), Vector(-77, 6, -11), Vector(-97, 1, -3), Vector(-101, 0,
+			-33), Vector(-37, 0, -25), Vector(-35, 2, -51), Vector(-65, 0, -9), Vector(-46, 1, -9), Vector(-75, 1, -40), Vector(-48, 2,
+			-52), Vector(119, 7, -24), Vector(70, 17, 42), Vector(139, 14, 44), Vector(107, 11, 46), Vector(132, 10, 8), Vector(97, 13,
+			21), Vector(62, 14, 17), Vector(76, 8, 10), Vector(87, 7, 10), Vector(81, 7, -4), Vector(147, 10, 0), Vector(165, 10, -10),
+			Vector(139, 14, 43), Vector(104, 20, 35), Vector(103, 12, 17), Vector(82, 13, 35), Vector(163, 10, -1), Vector(143, 11, -19),
+			Vector(143, 11, -20), Vector(154, 14, 19), Vector(118, 11, -32), Vector(133, 10, 9)), Index Of Array Value(Global.Maps,
+			Current Map) * 22, 22);
+		Global.ExtractionWindow = Workshop Setting Integer(Custom String("Extraction"), Custom String("Extraction Window Duration"), 10, 1,
+			30);
+	}
+}
+
+rule("Define Classes")
+{
+	event
+	{
+		Subroutine;
+		Classes;
+	}
+
+	actions
+	{
+		Global.Classes = Empty Array;
+		Modify Global Variable(Classes, Append To Array, Custom String("Classic"));
+		Modify Global Variable(Classes, Append To Array, Custom String("Illusionist"));
+		Modify Global Variable(Classes, Append To Array, Custom String("Isolator"));
+		Modify Global Variable(Classes, Append To Array, Custom String("Leech"));
+		disabled Modify Global Variable(Classes, Append To Array, Custom String("Stunner"));
+		disabled Modify Global Variable(Classes, Append To Array, Custom String("Brainwasher"));
+	}
+}
+
+rule("Create Global HUDs")
+{
+	event
+	{
+		Subroutine;
+		CreateGlobalHUDs;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.StartText[0]), Null, Null, Custom String(
+			"Press [{0}] to advance", Input Binding String(Button(Jump))), Top, 1, White, White, White, Visible To and String,
+			Visible Never);
+		Create HUD Text(Filtered Array(All Living Players(All Teams),
+			Current Array Element.Team == 2 && !Current Array Element.StartText[0]), Null, Null, Custom String("Targets"), Left, 6, White,
+			White, White, Visible To, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 5, White, White, White, Visible To,
+			Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Classic[0]), String("Healing"), Null, Null, Top, 1,
+			Yellow, White, White, Visible To and String, Visible Never);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Classic[3] == 1), Custom String(
+			"Becoming Invisible..."), Null, Null, Top, 2, White, White, White, Visible To and String, Visible Never);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Classic[4]), String("Invisible"), Null, Null, Top, 1,
+			Purple, White, White, Visible To and String, Visible Never);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Classic")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Toggle Stealth: Double-tap {0}", Input Binding String(
+			Button(Interact))), Left, 1, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Classic")
+			&& Current Array Element.Team == 2 && !Current Array Element.StartText[0]), Null, Null, Custom String(
+			"Heal: Crouch and remain still for 3 seconds"), Left, 2, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams),
+			Current Array Element.Illusionist[0] && !Current Array Element.Illusionist[1]), Custom String("Controlling Decoy Bot"), Null,
+			Null, Top, 1, Green, White, White, Visible To and String, Visible Never);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Illusionist")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Spawn Decoy/Toggle Control: Double-tap {0}",
+			Input Binding String(Button(Interact))), Left, 1, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Illusionist")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Teleport: Crouch and remain still for 3 seconds"), Left, 2,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Illusionist")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Hold {0} as decoy bot to choose teleport position",
+			Input Binding String(Button(Ultimate))), Left, 3, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Isolator")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("stopping them from acting at the same time."), Left, 2,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Isolator")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Kills heal you"), Left, 3, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Leech")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Toggle Leech: Double-tap {0}", Input Binding String(Button(
+			Interact))), Left, 1, White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Leech")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("Leech redirects healing away from and "), Left, 2, White,
+			White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Class == Custom String("Leech")
+			&& !Current Array Element.StartText[0]), Null, Null, Custom String("damage towards players in an 8m radius"), Left, 3, White,
+			White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.Brainwasher[0] == 2), Custom String(
+			"Brainwashing Ready"), Null, Null, Top, 0, Purple, White, White, Visible To and String, Default Visibility);
+		If(Global.Extraction);
+			Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.ScoringEtc[0]), Custom String(
+				"Successfully Extracted"), Null, Null, Top, 0, Green, White, White, Visible To and String, Default Visibility);
+			Create Effect(Filtered Array(All Players(All Teams), Global.Portal[2] || (
+				Global.Portal[0] && Global.Portal[1] - Total Time Elapsed < 2)), Ring, Sky Blue, Global.Portal[0], Global.PortalRadius * Min(1,
+				1 + (Total Time Elapsed - Global.Portal[1]) / 2), Visible To Position and Radius);
+			Create Effect(Filtered Array(All Players(All Teams), Global.Portal[2]), Cloud, White, Global.Portal[0], Global.PortalRadius,
+				Visible To Position and Radius);
+			Create Effect(Filtered Array(All Players(All Teams), Global.Portal[2]), Energy Sound, White, Global.Portal[0], 100,
+				Visible To Position and Radius);
+		End;
+	}
+}
+
+rule("Player Setup (All)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Global.Bots) == 0;
+		Event Player.Setup[1] == False;
+	}
+
+	actions
+	{
+		Event Player.Setup[1] = True;
+		Disable Nameplates(Event Player, All Players(All Teams));
+		Disable Nameplates(All Players(All Teams), Event Player);
+		If(!Event Player.DecoyBot);
+			Create Effect(All Living Players(All Teams), Energy Sound, White, Eye Position(Event Player), 100 * (1 - Absolute Value(
+				5 * Event Player.InvisibleCastTime - 4) ^ 2), Visible To Position and Radius);
+			Create Effect(All Living Players(All Teams), Good Aura Sound, White, Eye Position(Event Player), 100 * (1 - Absolute Value(
+				3 * Event Player.InvisibleCastTime - 2) ^ 2), Visible To Position and Radius);
+			Create HUD Text(Filtered Array(Event Player, Event Player.Team == 2), Custom String("{0} {1}", Round To Integer(Event Player.Power,
+				Up), Icon String(Bolt)), Null, Null, Right, 3, Yellow, White, White, Visible To and String, Default Visibility);
+			Create Effect(Filtered Array(All Living Players(All Teams), Event Player.Classic[0]), Good Aura Sound, White, Position Of(
+				Event Player), 100, Visible To Position and Radius);
+			Create Effect(Filtered Array(All Living Players(All Teams), Event Player.Classic[0]), Good Aura Sound, White, Position Of(
+				Event Player), 100, Visible To Position and Radius);
+			Create Effect(Filtered Array(Event Player, Is Dead(Event Player)), Bad Aura, Red, Position Of(Event Player) + Up, 10,
+				Visible To Position and Radius);
+			Create Effect(Filtered Array(Event Player, Is Dead(Event Player)), Bad Aura, Red, Position Of(Event Player) + Down, 10,
+				Visible To Position and Radius);
+			Create Effect(Filtered Array(Event Player, Is Dead(Event Player)), Bad Aura, Red, Event Player, 10,
+				Visible To Position and Radius);
+			Create In-World Text(Filtered Array(Event Player,
+				Event Player.SpawnPosition && Event Player.Team == 2 && Event Player.StartText[0] && !Is Communicating Any Emote(
+				Event Player)), Custom String("{0} {1}", Hero Icon String(Hero Of(Event Player)), String("You")), Event Player.SpawnPosition,
+				2, Do Not Clip, Visible To Position and String, Aqua, Visible Never);
+			Create In-World Text(Filtered Array(All Players(All Teams),
+				Event Player.SpawnPosition && Event Player.Team == 1 && Current Array Element.Team == 2 && Current Array Element.StartText[0] && !Is Communicating Any Emote(
+				Current Array Element)), Custom String("{0} {1}", Hero Icon String(Hero Of(Event Player)), Event Player),
+				Event Player.SpawnPosition, 2, Do Not Clip, Visible To Position and String, Red, Visible Never);
+			Create HUD Text(Filtered Array(Event Player, Current Array Element.Team == 2 && !Current Array Element.StartText[0]),
+				Custom String("Assassin"), Event Player.Class, Null, Left, 0, Red, White, White, Visible To and String, Default Visibility);
+			Create Beam Effect(Filtered Array(Event Player, Event Player.ActiveIndex != -1), Good Beam, (Position Of(Event Player.Isolator[0])
+				+ Eye Position(Event Player.Isolator[0])) / 2, (Position Of(Event Player.Isolator[1]) + Eye Position(Event Player.Isolator[1]))
+				/ 2, White, Visible To Position and Radius);
+			Create Effect(Filtered Array(Event Player, Event Player.Illusionist[9] && Is Button Held(Event Player, Ultimate)), Sphere, Green,
+				Event Player.Illusionist[9], 0.600, Visible To Position and Radius);
+			Create Beam Effect(Filtered Array(Remove From Array(All Players(All Teams), Array(Event Player, Event Player.DecoyBot)),
+				Current Array Element.Illusionist[0] && !Current Array Element.Illusionist[1] && Is Button Held(Current Array Element,
+				Ultimate)), Bad Beam, Eye Position(Event Player), Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+				+ 100 * Facing Direction Of(Event Player), Empty Array, Empty Array, False), Red, Visible To Position and Radius);
+			Create Icon(Filtered Array(Event Player, Event Player.Illusionist[8]), Event Player.Illusionist[8], X, Visible To and Position,
+				Lime Green, False);
+			Create Effect(Filtered Array(Event Player, Event Player.Leech[1]), Ring, Red, Event Player, 8, Visible To Position and Radius);
+			Create HUD Text(Filtered Array(Event Player, Is Alive(Event Player) && !Event Player.ScoringEtc[0]), Null, Null, Has Status(
+				Event Player, Hacked) ? Ability Icon String(Hero(Sombra), Button(Ultimate)) : Custom String("{0} {1}°", Array(Custom String(
+				"E"), Custom String("NE"), Custom String("N"), Custom String("NW"), Custom String("W"), Custom String("SW"), Custom String(
+				"S"), Custom String("SE"))[Round To Integer(Horizontal Facing Angle Of(Event Player) / 45 + 8, To Nearest) % 8], Mapped Array((
+				450 - Round To Integer(Horizontal Facing Angle Of(Event Player), To Nearest)) % 360,
+				Current Array Element < 10 ? Custom String("00{0}", Current Array Element) : (Current Array Element < 100 ? Custom String(
+				"0{0}", Current Array Element) : Current Array Element))), Right, 2, White, White, White, Visible To and String,
+				Default Visibility);
+			Create HUD Text(Filtered Array(Event Player, Is Alive(Event Player) && !Event Player.ScoringEtc[0]), Array(Custom String("←"),
+				Custom String("↖"), Custom String("↑"), Custom String("↗"), Custom String("→"), Custom String("↘"), Custom String("↓"),
+				Custom String("↙"))[Has Status(Event Player, Hacked) ? Random Integer(0, 7) : Round To Integer(Horizontal Facing Angle Of(
+				Event Player) / 45 + 8, To Nearest) % 8], Null, Null, Right, 1, White, White, White, Visible To and String,
+				Default Visibility);
+			Create HUD Text(Event Player, Null, Null, Event Player.ScoringEtc[4] ? (Total Time Elapsed < Global.Portal[1] ? Custom String(
+				"{0}{1} seconds.", Event Player.ScoringEtc[4], Round To Integer(Global.Portal[1] - Total Time Elapsed, Up)) : Custom String(
+				"Extraction portal detected! Closing in -{0}-", Round To Integer(
+				Global.Portal[1] + Global.ExtractionWindow - Total Time Elapsed, Up))) : Custom String(" "), Right, 0, White, White, White,
+				Visible To and String, Default Visibility);
+			Create HUD Text(Event Player.Team == 1 ? Filtered Array(All Living Players(All Teams),
+				Current Array Element.Team == 2 && !Current Array Element.StartText[0]) : Empty Array, Custom String("{0} {1} {2}",
+				Event Player.ScoringEtc[0] ? Icon String(X) : (Is Alive(Event Player) ? Icon String(Ring Thin) : Icon String(Skull)),
+				Hero Icon String(Hero Of(Event Player)), Event Player), Null, Null, Left, 7 + Slot Of(Event Player), White, White, White,
+				Visible To Sort Order and String, Default Visibility);
+			Create HUD Text(Filtered Array(Event Player, Event Player.Class == Custom String("Isolator") && !Event Player.StartText[0]), Null,
+				Null, Custom String("{0} two opponents ({1}) to link them, ", Hero Of(Event Player) == Hero(Reinhardt) ? Custom String(
+				"Strike") : (Hero Of(Event Player) == Hero(Brigitte) ? Custom String("Shield Bash") : Custom String("Melee")), Hero Of(
+				Event Player) == Hero(Reinhardt) ? Input Binding String(Button(Primary Fire)) : (Hero Of(Event Player) == Hero(Brigitte)
+				? Custom String("{0} + {1}", Input Binding String(Button(Secondary Fire)), Input Binding String(Button(Primary Fire)))
+				: Input Binding String(Button(Melee)))), Left, 1, White, White, White, Visible To and String, Default Visibility);
+			Create Effect(Event Player, Orb, Yellow, Eye Position(Event Player.Brainwasher[1]), 1, Visible To Position and Radius);
+		End;
+	}
+}
+
+rule("Dummy Bot Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		If(!Array Contains(All Heroes, First Of(Global.Bots)));
+			First Of(Global.Bots).Illusionist[0] = Event Player;
+			Event Player.DecoyBot = First Of(Global.Bots);
+			Set Damage Dealt(Event Player, 10);
+			Modify Player Score(Event Player, -10000);
+			Event Player.DecoyBot.Illusionist[1] = False;
+		End;
+		Modify Global Variable(Bots, Remove From Array By Index, 0);
+		Wait(0.080, Ignore Condition);
+		If(Count Of(Global.Bots) > 0);
+			Call Subroutine(AddBot);
+		End;
+	}
+}
+
+rule("Test Mode")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Has Spawned(Host Player) == True;
+		Is Waiting For Players == True;
+		Global.TestMode == True;
+	}
+
+	actions
+	{
+		For Global Variable(j, 0, 4, 1);
+			Modify Global Variable(Bots, Append To Array, Random Value In Array(All Heroes));
+		End;
+		disabled Modify Global Variable(Bots, Append To Array, Hero(Roadhog));
+	}
+}
+
+rule("Test Mode Group Up")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Communicating(Host Player, Group Up) == True;
+		Global.TestMode == True;
+	}
+
+	actions
+	{
+		Teleport(All Players(All Teams), Host Player);
+	}
+}
+
+rule("Add Bots")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Global.Bots) > 0;
+	}
+
+	actions
+	{
+		Call Subroutine(AddBot);
+	}
+}
+
+rule("Add Dummy Bot")
+{
+	event
+	{
+		Subroutine;
+		AddBot;
+	}
+
+	actions
+	{
+		If(Array Contains(All Heroes, First Of(Global.Bots)));
+			Create Dummy Bot(First Of(Global.Bots), All Teams, -1, Random Value In Array(Global.PortalLocations), Direction From Angles(
+				Random Integer(-179, 180), 0));
+		Else;
+			Create Dummy Bot(Hero Of(First Of(Global.Bots)), All Teams, -1, Nearest Walkable Position(World Vector Of(Forward, First Of(
+				Global.Bots), Rotation And Translation)), Facing Direction Of(First Of(Global.Bots)));
+		End;
+	}
+}
+
+rule("Mystery Heroes (Waiting For Players)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Is Waiting For Players == True;
+	}
+
+	actions
+	{
+		If(Global.MysteryHeroes);
+			Start Forcing Player To Be Hero(Event Player, Random Value In Array(Remove From Array(All Heroes, Mapped Array(All Players(
+				All Teams), Hero Of(Current Array Element)))));
+		End;
+	}
+}
+
+rule("Not Waiting For Players (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Waiting For Players == False;
+	}
+
+	actions
+	{
+		Global.GameStage = Custom String("PreGame");
+	}
+}
+
+rule("Not Waiting For Players (Player)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Waiting For Players == False;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+	}
+}
+
+rule("Test Mode Bot Spawn Fix")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.TestMode == True;
+	}
+
+	actions
+	{
+		If(Is Dummy Bot(Event Player));
+			Start Forcing Player To Be Hero(Event Player, Random Value In Array(All Heroes));
+		End;
+	}
+}
+
+rule("PreGame")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.GameStage == Custom String("PreGame");
+	}
+
+	actions
+	{
+		Global.Portal[0] = Null;
+		Start Rule(NewPortal, Restart Rule);
+		Stop All Damage Modifications;
+		Stop All Healing Modifications;
+		All Players(All Teams).SpawnPosition = Null;
+		Stop Forcing Player To Be Hero(All Players(All Teams));
+		Global.Victor = Null;
+		All Players(All Teams).SkipStartText = False;
+		All Players(All Teams).ScoringEtc = Array(False, False, 0, 0, Null);
+		All Players(All Teams).Illusionist = Empty Array;
+		All Players(All Teams).Classic[1] = 0;
+		All Players(All Teams).Leech[0] = 0;
+		Set Move Speed(All Players(All Teams), 100);
+		Set Jump Vertical Speed(All Players(All Teams), 100);
+		Set Invisible(All Players(All Teams), None);
+		Stop Chasing Player Variable(All Players(All Teams), Power);
+		Call Subroutine(AssignRoles);
+		If(Global.MysteryHeroes);
+			All Players(All Teams).Setup[2] = False;
+			Global.Heroes = Randomized Array(Remove From Array(All Heroes, Mapped Array(All Players(All Teams), Hero Of(
+				Current Array Element))));
+			Global.PossibleSpawns = Global.PortalLocations;
+			While(!Is True For All(All Players(All Teams), Current Array Element.Setup[2]));
+				Global.CurrentPlayer = Random Value In Array(Filtered Array(All Players(All Teams), !Current Array Element.Setup[2]));
+				Global.CurrentPlayer.SpawnPosition = Random Value In Array(Global.PossibleSpawns);
+				Teleport(Global.CurrentPlayer, Global.CurrentPlayer.SpawnPosition);
+				Global.PossibleSpawns = Filtered Array(Global.PossibleSpawns, Distance Between(Current Array Element,
+					Global.CurrentPlayer.SpawnPosition) > 15);
+				If(Count Of(Global.PossibleSpawns) == 0);
+					Global.PossibleSpawns = Global.PortalLocations;
+					While(Count Of(Global.PossibleSpawns) > 1);
+						Modify Global Variable(PossibleSpawns, Remove From Array By Index, First Of(Sorted Array(Mapped Array(All Players(All Teams),
+							Distance Between(Current Array Element.SpawnPosition, First Of(Global.PossibleSpawns))), Current Array Element)) < First Of(
+							Sorted Array(Mapped Array(All Players(All Teams), Distance Between(Current Array Element.SpawnPosition,
+							Global.PossibleSpawns[1])), Current Array Element)) ? 0 : 1);
+						Wait(0.016, Ignore Condition);
+					End;
+				End;
+				Start Forcing Player To Be Hero(Global.CurrentPlayer, First Of(Global.Heroes));
+				Global.CurrentPlayer.Setup[2] = True;
+				Modify Global Variable(Heroes, Remove From Array By Index, 0);
+				Wait(0.016, Ignore Condition);
+			End;
+			Global.GameStage = Custom String("GameStart");
+		Else;
+			Go To Assemble Heroes;
+		End;
+	}
+}
+
+rule("Destroy Decoy Bots")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.GameStage == Custom String("PreGame");
+	}
+
+	actions
+	{
+		If(Event Player.DecoyBot);
+			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+		End;
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		If(Global.MysteryHeroes);
+			Set Match Time(0);
+		Else;
+			Unpause Match Time;
+			Enable Built-In Game Mode Announcer;
+			Set Match Time(Global.TestMode ? 5 : 10);
+		End;
+	}
+}
+
+rule("Round Start")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == False;
+	}
+
+	actions
+	{
+		Abort If(Global.GameStage != Custom String("PreGame"));
+		Global.GameStage = Custom String("GameStart");
+	}
+}
+
+rule("Assign Roles")
+{
+	event
+	{
+		Subroutine;
+		AssignRoles;
+	}
+
+	actions
+	{
+		Global.Assassins = Global.TestMode ? Host Player : Array Slice(Randomized Array(Filtered Array(All Players(All Teams),
+			!Current Array Element.DecoyBot)), 0, Max(1, Min(Global.NumberOfAssassins, Round To Integer(Number of Players(All Teams) / 3,
+			Down))));
+		Global.Assassins.Team = 2;
+		Filtered Array(Remove From Array(All Players(All Teams), Global.Assassins), !Current Array Element.DecoyBot).Team = 1;
+		All Players(All Teams).Setup[0] = 0;
+	}
+}
+
+rule("Game In Progress (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Array Contains(Array(Custom String("GameStart"), Custom String("Game")), Global.GameStage) == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Announcer;
+		Disable Scoreboard(Filtered Array(All Players(All Teams), Current Array Element.Team == 1));
+		If(Global.Extraction);
+			Set Match Time(0);
+			Global.Portal[2] = False;
+			Global.Portal2 = Empty Array;
+		Else;
+			Set Match Time(240);
+		End;
+		Wait(20, Abort When False);
+		All Players(All Teams).SkipStartText = True;
+	}
+}
+
+rule("Game In Progress (Player)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Event Player.Setup[0] == 2;
+		Array Contains(Array(Custom String("GameStart"), Custom String("Game")), Global.GameStage) == True;
+	}
+
+	actions
+	{
+		Event Player.SpawnPosition = Position Of(Event Player);
+		Stop Forcing Player Outlines(All Players(All Teams), Event Player);
+		If(!Event Player.SkipStartText);
+			If(Event Player.Team == 2);
+				Disable Game Mode HUD(Event Player);
+				Start Camera(Event Player, Global.CameraPosition, Global.CameraPosition + 100 * Down + Direction From Angles(Global.CameraAngle,
+					0), 0);
+				Set Facing(Event Player, Direction From Angles(Global.CameraAngle, 0), To World);
+			End;
+			Set Status(Event Player, Null, Phased Out, 9999);
+			Event Player.Stahppers[0] = True;
+			Event Player.StartText[0] = 1;
+		End;
+		Event Player.Stahppers[1] = False;
+		Event Player.Stahppers[2] = False;
+	}
+}
+
+rule("Game Start - Game")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.GameStage == Custom String("GameStart");
+	}
+
+	actions
+	{
+		Wait(1, Ignore Condition);
+		Global.GameStage = Custom String("Game");
+	}
+}
+
+rule("Create Start Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StartText[0] > 0;
+		Event Player.StartText[1] == Null;
+	}
+
+	actions
+	{
+		If(Event Player.Team == 1);
+			Create HUD Text(Event Player, Array(Custom String("Hello {0}", Event Player), Custom String("Beware the assassins"), Custom String(
+				"Your objective: defeat the assassins, or {0}", Global.Extraction ? Custom String("get to an extraction point")
+				: Custom String("survive until time runs out")), Custom String("Assassins have special abilities"), Custom String(
+				"Tip: try not to kill people who aren't assassins"))[Event Player.StartText[0] - 1], Null, Null, Top, 2, White, White, White,
+				String, Default Visibility);
+		Else If(Event Player.Team == 2);
+			Create HUD Text(Event Player, Array(Custom String("You are an assassin"), Custom String("Your objective: kill all your targets"),
+				Custom String("You have special abilities which will be listed in the top left corner"), Custom String(
+				"Your special abilities use power, of which you have a limited amount"), Custom String("Your power meter is in the top-right"))
+				[Event Player.StartText[0] - 1], Null, Null, Top, 2, White, White, White, String, Default Visibility);
+		Else;
+			Abort;
+		End;
+		Event Player.StartText[1] = Last Text ID;
+	}
+}
+
+rule("Next Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.StartText[0]);
+		If((Event Player.Team == 1 && Event Player.StartText[0] >= 5) || (Event Player.Team == 2 && Event Player.StartText[0] >= 5));
+			Event Player.SkipStartText = True;
+		Else;
+			Event Player.StartText[0] += 1;
+		End;
+	}
+}
+
+rule("Destroy Start Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StartText[0] == 0;
+		Event Player.StartText[1] != Null;
+	}
+
+	actions
+	{
+		Destroy HUD Text(Event Player.StartText[1]);
+		Wait(0.300, Ignore Condition);
+		Event Player.StartText[1] = Null;
+	}
+}
+
+rule("End Start Text, Chase Power")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SkipStartText == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Stahppers[0] = False;
+		If(Event Player.StartText[0]);
+			Enable Game Mode HUD(Event Player);
+			Stop Camera(Event Player);
+			Event Player.StartText[0] = 0;
+		End;
+		If(Event Player.Class == Custom String("Classic"));
+			Chase Player Variable At Rate(Event Player, Power, 0, 40 * Event Player.Classic[0] + 1 * Event Player.InvisibleCastTime,
+				Destination and Rate);
+		Else If(Event Player.Class == Custom String("Illusionist"));
+			Chase Player Variable At Rate(Event Player, Power, 0, Event Player.Illusionist[0] && (!Event Player.Illusionist[1] || Throttle Of(
+				Event Player.Illusionist[0]) != Vector(0, 0, 0)) ? 1 : 0, Destination and Rate);
+		Else If(Event Player.Class == Custom String("Isolator"));
+			Chase Player Variable At Rate(Event Player, Power, 0, Count Of(Event Player.Isolator), Destination and Rate);
+		Else If(Event Player.Class == Custom String("Leech"));
+			Chase Player Variable At Rate(Event Player, Power, 0, 3 * Event Player.Leech[1], Destination and Rate);
+		Else If(Event Player.Class == Custom String("Brainwasher"));
+			Chase Player Variable At Rate(Event Player, Power, 0, Event Player.Brainwasher[1] ? 1 : 0, Destination and Rate);
+		End;
+	}
+}
+
+rule("Release")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Event Player.Stahppers, Current Array Element) == False;
+		Event Player.StahpStage == Custom String("Stahpped");
+	}
+
+	actions
+	{
+		Event Player.StahpStage = Custom String("Releasing");
+		Set Melee Enabled(Event Player, True);
+		Allow Button(Event Player, Reload);
+		Allow Button(Event Player, Interact);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Allow Button(Event Player, Ultimate);
+		Clear Status(Event Player, Rooted);
+		Clear Status(Event Player, Phased Out);
+		Wait(0.600, Ignore Condition);
+		Set Jump Enabled(Event Player, True);
+		Event Player.StahpStage = Null;
+	}
+}
+
+rule("Count Elims")
+{
+	event
+	{
+		Player Earned Elimination;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).Team == 3 - Victim.Team;
+	}
+
+	actions
+	{
+		If((Event Player.DecoyBot ? Event Player.DecoyBot : Event Player) != First Of(Victim.Brainwashee));
+			(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).ScoringEtc[2] += 1;
+		End;
+	}
+}
+
+rule("Count Last Hits")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).Team == 3 - Victim.Team;
+	}
+
+	actions
+	{
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).ScoringEtc[3] += 1;
+	}
+}
+
+rule("Log Friendly Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).Team == Victim.Team;
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player) != Victim;
+	}
+
+	actions
+	{
+		(Event Player.DecoyBot ? Event Player.DecoyBot : Event Player).ScoringEtc[1] = True;
+	}
+}
+
+rule("Round Complete (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.GameStage == Custom String("Game");
+		(Is True For All(All Living Players(All Teams), Current Array Element.Team != 1 || Current Array Element.ScoringEtc[0])
+			|| Is True For All(All Living Players(All Teams), Current Array Element.Team != 2 || Current Array Element.ScoringEtc[0]) || (
+			!Global.Extraction && Match Time == 0)) == True;
+		Is True For All(All Players(All Teams), Has Spawned(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Global.GameStage = Custom String("RoundEnd");
+		If(!(Global.Extraction || Match Time));
+			Filtered Array(All Living Players(All Teams), Current Array Element.Team == 1).ScoringEtc[0] = True;
+		End;
+		"All innocents dead"
+		If(Is True For All(All Living Players(All Teams), Current Array Element.Team != 1) == True);
+			Global.Victor = 2;
+			Modify Player Score(Filtered Array(All Players(All Teams), Current Array Element.Team == 2), 1);
+		"No innocents dead"
+		Else If(Is True For All(All Dead Players(All Teams), Current Array Element.Team != 1) == True);
+			Global.Victor = 1;
+			Modify Player Score(Filtered Array(All Players(All Teams), Current Array Element.Team == 1), 1);
+		"Some innocents & all assassins dead"
+		Else If(Is True For All(All Living Players(All Teams), Current Array Element.Team != 2) == True);
+			Global.Victor = 1;
+			Modify Player Score(Filtered Array(All Players(All Teams), Current Array Element.Team == 1 && (
+				Current Array Element.ScoringEtc[2] || Is Alive(Current Array Element))), 1);
+		Else;
+			Global.Victor = -1;
+			"Some innocents & no assassins dead"
+			If(Is True For All(All Dead Players(All Teams), Current Array Element.Team != 2) == True);
+			"Some innocents & some assassins dead"
+			Else;
+			End;
+		End;
+		Modify Player Score(Filtered Array(All Players(All Teams), Current Array Element.Team == 1 && Current Array Element.ScoringEtc[1]),
+			-1);
+		Modify Player Score(Filtered Array(All Players(All Teams),
+			Current Array Element.Team == 2 && Current Array Element.ScoringEtc[1] && Global.Victor != 2), -1);
+		Pause Match Time;
+		All Players(All Teams).SkipStartText = True;
+		If(Global.Victor == -1);
+			Modify Player Score(Filtered Array(All Living Players(All Teams), Current Array Element.Team == 1 && (
+				Current Array Element.ScoringEtc[3] || Is Alive(Current Array Element))), 1);
+			Modify Player Score(Filtered Array(All Living Players(All Teams),
+				Current Array Element.Team == 2 && Current Array Element.ScoringEtc[2] >= 2), 1);
+			Big Message(All Players(All Teams), String("Draw"));
+		Else;
+			Big Message(Filtered Array(All Players(All Teams), Current Array Element.Team == Global.Victor), String("Victory"));
+			Big Message(Filtered Array(All Players(All Teams), Current Array Element.Team == 3 - Global.Victor), String("Defeat"));
+		End;
+		Wait(5, Ignore Condition);
+		Global.GameStage = Custom String("PreGame");
+	}
+}
+
+rule("Round Complete (Player)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.GameStage == Custom String("RoundEnd");
+	}
+
+	actions
+	{
+		Event Player.Stahppers[1] = True;
+		Enable Scoreboard(Event Player);
+	}
+}
+
+rule("Stahp (GameStart, RoundEnd, Extraction, Isolator)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Event Player.Stahppers, Current Array Element) == True;
+		Event Player.StahpStage == Null;
+	}
+
+	actions
+	{
+		Event Player.StahpStage = Custom String("Stahpping");
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Jump Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Disallow Button(Event Player, Ultimate);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Reload);
+		Event Player.StahpStage = Custom String("Stahpped");
+	}
+}
+
+rule("Match Complete")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 10;
+	}
+
+	actions
+	{
+		Enable Built-In Game Mode Announcer;
+		Enable Built-In Game Mode Music;
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Disable Melee")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Melee)) > 0.250;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Melee);
+	}
+}
+
+rule("Enable Melee")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Melee)) < 0.150;
+	}
+
+	actions
+	{
+		Allow Button(Event Player, Melee);
+	}
+}
+
+rule("Player Took Damage")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		If(Event Player.Illusionist[0] && !Event Player.Illusionist[1]);
+			Event Player.Illusionist[1] = True;
+		End;
+		If(Event Damage >= 65);
+			Event Player.Brainwashee = Null;
+		End;
+	}
+}
+
+rule("Player Died")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.Brainwashee.ScoringEtc[2] += 1;
+		If(Event Player.Team == 2);
+			Filtered Array(All Players(All Teams), Current Array Element.Team == 2).ScoringEtc[2] -= 1;
+			If(Event Player.Class == Custom String("Isolator"));
+				Call Subroutine(Clear);
+				Event Player.Isolator = Empty Array;
+			End;
+			If(Array Contains(Array(Null, Event Player), Attacker));
+				disabled Small Message(Remove From Array(All Players(All Teams), Event Player), Custom String("The assassin died"));
+			Else;
+				disabled Small Message(All Players(All Teams), Custom String("{0} killed the assassin", Attacker));
+			End;
+		End;
+		Start Forcing Player Outlines(All Players(All Teams), Event Player, False, White);
+		If(Event Player.DecoyBot);
+			Event Player.DecoyBot.Illusionist[1] = True;
+		End;
+		If(Attacker.Class == Custom String("Isolator"));
+			Heal(Attacker, Null, Max Health(Attacker));
+		End;
+		If(!Is True For Any(Remove From Array(All Living Players(All Teams), Array(Event Player, Attacker, Attacker.Illusionist[0],
+			Attacker.DecoyBot)), Is In Line of Sight(Attacker.Illusionist[0], Current Array Element, Barriers Do Not Block LOS))
+			&& Random Real(0, 1) < Distance Between(Event Player, First Of(Sorted Array(Remove From Array(All Living Players(All Teams),
+			Array(Event Player, Attacker, Attacker.Illusionist[0], Attacker.DecoyBot)), Distance Between(Event Player,
+			Current Array Element)))) / 60);
+			Start Forcing Player To Be Hero(Event Player.DecoyBot ? Attacker : Attacker.Illusionist[0], Hero Of(Event Player));
+		End;
+		Wait(1, Ignore Condition);
+		Event Player.Brainwashee = Null;
+	}
+}
+
+rule("Can Aim")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Stunned) == False;
+	}
+
+	actions
+	{
+		Event Player.CanAim = True;
+	}
+}
+
+rule("Can't Aim")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen) || Has Status(Event Player, Stunned)) == True;
+	}
+
+	actions
+	{
+		Event Player.CanAim = False;
+	}
+}
+
+rule("Player Extraction")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Portal[2] == True;
+		Distance Between(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up, Global.Portal[0] - Y Component Of(
+			Global.Portal[0]) * Up) < Global.PortalRadius;
+		Y Component Of(Position Of(Event Player) - Global.Portal[0]) < 2;
+		Y Component Of(Position Of(Event Player) - Global.Portal[0]) > -1;
+		Is Alive(Event Player) == True;
+		Global.GameStage == Custom String("Game");
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Event Player.DecoyBot);
+			Event Player.DecoyBot.Illusionist[1] = True;
+			Destroy Dummy Bot(All Teams, Slot Of(Event Player));
+		Else If(!Event Player.ScoringEtc[0]);
+			Event Player.ScoringEtc[0] = True;
+			Event Player.Stahppers[2] = True;
+			Set Status(Event Player, Null, Phased Out, 9999);
+			Wait(1, Ignore Condition);
+			Set Invisible(Event Player, All);
+			Start Camera(Event Player, Eye Position(Event Player) - 1 * Facing Direction Of(Event Player), Eye Position(Event Player), 25);
+		End;
+	}
+}
+
+rule("Extraction Portal Open & Close")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Total Time Elapsed > Global.Portal[1];
+		Global.Portal[0] != Null;
+	}
+
+	actions
+	{
+		Global.Portal[2] = True;
+		Wait(Global.ExtractionWindow, Abort When False);
+		Global.Portal[2] = False;
+		Global.Portal[0] = Null;
+	}
+}
+
+rule("New Extraction Portal")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.GameStage == Custom String("Game");
+		Global.Portal[0] == Null;
+		Global.Extraction == True;
+	}
+
+	actions
+	{
+		Start Rule(NewPortal, Restart Rule);
+	}
+}
+
+rule("New Extraction Portal (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		NewPortal;
+	}
+
+	actions
+	{
+		Abort If(!Array Contains(Array(Custom String("Game"), Custom String("GameStart")), Global.GameStage));
+		Global.Portal[2] = False;
+		All Players(All Teams).ScoringEtc[4] = Null;
+		Global.Portal2 = Empty Array;
+		Wait(Random Real(60, 90), Ignore Condition);
+		Abort If(Global.GameStage != Custom String("Game"));
+		Global.Portal[1] = Total Time Elapsed + 5 * Random Integer(6, 12);
+		Global.Portal2[0] = Random Value In Array(Filtered Array(All Living Players(All Teams), Global.TestMode ? !Is Dummy Bot(
+			Current Array Element) : Current Array Element.Team == 1));
+		Global.Portal[0] = Random Value In Array(Filtered Array(Global.PortalLocations, Distance Between(Current Array Element,
+			Global.Portal2[0]) >= 25));
+		Wait(20, Ignore Condition);
+		Abort If(Global.GameStage != Custom String("Game") || !Global.Portal[0]);
+		Global.Portal2[1] = Random Value In Array(Filtered Array(Remove From Array(All Living Players(All Teams), Global.Portal2),
+			Current Array Element.Team == 2));
+	}
+}
+
+rule("Store Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Global.Portal2, Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.ScoringEtc[4] = Custom String("Extraction Expected {0}m {1} of here in ", Round To Integer(Distance Between(
+			Global.Portal[0] - Y Component Of(Global.Portal[0]) * Up, Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up), To Nearest), Array(Custom String("east"), Custom String("north-east"), Custom String("north"), Custom String(
+			"north-west"), Custom String("west"), Custom String("south-west"), Custom String("south"), Custom String("south-east"))
+			[Round To Integer(Horizontal Angle From Direction(Global.Portal[0] - Position Of(Event Player)) / 45 + 8, To Nearest) % 8]);
+		Small Message(Event Player, Custom String("{0}{1} seconds.", Event Player.ScoringEtc[4], Round To Integer(Max(0,
+			Global.Portal[1] - Total Time Elapsed), Up)));
+	}
+}
+
+rule("Stop Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Stunner, Event Player)) == False;
+		Event Player.DecoyBot == Null;
+		(Event Player.Brainwashee.Brainwasher[3] && Event Player.Brainwashee.Brainwasher[1] == Event Player) == False;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+disabled rule("TEAM 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Player Setup (Team 1)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Team == 1;
+		Event Player.Setup[0] == 0;
+	}
+
+	actions
+	{
+		Event Player.Setup[0] = 1;
+		Event Player.Class = Null;
+		Stop Chasing Player Variable(Event Player, Power);
+		Event Player.Setup[0] = 2;
+	}
+}
+
+disabled rule("TEAM 2 (ASSASSIN)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Player Setup (Assassin) (Team 2)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Team == 2;
+		Event Player.Setup[0] == 0;
+	}
+
+	actions
+	{
+		Event Player.Setup[0] = 1;
+		Event Player.Class = Random Value In Array(Global.Classes);
+		Event Player.Power = (Round To Integer(Count Of(Filtered Array(All Players(All Teams), Current Array Element.Team == 1))
+			/ Count Of(Filtered Array(All Players(All Teams), Current Array Element.Team == 2)), Down) + 1) * 100;
+		Event Player.Isolator = Empty Array;
+		If(Event Player.Class == Custom String("Leech"));
+			Start Healing Modification(Filtered Array(Remove From Array(All Players(All Teams), Event Player), Distance Between(Event Player,
+				Current Array Element) < 8 && Is In Line of Sight(Event Player, Current Array Element, Enemy Barriers Block LOS)), All Players(
+				All Teams), Event Player.Leech[1] ? 50 : 100, Receivers Healers and Healing Percent);
+			Event Player.Leech[2] = Last Healing Modification ID;
+			Start Damage Modification(Event Player, All Players(All Teams), 100 * (Event Player.Leech[1] ? Event Player.Leech[4] : 1),
+				Receivers Damagers and Damage Percent);
+			Event Player.Leech[3] = Last Damage Modification ID;
+		Else If(Event Player.Class == Custom String("Stunner"));
+			Start Damage Modification(Filtered Array(All Players(All Teams), Has Status(Current Array Element, Asleep)), Event Player, 10,
+				Receivers and Damagers);
+		End;
+		Event Player.Setup[0] = 2;
+	}
+}
+
+rule("Out of Power")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Power == 0;
+	}
+
+	actions
+	{
+		If(Event Player.Class == Custom String("Isolator"));
+			Call Subroutine(Clear);
+			Event Player.Isolator = Empty Array;
+		Else If(Event Player.Class == Custom String("Illusionist"));
+			Event Player.Illusionist[1] = True;
+		End;
+	}
+}
+
+rule("Reminder")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Custom String("Squiddel")), Custom String("{0}", Event Player)) == True;
+		Event Player.Team == 2;
+	}
+
+	actions
+	{
+		Big Message(Event Player, Custom String("You Are The Assassin"));
+		Wait(8, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Interact click counter (A[1])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Skip If(Event Player.StartText[0], 2);
+		Event Player.Assassin[1] += 1;
+		Wait(0.900, Restart When True);
+		Event Player.Assassin[1] = 0;
+	}
+}
+
+rule("Toggle Interact Ability")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Assassin[1] >= 2;
+	}
+
+	actions
+	{
+		If(Event Player.Class == Custom String("Illusionist"));
+			If(Event Player.Illusionist[0] && Is Alive(Event Player.Illusionist[0]));
+				Event Player.Illusionist[1] = Has Status(Event Player, Hacked) || !Event Player.Power || !Event Player.Illusionist[1];
+			Else If(Event Player.Power < 40);
+				Small Message(Event Player, Custom String("Insufficient power"));
+			Else If(!Has Status(Event Player, Hacked));
+				Event Player.Power -= 40;
+				Skip If(!Event Player.Illusionist[0], 1);
+				Destroy Dummy Bot(All Teams, Slot Of(Event Player.Illusionist[0]));
+				Modify Global Variable(Bots, Append To Array, Event Player);
+			End;
+		Else If(Event Player.Class == Custom String("Classic"));
+			Event Player.Classic[1] = 1 - Event Player.Classic[1];
+		Else If(Event Player.Class == Custom String("Leech"));
+			Event Player.Leech[0] = 1 - Event Player.Leech[0];
+		Else If(Event Player.Class == Custom String("Stunner") && !Has Status(Event Player, Hacked));
+			Event Player.Stunner = Remove From Array(Players Within Radius(Event Player, 15, All Teams, Off), Event Player);
+			Start Facing(Event Player.Stunner, Direction From Angles(0, 89), 400, To Player, Direction and Turn Rate);
+			Set Status(Event Player.Stunner, Event Player, Asleep, 5);
+			Set Status(Event Player, Null, Knocked Down, 1);
+			Wait(0.500, Ignore Condition);
+			Event Player.Stunner = Empty Array;
+		Else If(Event Player.Class == Custom String("Brainwasher") && !Event Player.Brainwasher[0]);
+			If(Event Player.Power < 50);
+				Small Message(Event Player, Custom String("Insufficient power"));
+			Else If(!Has Status(Event Player, Hacked));
+				Event Player.Power -= 50;
+				Event Player.Brainwasher[0] = 1;
+			End;
+		End;
+		Event Player.Assassin[1] = 0;
+	}
+}
+
+rule("Allow Crouch Ability (A[0])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+		Speed Of(Event Player) == 0;
+		Event Player.Team == 2;
+		Has Status(Event Player, Hacked) == False;
+		Event Player.ScoringEtc[0] == False;
+	}
+
+	actions
+	{
+		Wait(3, Abort When False);
+		Event Player.Assassin[0] = 1;
+	}
+}
+
+rule("Disallow Crouch Ability")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Speed Of(Event Player) == 0 && Is Crouching(Event Player) && Event Player.Team == 2 && !Has Status(Event Player, Hacked)
+			&& !Event Player.ScoringEtc[0]) == False;
+	}
+
+	actions
+	{
+		Wait(0.500, Ignore Condition);
+		Event Player.Assassin[0] = 0;
+	}
+}
+
+disabled rule("- CLASSIC")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Start Healing (C[0])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Assassin[0] && !Event Player.Classic[0] && Event Player.Power) == True;
+		Normalized Health(Event Player) < 1;
+		Event Player.Class == Custom String("Classic");
+	}
+
+	actions
+	{
+		Event Player.Classic[0] = 1;
+		Start Heal Over Time(Event Player, Event Player, 9999, 40);
+	}
+}
+
+rule("Stop Healing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Assassin[0] && Normalized Health(Event Player) < 1 && Event Player.Power) == False;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.Classic[0]);
+		Stop All Heal Over Time(Event Player);
+		Event Player.Classic[0] = 0;
+	}
+}
+
+rule("Inactivity/Hack Enables Invisibility (C[2])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Team == 2;
+		(Array Contains(Global.Primary, Hero Of(Event Player)) ? Is Button Held(Event Player, Primary Fire) : Is Firing Primary(
+			Event Player)) == False;
+		(Array Contains(Global.Secondary, Hero Of(Event Player)) ? Is Button Held(Event Player, Secondary Fire) : Is Firing Secondary(
+			Event Player)) == False;
+		(Array Contains(Global.Ability1, Hero Of(Event Player)) ? Is Button Held(Event Player, Ability 1) : Is Using Ability 1(
+			Event Player)) == False;
+		(Array Contains(Global.Ability2, Hero Of(Event Player)) ? Is Button Held(Event Player, Ability 2) : Is Using Ability 2(
+			Event Player)) == False;
+		(Array Contains(Global.Ultimate, Hero Of(Event Player)) ? Is Button Held(Event Player, Ultimate) : Is Using Ultimate(Event Player))
+			== False;
+		Is Meleeing(Event Player) == False;
+		Has Status(Event Player, Hacked) == False;
+		Event Player.ScoringEtc[0] == False;
+	}
+
+	actions
+	{
+		Wait(0.800, Abort When False);
+		Event Player.Classic[2] = 0;
+	}
+}
+
+rule("Activity/Hack Disables Invisibility (C[2])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Classic");
+		(Event Player.Team != 2 || (Array Contains(Global.Primary, Hero Of(Event Player)) ? Is Button Held(Event Player, Primary Fire)
+			: Is Firing Primary(Event Player)) || (Array Contains(Global.Secondary, Hero Of(Event Player)) ? Is Button Held(Event Player,
+			Secondary Fire) : Is Firing Secondary(Event Player)) || (Array Contains(Global.Ability1, Hero Of(Event Player))
+			? Is Button Held(Event Player, Ability 1) : Is Using Ability 1(Event Player)) || (Array Contains(Global.Ability2, Hero Of(
+			Event Player)) ? Is Button Held(Event Player, Ability 2) : Is Using Ability 2(Event Player)) || (Array Contains(
+			Global.Ultimate, Hero Of(Event Player)) ? Is Button Held(Event Player, Ultimate) : Is Using Ultimate(Event Player))
+			|| Is Meleeing(Event Player) || Has Status(Event Player, Hacked) || Event Player.ScoringEtc[0]) == True;
+	}
+
+	actions
+	{
+		Event Player.Classic[2] = 1;
+	}
+}
+
+rule("Start \"Animation\" (T)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Classic[1] == 1;
+		(Event Player.Classic[2] || Event Player.Classic[3] || Event Player.Classic[4]) == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Event Player.Classic[3] = 1;
+		Chase Player Variable At Rate(Event Player, InvisibleCastTime, 1, 1.250, None);
+	}
+}
+
+rule("Invisibility Animation")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InvisibleCastTime > 0.750;
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), Bad Pickup Effect, Red, Position Of(Event Player) + 0.200 * Velocity Of(Event Player), 1);
+	}
+}
+
+rule("\"Animation\" Interrupted (T)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Classic[1] && !Event Player.Classic[2] && !Event Player.Classic[4] && Event Player.Power) == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Classic[3] != 1 || Event Player.Classic[4]);
+		Event Player.Classic[3] = 2;
+		Stop Chasing Player Variable(Event Player, InvisibleCastTime);
+		Event Player.InvisibleCastTime = 0;
+		Event Player.Classic[3] = 0;
+	}
+}
+
+rule("Start Invisible (C[4])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.InvisibleCastTime == 1;
+	}
+
+	actions
+	{
+		Event Player.Classic[4] = 1;
+		Stop Chasing Player Variable(Event Player, InvisibleCastTime);
+		Set Invisible(Event Player, All);
+		Set Move Speed(Event Player, 115);
+		Set Jump Vertical Speed(Event Player, 115);
+		Event Player.Classic[3] = 0;
+	}
+}
+
+rule("Stop Invisible (C[4])")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Classic[3] == 0;
+		Event Player.Classic[4] == 1;
+		(Event Player.Classic[1] && Event Player.Power && !Event Player.Classic[2]) == False;
+	}
+
+	actions
+	{
+		Event Player.Classic[3] = 2;
+		Event Player.Classic[4] = 0;
+		Set Move Speed(Event Player, 100);
+		Set Jump Vertical Speed(Event Player, 100);
+		Set Invisible(Event Player, None);
+		Event Player.InvisibleCastTime = 0;
+		Event Player.Classic[3] = 0;
+	}
+}
+
+disabled rule("- ILLUSIONIST")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Unset TP pos")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == True;
+		(Event Player.Illusionist[0] && !Event Player.Illusionist[1]) == True;
+	}
+
+	actions
+	{
+		Event Player.Illusionist[8] = Null;
+	}
+}
+
+rule("Set Teleport Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == False;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.Illusionist[0]);
+		Abort If(!Event Player.Illusionist[9]);
+		Event Player.Illusionist[8] = Event Player.Illusionist[9];
+	}
+}
+
+rule("Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Illusionist");
+		Event Player.Assassin[0] == 1;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.Illusionist[8]);
+		If(Event Player.Power < 40);
+			Small Message(Event Player, Custom String("Insufficient power"));
+		Else;
+			Event Player.Power -= 40;
+			Teleport(Event Player, Event Player.Illusionist[8]);
+			Wait(0.400, Ignore Condition);
+			Event Player.Illusionist[8] = Null;
+		End;
+	}
+}
+
+rule("Decouple when hacked/extraction")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Has Status(Event Player, Hacked) || Event Player.ScoringEtc[0]) == True;
+	}
+
+	actions
+	{
+		If(Event Player.Illusionist[0]);
+			Event Player.Illusionist[1] = True;
+		End;
+	}
+}
+
+rule("Hello")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Hello) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Illusionist[1]);
+		Communicate(Event Player.Illusionist[0], Hello);
+	}
+}
+
+rule("Thanks")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Thanks) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Illusionist[1]);
+		Communicate(Event Player.Illusionist[0], Thanks);
+	}
+}
+
+rule("Yes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Yes) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Illusionist[1]);
+		Communicate(Event Player.Illusionist[0], Yes);
+	}
+}
+
+rule("No")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, No) == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Custom String("no"));
+		Abort If(Event Player.Illusionist[1]);
+		Communicate(Event Player.Illusionist[0], No);
+	}
+}
+
+rule("Couple Bot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Illusionist[0] != Null;
+		Has Spawned(Event Player.Illusionist[0]) == True;
+		Event Player.Illusionist[1] == False;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Up, -2 * 1 * 9 * Vertical Speed Of(Event Player) - 9 ^ 2 * (Altitude Of(Event Player) - 0.500),
+			20, To World, Direction Rate and Max Speed);
+		Set Crouch Enabled(Event Player, False);
+		Set Jump Enabled(Event Player, False);
+		Event Player.Illusionist[2] = Horizontal Facing Angle Of(Event Player.Illusionist[0]) - Horizontal Facing Angle Of(Event Player);
+		Set Move Speed(Event Player, 0);
+		Set Jump Vertical Speed(Event Player, 0);
+		Start Throttle In Direction(Event Player.Illusionist[0], Throttle Of(Event Player), Event Player.Power ? Square Root(Dot Product(
+			Throttle Of(Event Player), Throttle Of(Event Player))) : 0, To Player, Replace existing throttle, Direction and Magnitude);
+		Start Camera(Event Player, Eye Position(Event Player.Illusionist[0]) + (Is Button Held(Event Player, Ultimate) ? 1 : -2)
+			* Facing Direction Of(Event Player.Illusionist[0]), Eye Position(Event Player.Illusionist[0]) + 2 * Facing Direction Of(
+			Event Player.Illusionist[0]), 20);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Set Reload Enabled(Event Player, False);
+		Set Ultimate Charge(Event Player.Illusionist[0], Ultimate Charge Percent(Event Player));
+		Cancel Primary Action(Event Player);
+		Set Ultimate Ability Enabled(Event Player, False);
+		While(Event Player.Illusionist[0] && !Event Player.Illusionist[1]);
+			Event Player.Illusionist[9] = Ray Cast Hit Position(Eye Position(Event Player.Illusionist[0]) + Facing Direction Of(
+				Event Player.Illusionist[0]), Eye Position(Event Player.Illusionist[0]) + 12 * Facing Direction Of(
+				Event Player.Illusionist[0]), Empty Array, Empty Array, False);
+			Wait(0.016, Ignore Condition);
+		End;
+		Event Player.Illusionist[9] = Null;
+	}
+}
+
+rule("Coupled Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Stunner, Event Player)) == False;
+		Event Player.DecoyBot.Illusionist[1] == False;
+		Event Player.DecoyBot != Null;
+		Event Player.Brainwashee.Brainwasher[1] != Event Player;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player.DecoyBot)
+			+ Event Player.DecoyBot.Illusionist[2], Vertical Facing Angle Of(Event Player.DecoyBot)),
+			Event Player.DecoyBot.Power && Event Player.CanAim ? 1000 : 0, To World, Direction and Turn Rate);
+	}
+}
+
+rule("Decouple Bot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(!Event Player.Illusionist[0] || Event Player.Illusionist[1]) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Set Jump Vertical Speed(Event Player, 100);
+		Stop Accelerating(Event Player);
+		Set Crouch Enabled(Event Player, True);
+		Set Jump Enabled(Event Player, True);
+		Stop Camera(Event Player);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Melee Enabled(Event Player, True);
+		Set Reload Enabled(Event Player, True);
+		Abort If(!Event Player.Illusionist[0]);
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player.Illusionist[0]));
+		Start Throttle In Direction(Event Player.Illusionist[0], World Vector Of(Direction From Angles(45 * Event Player.Illusionist[7],
+			0), Event Player.Illusionist[0], Rotation), Event Player.Power ? Event Player.Illusionist[3] : 0, To World,
+			Replace existing throttle, Direction and Magnitude);
+		Stop Holding Button(Event Player.Illusionist[0], Primary Fire);
+		Stop Holding Button(Event Player.Illusionist[0], Secondary Fire);
+		Stop Holding Button(Event Player.Illusionist[0], Ability 1);
+		Stop Holding Button(Event Player.Illusionist[0], Ability 2);
+		Stop Holding Button(Event Player.Illusionist[0], Melee);
+		Stop Holding Button(Event Player.Illusionist[0], Reload);
+		Stop Holding Button(Event Player.Illusionist[0], Jump);
+		Stop Holding Button(Event Player.Illusionist[0], Crouch);
+		While(Event Player.Illusionist[1]);
+			Event Player.Illusionist[3] = Random Real(0, 1) < (Is True For Any(Remove From Array(All Living Players(All Teams), Array(
+				Event Player, Event Player.Illusionist[0])), Is In Line of Sight(Event Player.Illusionist[0], Current Array Element,
+				Barriers Do Not Block LOS)) ? 0.900 : 0.200) ? 1 : 0;
+			Event Player.Illusionist[4] = Distance Between(Event Player.Illusionist[0], First Of(Sorted Array(Remove From Array(
+				All Living Players(All Teams), Array(Event Player, Event Player.Illusionist[0])), Distance Between(Event Player.Illusionist[0],
+				Current Array Element))));
+			Event Player.Weights = Mapped Array(Array(0, 1, 2, 3, 4, 5, 6, 7), 45 * Current Array Element);
+			Event Player.Walls = Mapped Array(Event Player.Weights, Distance Between(World Vector Of(Up, Event Player.Illusionist[0],
+				Rotation And Translation), Ray Cast Hit Position(World Vector Of(Up, Event Player.Illusionist[0], Rotation And Translation),
+				World Vector Of(Up + 5 * Direction From Angles(Current Array Element, 0), Event Player.Illusionist[0],
+				Rotation And Translation), Null, Null, False)));
+			Event Player.Walls = Mapped Array(Event Player.Walls, Current Array Element > 1.600);
+			If(Event Player.Illusionist[4] < 3);
+				Event Player.Illusionist[5] = Event Player.Illusionist[4] / 3;
+				Event Player.Weights = Mapped Array(Event Player.Weights, 1 + Cosine From Degrees(Current Array Element));
+			Else If(Event Player.Illusionist[4] > 10);
+				Event Player.Illusionist[5] = 1 / (Event Player.Illusionist[4] - 9);
+				Event Player.Weights = Mapped Array(Event Player.Weights, 1 - Cosine From Degrees(Current Array Element));
+			Else;
+				Event Player.Illusionist[5] = 1;
+				Event Player.Weights = Array(1, 1, 1, 1, 1, 1, 1, 1);
+			End;
+			Event Player.Weights = Mapped Array(Event Player.Weights, Event Player.Walls[Current Array Index] ? Round To Integer((
+				Current Array Element - 2) / ((2 - 1 / Event Player.Illusionist[5]) / Event Player.Illusionist[5] * Current Array Element - 2)
+				* 100, To Nearest) * 0.010 : 0);
+			For Player Variable(Event Player, k, 1, 8, 1);
+				Event Player.Weights[Event Player.k] += Event Player.Weights[Event Player.k - 1];
+			End;
+			If(Last Of(Event Player.Weights) == 0);
+				Event Player.Illusionist[3] = 0;
+			Else;
+				Event Player.Illusionist[6] = Random Real(0, Last Of(Event Player.Weights));
+				For Player Variable(Event Player, k, 0, 8, 1);
+					If(Event Player.Illusionist[6] <= Event Player.Weights[Event Player.k]);
+						Break;
+					End;
+				End;
+				Event Player.Illusionist[7] = Event Player.k;
+			End;
+			Wait(Random Real(0.200, Event Player.Illusionist[3] ? 0.300 : 5), Abort When False);
+		End;
+	}
+}
+
+rule("Decoupled Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Stunner, Event Player)) == False;
+		Event Player.DecoyBot.Illusionist[1] == True;
+		Event Player.Brainwashee.Brainwasher[1] != Event Player;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Vector Towards(Event Player, First Of(Sorted Array(Remove From Array(All Players(All Teams), Array(
+			Event Player, Event Player.DecoyBot)), Distance Between(Current Array Element, Event Player)))),
+			Event Player.DecoyBot.Power && Event Player.CanAim ? 120 : 0, To World, Direction and Turn Rate);
+	}
+}
+
+rule("Primary Fire On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Primary Fire);
+	}
+}
+
+rule("Primary Fire Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Primary Fire) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Primary Fire);
+	}
+}
+
+rule("Secondary Fire On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Secondary Fire);
+	}
+}
+
+rule("Secondary Fire Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Secondary Fire) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Secondary Fire);
+	}
+}
+
+rule("Ability 1 On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Ability 1);
+	}
+}
+
+rule("Ability 1 Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Ability 1) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Ability 1);
+	}
+}
+
+rule("Ability 2 On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 2) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Ability 2);
+	}
+}
+
+rule("Ability 2 Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Ability 2) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Ability 2);
+	}
+}
+
+rule("Melee On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Melee) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Melee);
+	}
+}
+
+rule("Melee Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Melee) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Melee);
+	}
+}
+
+rule("Reload On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Reload) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Reload);
+	}
+}
+
+rule("Reload Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Reload) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Reload);
+	}
+}
+
+rule("Jump On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Jump);
+	}
+}
+
+rule("Jump Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Jump) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Jump);
+	}
+}
+
+rule("Crouch On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Crouch) == True;
+		Event Player.Illusionist[1] == False;
+		Event Player.Power > 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Illusionist[0], Crouch);
+	}
+}
+
+rule("Crouch Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Button Held(Event Player, Crouch) && Event Player.Power > 0) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Illusionist[0], Crouch);
+	}
+}
+
+disabled rule("- ISOLATOR")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Active")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Active[1] || Is Button Held(Event Player, Primary Fire) || Is Button Held(Event Player, Secondary Fire)
+			|| Is Button Held(Event Player, Ability 1) || Is Button Held(Event Player, Ability 2) || Is Button Held(Event Player, Ultimate)
+			|| Is Button Held(Event Player, Jump) || Is Button Held(Event Player, Crouch) || Is Button Held(Event Player, Interact)
+			|| Is Button Held(Event Player, Melee) || Is Button Held(Event Player, Reload) || Throttle Of(Event Player) != Vector(0, 0, 0))
+			== True;
+	}
+
+	actions
+	{
+		Event Player.Active[0] = True;
+	}
+}
+
+rule("Inactive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Active[1] || Is Button Held(Event Player, Primary Fire) || Is Button Held(Event Player, Secondary Fire)
+			|| Is Button Held(Event Player, Ability 1) || Is Button Held(Event Player, Ability 2) || Is Button Held(Event Player, Ultimate)
+			|| Is Button Held(Event Player, Jump) || Is Button Held(Event Player, Crouch) || Is Button Held(Event Player, Interact)
+			|| Is Button Held(Event Player, Melee) || Is Button Held(Event Player, Reload) || Throttle Of(Event Player) != Vector(0, 0, 0))
+			== False;
+	}
+
+	actions
+	{
+		Event Player.Active[0] = False;
+	}
+}
+
+rule("Add To Isolator Array")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		((Hero Of(Event Player) != Hero(Brigitte) && Event Ability == Button(Melee)) || (Event Ability == Button(Primary Fire)
+			&& Array Contains(Array(Hero Of(Event Player) == Hero(Reinhardt), Hero Of(Event Player) == Hero(Brigitte)
+			&& Is Firing Secondary(Event Player), Hero Of(Event Player) == Hero(Torbjörn) && Is In Alternate Form(Event Player)), True)))
+			== True;
+		Event Player.Class == Custom String("Isolator");
+	}
+
+	actions
+	{
+		Abort If(Has Status(Event Player, Hacked));
+		Abort If(Event Player.Power <= 0);
+		If(!Array Contains(Event Player.Isolator, Victim));
+			If(Count Of(Event Player.Isolator) >= 2);
+				Clear Status(Event Player.Isolator, Phased Out);
+				Event Player.Isolator = Empty Array;
+			End;
+			Modify Player Variable(Event Player, Isolator, Append To Array, Victim);
+		End;
+	}
+}
+
+rule("Track Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Current Array Element.Class == Custom String("Isolator")) == True;
+	}
+
+	actions
+	{
+		Event Player.Active[1] = Facing Direction Of(Event Player) != Event Player.Facing;
+		Event Player.Facing = Facing Direction Of(Event Player);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("All Inactive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Isolator");
+		(Count Of(Event Player.Isolator) < 2 || !Is True For Any(Event Player.Isolator, Current Array Element.Active[0])) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Clear);
+	}
+}
+
+rule("One Active")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Isolator");
+		Is True For Any(Event Player.Isolator, Current Array Element.Active[0]) == True;
+		Count Of(Event Player.Isolator) >= 2;
+	}
+
+	actions
+	{
+		Event Player.ActiveIndex = Index Of Array Value(Event Player.Isolator, Random Value In Array(Filtered Array(Event Player.Isolator,
+			Current Array Element.Active[0])));
+		Set Status(Remove From Array(Event Player.Isolator, Event Player.Isolator[Event Player.ActiveIndex]), Event Player, Phased Out,
+			9999);
+	}
+}
+
+rule("Update Isolator Array")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Isolator");
+		Is True For All(Event Player.Isolator, Array Contains(All Living Players(All Teams), Current Array Element)) == False;
+	}
+
+	actions
+	{
+		If(Is True For Any(Event Player.Isolator, Is Dead(Current Array Element)));
+			Call Subroutine(Clear);
+			Event Player.Isolator = Empty Array;
+		Else;
+			Event Player.Isolator = Filtered Array(Event Player.Isolator, Array Contains(All Living Players(All Teams),
+				Current Array Element));
+		End;
+	}
+}
+
+rule("Isolator Clear")
+{
+	event
+	{
+		Subroutine;
+		Clear;
+	}
+
+	actions
+	{
+		Clear Status(Event Player.Isolator, Phased Out);
+		Event Player.ActiveIndex = -1;
+	}
+}
+
+rule("iSOLATOR sTAHP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Isolator, Event Player)
+			&& Current Array Element.ActiveIndex != -1 && Current Array Element.Isolator[Current Array Element.ActiveIndex] != Event Player)
+			== True;
+	}
+
+	actions
+	{
+		Event Player.Stahppers[3] = True;
+	}
+}
+
+rule("iSOLATOR rELEASE")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Isolator, Event Player)
+			&& Current Array Element.ActiveIndex != -1 && Current Array Element.Isolator[Current Array Element.ActiveIndex] != Event Player)
+			== False;
+	}
+
+	actions
+	{
+		Event Player.Stahppers[3] = False;
+	}
+}
+
+disabled rule("- LEECH")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Leech heal")
+{
+	event
+	{
+		Player Received Healing;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Filtered Array(All Players(All Teams), Distance Between(Current Array Element, Event Player) < 8 && Is In Line of Sight(
+			Current Array Element, Event Player, Enemy Barriers Block LOS) && Current Array Element.Leech[1]), Null, Event Healing);
+	}
+}
+
+rule("Leech damage")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Leech[1] == True;
+	}
+
+	actions
+	{
+		Event Player.Leech2 = Remove From Array(Filtered Array(All Players(All Teams), Distance Between(Event Player,
+			Current Array Element) < 8 && Is In Line of Sight(Event Player, Current Array Element, Enemy Barriers Block LOS)),
+			Event Player);
+		For Player Variable(Event Player, k, 0, Count Of(Event Player.Leech2), 1);
+			Damage(Event Player.Leech2[Event Player.k], Event Player, Min(1, Max Health(Event Player.Leech2[Event Player.k]) / Max Health(
+				Event Player)) * Event Damage);
+		End;
+	}
+}
+
+rule("Leech self damage %")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Leech[1] == True;
+	}
+
+	actions
+	{
+		Event Player.Leech3 = Mapped Array(Remove From Array(Filtered Array(All Players(All Teams), Distance Between(Event Player,
+			Current Array Element) < 8 && Is In Line of Sight(Event Player, Current Array Element, Enemy Barriers Block LOS)),
+			Event Player), Min(1, Max Health(Current Array Element) / Max Health(Event Player)));
+		While(Count Of(Event Player.Leech3) > 1);
+			Event Player.Leech3[1] += First Of(Event Player.Leech3);
+			Modify Player Variable(Event Player, Leech3, Remove From Array By Index, 0);
+		End;
+		Event Player.Leech[4] = 1 / (1 + First Of(Event Player.Leech3));
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Leech on")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Power > 0;
+		Has Status(Event Player, Hacked) == False;
+		Is Alive(Event Player) == True;
+		Event Player.Leech[0] == 1;
+		Event Player.ScoringEtc[0] == False;
+	}
+
+	actions
+	{
+		Event Player.Leech[1] = True;
+	}
+}
+
+rule("Leech off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Leech");
+		(Event Player.Power && !Has Status(Event Player, Hacked) && !Event Player.ScoringEtc[0] && Is Alive(Event Player)
+			&& Event Player.Leech[0]) == False;
+	}
+
+	actions
+	{
+		Event Player.Leech[1] = False;
+	}
+}
+
+disabled rule("Rule 112")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Stunner");
+		Ability Cooldown(Event Player, Button(Ability 1)) != 0;
+	}
+
+	actions
+	{
+		Set Ability Cooldown(Event Player, Button(Ability 1), 0);
+	}
+}
+
+disabled rule("Rule 112")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Class == Custom String("Stunner");
+		Ability Cooldown(Event Player, Button(Ability 2)) != 0;
+	}
+
+	actions
+	{
+		Set Ability Cooldown(Event Player, Button(Ability 2), 0);
+	}
+}
+
+disabled rule("- BRAINWASHER")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Brainwasher Init Window")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwasher[0] > 0;
+		Global.GameStage == Custom String("Game");
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Event Player.Brainwasher[0] = 2;
+		Wait(5, Abort When False);
+		Event Player.Brainwasher[0] = 0;
+	}
+}
+
+rule("Choose New Brainwasher On Voice Line")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Global.TestMode ? Is Button Held(Host Player, Ultimate) : Is Communicating Any Voice line(Event Player)) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.StartText[0]);
+		Abort If(Is Dead(Event Player));
+		Modify Player Variable(Event Player, Brainwashee, Append To Array, Randomized Array(Filtered Array(Remove From Array(
+			Players Within Radius(Event Player, 35, All Teams, Off), Event Player), Current Array Element.Brainwasher[0] == 2)));
+		Start Rule(NewBrainwasher, Restart Rule);
+	}
+}
+
+rule("Choose New Brainwasher On Hello")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Hello) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.StartText[0]);
+		Abort If(Is Dead(Event Player));
+		Modify Player Variable(Event Player, Brainwashee, Append To Array, Randomized Array(Filtered Array(Remove From Array(
+			Players Within Radius(Event Player, 35, All Teams, Off), Event Player),
+			Current Array Element.Brainwasher[0] == 2 && Is Communicating(Current Array Element, Hello))));
+		Start Rule(NewBrainwasher, Restart Rule);
+	}
+}
+
+rule("New Brainwasher Sub")
+{
+	event
+	{
+		Subroutine;
+		NewBrainwasher;
+	}
+
+	actions
+	{
+		If(Last Of(Remove From Array(Event Player.Brainwashee, Null)) != First Of(Event Player.Brainwashee));
+			Small Message(Last Of(Remove From Array(Event Player.Brainwashee, Null)), Custom String("Connection established with {0} {1}",
+				Hero Icon String(Hero Of(Event Player)), Event Player));
+		End;
+		Event Player.Brainwashee = Last Of(Remove From Array(Event Player.Brainwashee, Null));
+	}
+}
+
+rule("Choose Target To Direct")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwashee != Null;
+		Angle Between Vectors(Facing Direction Of(Event Player.Brainwashee), Eye Position(Event Player) - Eye Position(
+			Event Player.Brainwashee)) < Arctangent In Degrees(2, Distance Between(Event Player, Event Player.Brainwashee));
+		Event Player.Brainwashee.Brainwasher[1] == Null;
+		Is Alive(Event Player) == True;
+		Is In Line of Sight(Event Player.Brainwashee, Event Player, Enemy Barriers Block LOS) == True;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Event Player.Brainwashee.Brainwasher[1] = Event Player;
+	}
+}
+
+rule("Set Target Position & Go")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwasher[1] != Null;
+	}
+
+	actions
+	{
+		Event Player.Brainwasher[2] = Position Of(Event Player.Brainwasher[1]) + Dot Product(Facing Direction Of(Event Player),
+			Cross Product(World Vector Of(Left, Event Player, Rotation), Vector Towards(Event Player.Brainwasher[1], Eye Position(
+			Event Player)))) / (Z Component Of(Facing Direction Of(Event Player)) * X Component Of(World Vector Of(Left, Event Player,
+			Rotation)) - X Component Of(Facing Direction Of(Event Player)) * Z Component Of(World Vector Of(Left, Event Player, Rotation)))
+			* Up;
+		Small Message(Event Player.Brainwasher[1], Custom String("Command incoming from {0}", Hero Icon String(Hero Of(Event Player))));
+		Wait(0.650, Abort When False);
+		Event Player.Brainwasher[3] = Position Of(Event Player) + Y Component Of(Vector Towards(Event Player, Event Player.Brainwasher[2]))
+			* Up + (Facing Direction Of(Event Player) - Y Component Of(Facing Direction Of(Event Player)) * Up) * Mapped Array((
+			Y Component Of(Event Player.Brainwasher[2]) - Y Component Of(Eye Position(Event Player))) / Y Component Of(Facing Direction Of(
+			Event Player)), Current Array Element >= 0 ? Current Array Element : (Vertical Facing Angle Of(Event Player) * Y Component Of(
+			Vector Towards(Eye Position(Event Player), Event Player.Brainwasher[1])) > 0 ? 100 / Square Root(1 - Absolute Value(
+			Y Component Of(Facing Direction Of(Event Player))) ^ 2) : 0));
+		Wait(Angle Between Vectors(Facing Direction Of(Event Player.Brainwasher[1]), Vector Towards(Event Player.Brainwasher[2],
+			Event Player.Brainwasher[3])) / 720, Abort When False);
+		Start Forcing Throttle(Event Player.Brainwasher[1], 1, 1, 0, 0, 0, 0);
+		Wait(Distance Between(Event Player.Brainwasher[2], Event Player.Brainwasher[3]) / 5.500, Abort When False);
+		Event Player.Brainwasher[1] = Null;
+		Event Player.Brainwasher[3] = Null;
+	}
+}
+
+rule("Command End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwasher[1] != Null;
+		(First Of(Event Player.Brainwasher[1].Brainwashee) != Event Player || Is Communicating(Event Player, No)) == True;
+	}
+
+	actions
+	{
+		Event Player.Brainwasher[1] = Null;
+		Event Player.Brainwasher[3] = Null;
+	}
+}
+
+rule("End on Stun")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Stunned) == True;
+	}
+
+	actions
+	{
+		Event Player.Brainwashee = Null;
+	}
+}
+
+rule("Command End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwashee.Brainwasher[1] != Event Player;
+	}
+
+	actions
+	{
+		If(Event Player.Brainwashee);
+			Start Forcing Throttle(Event Player, 0, 0.100, 0, 0.100, 0, 0.100);
+		Else;
+			Stop Forcing Throttle(Event Player);
+		End;
+	}
+}
+
+rule("Brainwashee Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Array Contains(Current Array Element.Stunner, Event Player)) == False;
+		Event Player.Brainwashee.Brainwasher[3] != Null;
+		Event Player.Brainwashee.Brainwasher[1] == Event Player;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Vector Towards(Event Player.Brainwashee.Brainwasher[2], Event Player.Brainwashee.Brainwasher[3]), 720,
+			To World, Direction and Turn Rate);
+	}
+}
+
+rule("Connection End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwashee == Null;
+	}
+
+	actions
+	{
+		Set Aim Speed(Event Player, 100);
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Connection Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Brainwashee != Null;
+	}
+
+	actions
+	{
+		Set Aim Speed(Event Player, 10);
+		Start Forcing Throttle(Event Player, 0, 0.100, 0, 0.100, 0, 0.100);
+	}
+}

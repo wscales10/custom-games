@@ -1,0 +1,861 @@
+settings
+{
+	main
+	{
+		Description: "The best version of deathmatch!"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Team 1 Players: 1
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hollywood
+				King's Row
+				Paris
+				Petra
+			}
+		}
+
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hollywood
+				King's Row
+				Paris
+				Petra
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 80%
+			Damage Received: 125%
+
+			Ana
+			{
+				Sleep Dart: Off
+			}
+
+			Ashe
+			{
+				Coach Gun Knockback Scalar Enemy: 0%
+				Ultimate Ability B.O.B.: Off
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 0%
+			}
+
+			Brigitte
+			{
+				Shield Bash: Off
+				Whip Shot: Off
+			}
+
+			D.Va
+			{
+				Boosters Knockback Scalar: 0%
+				Call Mech Knockback Scalar: 0%
+				Self Destruct Knockback Scalar: 0%
+			}
+
+			Doomfist
+			{
+				Meteor Strike Knockback Scalar: 0%
+				Rising Uppercut Knockback Scalar: 0%
+				Rocket Punch: Off
+				Rocket Punch Knockback Scalar: 0%
+				Seismic Slam: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 0%
+				Frag Launcher Knockback Scalar: 0%
+				Steel Trap: Off
+			}
+
+			Lúcio
+			{
+				Soundwave Knockback Scalar: 0%
+			}
+
+			McCree
+			{
+				Flashbang: Off
+			}
+
+			Mei
+			{
+				Blizzard Freeze Minimum: 0%
+				Blizzard Freeze Rate Scalar: 0%
+				Weapon Freeze Minimum: 0%
+				Weapon Freeze Rate Scalar: 0%
+			}
+
+			Orisa
+			{
+				Fortify: Off
+				Halt!: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Rocket Launcher Knockback Scalar: 0%
+			}
+
+			Reinhardt
+			{
+				Healing Received: 500%
+			}
+
+			Roadhog
+			{
+				Chain Hook: Off
+				Whole Hog Knockback Scalar: 0%
+			}
+
+			Sigma
+			{
+				Accretion: Off
+				Primary Fire: Off
+				Ultimate Ability Gravitic Flux: Off
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 0%
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Ultimate Ability EMP: Off
+			}
+
+			Symmetra
+			{
+				Sentry Turret: Off
+			}
+
+			Winston
+			{
+				Jump Pack Knockback Scalar: 0%
+				Ultimate Ability Primal Rage: Off
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 0%
+				Minefield Knockback Scalar: 0%
+			}
+
+			Zarya
+			{
+				Particle Cannon Secondary Knockback Scalar: 0%
+				Ultimate Ability Graviton Surge: Off
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		12: SpeedScalar
+		17: PlayerRadius
+
+	player:
+		0: Players
+		1: Lambdas
+		2: ClearTarget
+		3: Discriminant
+		4: CurrentElement
+		6: IsTargeting
+		8: Index
+		11: Lambda
+		12: ShieldSpeed
+		13: CrouchSpeed
+		14: BackSpeed
+		15: Position
+		18: ScalarProduct
+		19: Target
+		21: Vector
+		22: Walkable
+}
+
+subroutines
+{
+	0: SpeedRoutine
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+		Set Global Variable(SpeedScalar, 1);
+		Set Global Variable(PlayerRadius, 1.500);
+	}
+}
+
+rule("Quick Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Host Player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(And(Compare(Current Game Mode, ==, Game Mode(Deathmatch)), Compare(Event Player, ==, Host Player)), Compare(Team Of(
+			Event Player), ==, Team 1)) == True;
+	}
+
+	actions
+	{
+		Reset Player Hero Availability(Event Player);
+	}
+}
+
+rule("Other Players")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		And(Compare(Current Game Mode, ==, Game Mode(Deathmatch)), Compare(Event Player, ==, Host Player)) == False;
+		Team Of(Event Player) != Team 1;
+	}
+
+	actions
+	{
+		Set Player Allowed Heroes(Event Player, Remove From Array(All Heroes, Hero(Reinhardt)));
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Icon(Filtered Array(Event Player, Compare(Player Variable(Event Player, Target), !=, Null)), Player Variable(Event Player,
+			Target), Skull, Visible To and Position, Red, True);
+		Create Icon(Filtered Array(Event Player, And(Compare(Player Variable(Event Player, Target), ==, Null), Compare(Player Variable(
+			Event Player, Position), !=, Null))), Player Variable(Event Player, Position), X, Visible To and Position, Red, True);
+		Create Icon(Filtered Array(Event Player, And(And(Is Using Ability 1(Event Player), Compare(Player Variable(Event Player, Position),
+			!=, Null)), Compare(Absolute Value(Subtract(46, Horizontal Angle Towards(Event Player, Player Variable(Event Player,
+			Position)))), <, 44))), World Vector Of(Left, Event Player, Rotation And Translation), Arrow: Left, Visible To and Position,
+			White, True);
+		Create Icon(Filtered Array(Event Player, And(And(Is Using Ability 1(Event Player), Compare(Player Variable(Event Player, Position),
+			!=, Null)), Compare(Absolute Value(Add(46, Horizontal Angle Towards(Event Player, Player Variable(Event Player, Position)))),
+			<, 44))), World Vector Of(Right, Event Player, Rotation And Translation), Arrow: Right, Visible To and Position, White, True);
+	}
+}
+
+rule("Not Reinhardt Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Set Player Variable(Event Player, Target, Null);
+		Set Player Variable(Event Player, Position, Null);
+	}
+}
+
+rule("Elimination")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
+
+rule("Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Attacker == Null;
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, -1);
+	}
+}
+
+rule("Shield Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, ShieldSpeed, Divide(1, 0.700));
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("No Shield Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, ShieldSpeed, 1);
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Crouch Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, BackSpeed, 1);
+		Set Player Variable(Event Player, CrouchSpeed, Divide(5.500, 3));
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("No Crouch Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, CrouchSpeed, 1);
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Back Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) == -1;
+		X Component Of(Throttle Of(Event Player)) == 0;
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, BackSpeed, Divide(5.500, 4.950));
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("MidBackSpeed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) == -1;
+		Absolute Value(X Component Of(Throttle Of(Event Player))) == 1;
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, BackSpeed, Divide(5.500, 5.130));
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Back Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) >= 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, BackSpeed, 1);
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Reinhardt Launch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.600, Ignore Condition);
+		Skip If(Compare(Player Variable(Event Player, Target), ==, Null), 1);
+		Set Player Variable(Event Player, Position, Add(Position Of(Player Variable(Event Player, Target)), Multiply(1.500,
+			Direction From Angles(Horizontal Angle From Direction(Direction Towards(Player Variable(Event Player, Target), Event Player)),
+			0))));
+		Apply Impulse(Event Player, Up, Add(Multiply(Divide(0.530, Global Variable(SpeedScalar)), Multiply(Distance Between(Event Player,
+			Player Variable(Event Player, Position)), Cosine From Degrees(Multiply(-1, Vertical Angle Towards(Event Player,
+			Player Variable(Event Player, Position)))))), Multiply(Multiply(16.500, Global Variable(SpeedScalar)), Tangent From Degrees(
+			Multiply(-1, Vertical Angle Towards(Event Player, Player Variable(Event Player, Position)))))), To World,
+			Cancel Contrary Motion);
+		Big Message(Player Variable(Event Player, Target), String("Incoming", Null, Null, Null));
+	}
+}
+
+rule("Reinhardt Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Abort If(Player Variable(Event Player, IsTargeting));
+		Set Player Variable(Event Player, IsTargeting, True);
+		Set Player Variable(Event Player, Target, Ray Cast Hit Player(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			1000, Facing Direction Of(Event Player))), All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, False));
+		If(Compare(Player Variable(Event Player, Target), ==, Null));
+			Set Player Variable(Event Player, Players, Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))),
+				Event Player));
+			Set Player Variable(Event Player, Lambdas, Empty Array);
+			For Player Variable(Event Player, Index, 0, Count Of(Player Variable(Event Player, Players)), 1);
+				Call Subroutine(Sub1);
+			End;
+			Set Player Variable(Event Player, Target, First Of(Sorted Array(Player Variable(Event Player, Players), Value In Array(
+				Player Variable(Event Player, Lambdas), Index Of Array Value(Player Variable(Event Player, Players),
+				Current Array Element)))));
+			If(Compare(Player Variable(Event Player, Target), ==, Null));
+				Set Player Variable(Event Player, Position, Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player),
+					Multiply(1000, Facing Direction Of(Event Player))), Null, Null, False));
+				Set Player Variable(Event Player, Walkable, Nearest Walkable Position(Player Variable(Event Player, Position)));
+				"Empty Array check for bug workaround"
+				If(And(Compare(Player Variable(Event Player, Walkable), !=, Empty Array), Compare(Distance Between(Player Variable(Event Player,
+					Position), Player Variable(Event Player, Walkable)), <=, 1)));
+					Set Player Variable(Event Player, Position, Nearest Walkable Position(Player Variable(Event Player, Position)));
+				End;
+			End;
+		End;
+		Set Player Variable(Event Player, IsTargeting, False);
+		Wait(3, Abort When False);
+		Set Player Variable(Event Player, Position, Null);
+		Set Player Variable(Event Player, Target, Null);
+	}
+}
+
+rule("Loop Inner")
+{
+	event
+	{
+		Subroutine;
+		Sub1;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, CurrentElement, Value In Array(Player Variable(Event Player, Players), Player Variable(
+			Event Player, Index)));
+		Set Player Variable(Event Player, Vector, Vector Towards(Eye Position(Event Player), Divide(Add(Eye Position(Player Variable(
+			Event Player, CurrentElement)), Position Of(Player Variable(Event Player, CurrentElement))), 2)));
+		Set Player Variable(Event Player, ScalarProduct, Dot Product(Facing Direction Of(Event Player), Player Variable(Event Player,
+			Vector)));
+		Set Player Variable(Event Player, Discriminant, Add(Raise To Power(Player Variable(Event Player, ScalarProduct), 2), Subtract(
+			Raise To Power(Global Variable(PlayerRadius), 2), Dot Product(Player Variable(Event Player, Vector), Player Variable(
+			Event Player, Vector)))));
+		If(Compare(Player Variable(Event Player, Discriminant), >=, 0));
+			Modify Player Variable(Event Player, Discriminant, Raise To Power, 0.500);
+			If(Compare(Add(Player Variable(Event Player, ScalarProduct), Player Variable(Event Player, Discriminant)), >=, 0));
+				Set Player Variable(Event Player, Lambda, Add(Player Variable(Event Player, ScalarProduct), Multiply(Divide(Absolute Value(
+					Subtract(Player Variable(Event Player, Discriminant), Player Variable(Event Player, ScalarProduct))), Subtract(Player Variable(
+					Event Player, Discriminant), Player Variable(Event Player, ScalarProduct))), Player Variable(Event Player, Discriminant))));
+				If(Compare(Distance Between(Add(Eye Position(Event Player), Multiply(Player Variable(Event Player, Lambda), Facing Direction Of(
+					Event Player))), Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(Player Variable(
+					Event Player, Lambda), Facing Direction Of(Event Player))), All Players(Opposite Team Of(Team Of(Event Player))), Event Player,
+					False)), <=, 0.100));
+					Modify Player Variable(Event Player, Lambdas, Append To Array, Player Variable(Event Player, Lambda));
+					Abort;
+				End;
+			End;
+		End;
+		Set Player Variable At Index(Event Player, Players, Player Variable(Event Player, Index), Null);
+		Modify Player Variable(Event Player, Lambdas, Append To Array, 100000);
+	}
+}
+
+rule("Root Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), And(Compare(Player Variable(Current Array Element, Target), ==,
+			Event Player), Is Using Ability 1(Current Array Element))) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Gravity(Event Player, 0);
+		Apply Impulse(Event Player, Multiply(-1, Velocity Of(Event Player)), Speed Of(Event Player), To World,
+			Incorporate Contrary Motion);
+		Wait(0.200, Ignore Condition);
+		Apply Impulse(Event Player, Multiply(-1, Velocity Of(Event Player)), Speed Of(Event Player), To World,
+			Incorporate Contrary Motion);
+	}
+}
+
+rule("Unroot Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), And(Compare(Player Variable(Current Array Element, Target), ==,
+			Event Player), Is Using Ability 1(Current Array Element))) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		Set Gravity(Event Player, 100);
+	}
+}
+
+rule("Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Down, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Up, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Stop Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		And(Is Using Ability 1(Event Player), Or(Is Button Held(Event Player, Crouch), Is Button Held(Event Player, Jump))) == False;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Untarget")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(All Living Players(All Teams), Player Variable(Event Player, Target)) == False;
+		Player Variable(Event Player, Target) != Null;
+		Player Variable(Event Player, IsTargeting) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Position, Null);
+		Set Player Variable(Event Player, Target, Null);
+	}
+}
+
+rule("Speed")
+{
+	event
+	{
+		Subroutine;
+		SpeedRoutine;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Multiply(Multiply(100, Player Variable(Event Player, ShieldSpeed)), Multiply(Player Variable(
+			Event Player, CrouchSpeed), Player Variable(Event Player, BackSpeed))));
+	}
+}
+
+rule("Hammer DOWN")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Modulo(Ultimate Charge Percent(Event Player), 100) == 0;
+		Is Button Held(Event Player, Ultimate) == True;
+		Has Status(Event Player, Stunned) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Is Using Ability 1(Event Player) == False;
+		Is Using Ability 2(Event Player) == False;
+		Is Communicating Any Emote(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Or(Is On Ground(Event Player), Is Using Ultimate(Event Player)));
+		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("Clear Target on Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, ClearTarget, True);
+	}
+}
+
+rule("Clear Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, IsTargeting) == False;
+		Player Variable(Event Player, ClearTarget) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Position, Null);
+		Set Player Variable(Event Player, Target, Null);
+		Set Player Variable(Event Player, ClearTarget, False);
+	}
+}

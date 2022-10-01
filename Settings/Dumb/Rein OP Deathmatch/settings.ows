@@ -1,0 +1,951 @@
+settings
+{
+	main
+	{
+		Description: "The best version of deathmatch!"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Team 1 Players: 1
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hollywood
+				King's Row
+				Petra
+			}
+		}
+
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Ecopoint: Antarctica
+				Eichenwalde
+				Hollywood
+				King's Row
+				Necropolis
+				Petra
+			}
+		}
+
+		General
+		{
+			Hero Limit: 1 Per Game
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+
+		Team 2
+		{
+			disabled heroes
+			{
+				Reinhardt
+			}
+		}
+
+		General
+		{
+			Damage Dealt: 80%
+			Damage Received: 125%
+
+			Ana
+			{
+				Sleep Dart: Off
+			}
+
+			Ashe
+			{
+				Coach Gun Knockback Scalar Enemy: 0%
+				Ultimate Ability B.O.B.: Off
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 0%
+			}
+
+			Brigitte
+			{
+				Shield Bash: Off
+				Whip Shot: Off
+			}
+
+			D.Va
+			{
+				Boosters Knockback Scalar: 0%
+				Call Mech Knockback Scalar: 0%
+				Self Destruct Knockback Scalar: 0%
+			}
+
+			Doomfist
+			{
+				Meteor Strike Knockback Scalar: 0%
+				Rising Uppercut Knockback Scalar: 0%
+				Rocket Punch: Off
+				Rocket Punch Knockback Scalar: 0%
+				Seismic Slam: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 0%
+				Frag Launcher Knockback Scalar: 0%
+				Steel Trap: Off
+			}
+
+			Lúcio
+			{
+				Soundwave Knockback Scalar: 0%
+			}
+
+			McCree
+			{
+				Flashbang: Off
+			}
+
+			Mei
+			{
+				Blizzard Freeze Minimum: 0%
+				Blizzard Freeze Rate Scalar: 0%
+				Weapon Freeze Minimum: 0%
+				Weapon Freeze Rate Scalar: 0%
+			}
+
+			Orisa
+			{
+				Fortify: Off
+				Halt!: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Rocket Launcher Knockback Scalar: 0%
+			}
+
+			Reinhardt
+			{
+				Healing Received: 500%
+			}
+
+			Roadhog
+			{
+				Chain Hook: Off
+				Whole Hog Knockback Scalar: 0%
+			}
+
+			Sigma
+			{
+				Accretion: Off
+				Primary Fire: Off
+				Ultimate Ability Gravitic Flux: Off
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 0%
+			}
+
+			Sombra
+			{
+				Hack: Off
+				Ultimate Ability EMP: Off
+			}
+
+			Symmetra
+			{
+				Sentry Turret: Off
+			}
+
+			Winston
+			{
+				Jump Pack Knockback Scalar: 0%
+				Ultimate Ability Primal Rage: Off
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 0%
+				Minefield Knockback Scalar: 0%
+			}
+
+			Zarya
+			{
+				Particle Cannon Secondary Knockback Scalar: 0%
+				Ultimate Ability Graviton Surge: Off
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		12: SpeedScalar
+		17: PlayerRadius
+
+	player:
+		0: Players
+		1: Lambdas
+		2: ClearTarget
+		3: Discriminant
+		4: CurrentElement
+		6: IsTargeting
+		7: Charging
+		8: Index
+		11: Lambda
+		12: ShieldSpeed
+		13: CrouchSpeed
+		14: BackSpeed
+		15: Position
+		18: ScalarProduct
+		19: Target
+		21: Vector
+		22: Walkable
+}
+
+subroutines
+{
+	0: SpeedRoutine
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+		Global.SpeedScalar = 1;
+		Global.PlayerRadius = 1.500;
+	}
+}
+
+rule("Quick Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Host Player")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		((Current Game Mode == Game Mode(Deathmatch) && Event Player == Host Player) || (Team Of(Event Player) == Team 1)) == True;
+	}
+
+	actions
+	{
+		Reset Player Hero Availability(Event Player);
+	}
+}
+
+rule("Other Players")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Current Game Mode == Game Mode(Deathmatch) && Event Player == Host Player) == False;
+		Team Of(Event Player) != Team 1;
+	}
+
+	actions
+	{
+		Set Player Allowed Heroes(Event Player, Remove From Array(All Heroes, Hero(Reinhardt)));
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Icon(Filtered Array(Event Player, Event Player.Target != Null), Event Player.Target, Skull, Visible To and Position, Red,
+			True);
+		Create Icon(Filtered Array(Event Player, Event Player.Target == Null && Event Player.Position != Null), Event Player.Position, X,
+			Visible To and Position, Red, True);
+		Create Icon(Filtered Array(Event Player, Is Using Ability 1(Event Player) && Event Player.Position != Null && Absolute Value(
+			46 - Horizontal Angle Towards(Event Player, Event Player.Position)) < 44), World Vector Of(Left, Event Player,
+			Rotation And Translation), Arrow: Left, Visible To and Position, White, True);
+		Create Icon(Filtered Array(Event Player, Is Using Ability 1(Event Player) && Event Player.Position != Null && Absolute Value(
+			46 + Horizontal Angle Towards(Event Player, Event Player.Position)) < 44), World Vector Of(Right, Event Player,
+			Rotation And Translation), Arrow: Right, Visible To and Position, White, True);
+	}
+}
+
+rule("Not Reinhardt Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Event Player.Target = Null;
+		Event Player.Position = Null;
+	}
+}
+
+rule("Elimination")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
+
+rule("Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Attacker == Null;
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, -1);
+	}
+}
+
+rule("Shield Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.ShieldSpeed = 1 / 0.700;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("No Shield Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.ShieldSpeed = 1;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Crouch Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.BackSpeed = 1;
+		Event Player.CrouchSpeed = 5.500 / 3;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("No Crouch Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.CrouchSpeed = 1;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Back Speed+")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) == -1;
+		X Component Of(Throttle Of(Event Player)) == 0;
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.BackSpeed = 5.500 / 4.950;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("MidBackSpeed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) == -1;
+		Absolute Value(X Component Of(Throttle Of(Event Player))) == 1;
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.BackSpeed = 5.500 / 5.130;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Back Speed-")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Z Component Of(Throttle Of(Event Player)) >= 0;
+	}
+
+	actions
+	{
+		Event Player.BackSpeed = 1;
+		Start Rule(SpeedRoutine, Restart Rule);
+	}
+}
+
+rule("Reinhardt Launch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.600, Ignore Condition);
+		Skip If(Event Player.Target == Null, 1);
+		Event Player.Position = Position Of(Event Player.Target) + 1.500 * Direction From Angles(Horizontal Angle From Direction(
+			Direction Towards(Event Player.Target, Event Player)), 0);
+		Apply Impulse(Event Player, Up, 0.530 / Global.SpeedScalar * Distance Between(Event Player, Event Player.Position)
+			* Cosine From Degrees(-1 * Vertical Angle Towards(Event Player, Event Player.Position))
+			+ 16.500 * Global.SpeedScalar * Tangent From Degrees(-1 * Vertical Angle Towards(Event Player, Event Player.Position)),
+			To World, Cancel Contrary Motion);
+		Big Message(Event Player.Target, String("Incoming"));
+	}
+}
+
+rule("Reinhardt Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.IsTargeting);
+		Event Player.IsTargeting = True;
+		Event Player.Target = Ray Cast Hit Player(Eye Position(Event Player), Eye Position(Event Player) + 1000 * Facing Direction Of(
+			Event Player), All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, False);
+		If(Event Player.Target == Null);
+			Event Player.Players = Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player);
+			Event Player.Lambdas = Empty Array;
+			For Player Variable(Event Player, Index, 0, Count Of(Event Player.Players), 1);
+				Call Subroutine(Sub1);
+			End;
+			Event Player.Target = First Of(Sorted Array(Event Player.Players, Event Player.Lambdas[Index Of Array Value(Event Player.Players,
+				Current Array Element)]));
+			If(Event Player.Target == Null);
+				Event Player.Position = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 1000 * Facing Direction Of(
+					Event Player), Null, Null, False);
+				Event Player.Walkable = Nearest Walkable Position(Event Player.Position);
+				"Empty Array check for bug workaround"
+				If(Event Player.Walkable != Empty Array && Distance Between(Event Player.Position, Event Player.Walkable) <= 1);
+					Event Player.Position = Nearest Walkable Position(Event Player.Position);
+				End;
+			End;
+		End;
+		Event Player.IsTargeting = False;
+		Wait(3, Abort When False);
+		Event Player.Position = Null;
+		Event Player.Target = Null;
+	}
+}
+
+rule("Loop Inner")
+{
+	event
+	{
+		Subroutine;
+		Sub1;
+	}
+
+	actions
+	{
+		Event Player.CurrentElement = Event Player.Players[Event Player.Index];
+		Event Player.Vector = Vector Towards(Eye Position(Event Player), (Eye Position(Event Player.CurrentElement) + Position Of(
+			Event Player.CurrentElement)) / 2);
+		Event Player.ScalarProduct = Dot Product(Facing Direction Of(Event Player), Event Player.Vector);
+		Event Player.Discriminant = Event Player.ScalarProduct ^ 2 + (Global.PlayerRadius ^ 2 - Dot Product(Event Player.Vector,
+			Event Player.Vector));
+		If(Event Player.Discriminant >= 0);
+			Event Player.Discriminant ^= 0.500;
+			If(Event Player.ScalarProduct + Event Player.Discriminant >= 0);
+				Event Player.Lambda = Event Player.ScalarProduct + Absolute Value(Event Player.Discriminant - Event Player.ScalarProduct) / (
+					Event Player.Discriminant - Event Player.ScalarProduct) * Event Player.Discriminant;
+				If(Distance Between(Eye Position(Event Player) + Event Player.Lambda * Facing Direction Of(Event Player), Ray Cast Hit Position(
+					Eye Position(Event Player), Eye Position(Event Player) + Event Player.Lambda * Facing Direction Of(Event Player), All Players(
+					Opposite Team Of(Team Of(Event Player))), Event Player, False)) <= 0.100);
+					Modify Player Variable(Event Player, Lambdas, Append To Array, Event Player.Lambda);
+					Abort;
+				End;
+			End;
+		End;
+		Event Player.Players[Event Player.Index] = Null;
+		Modify Player Variable(Event Player, Lambdas, Append To Array, 100000);
+	}
+}
+
+rule("Root Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), Current Array Element.Target == Event Player && Is Using Ability 1(
+			Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Gravity(Event Player, 0);
+		Apply Impulse(Event Player, -1 * Velocity Of(Event Player), Speed Of(Event Player), To World, Incorporate Contrary Motion);
+		Wait(0.200, Ignore Condition);
+		Apply Impulse(Event Player, -1 * Velocity Of(Event Player), Speed Of(Event Player), To World, Incorporate Contrary Motion);
+	}
+}
+
+rule("Unroot Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), Current Array Element.Target == Event Player && Is Using Ability 1(
+			Current Array Element)) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		Set Gravity(Event Player, 100);
+	}
+}
+
+rule("Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Down, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Up, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Stop Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		(Is Using Ability 1(Event Player) && (Is Button Held(Event Player, Crouch) || Is Button Held(Event Player, Jump))) == False;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Untarget")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(All Living Players(All Teams), Event Player.Target) == False;
+		Event Player.Target != Null;
+		Event Player.IsTargeting == False;
+	}
+
+	actions
+	{
+		Event Player.Position = Null;
+		Event Player.Target = Null;
+	}
+}
+
+rule("Speed")
+{
+	event
+	{
+		Subroutine;
+		SpeedRoutine;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100 * Event Player.ShieldSpeed * Event Player.CrouchSpeed * Event Player.BackSpeed);
+	}
+}
+
+rule("Hammer DOWN")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) % 100 == 0;
+		Is Button Held(Event Player, Ultimate) == True;
+		Has Status(Event Player, Stunned) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Is Using Ability 1(Event Player) == False;
+		Is Using Ability 2(Event Player) == False;
+		Is Communicating Any Emote(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Is On Ground(Event Player) || Is Using Ultimate(Event Player));
+		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("Clear Target on Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.ClearTarget = True;
+	}
+}
+
+rule("Clear Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsTargeting == False;
+		Event Player.ClearTarget == True;
+	}
+
+	actions
+	{
+		Event Player.Position = Null;
+		Event Player.Target = Null;
+		Event Player.ClearTarget = False;
+	}
+}
+
+rule("Reset Cooldowns on Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ability Cooldown(Event Player, Button(Ability 1), 0);
+		Set Ability Cooldown(Event Player, Button(Ability 2), 0);
+	}
+}
+
+rule("Charge Cancel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		If(Event Player.Charging);
+			Cancel Primary Action(Event Player);
+	}
+}
+
+rule("Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.500, Abort When False);
+		Event Player.Charging = True;
+	}
+}
+
+rule("Not Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.Charging = False;
+	}
+}

@@ -1,0 +1,104 @@
+settings
+{
+	lobby
+	{
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Château Guillard
+				Ecopoint: Antarctica
+				Necropolis
+				Petra
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Moira
+			{
+				Biotic Orb: Off
+				Fade Cooldown Time: 0%
+				Health: 10%
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			enabled heroes
+			{
+				Moira
+			}
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("Game In Progress")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}

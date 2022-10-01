@@ -1,0 +1,235 @@
+variables
+{
+	player:
+		0: path
+		2: current
+		3: distances
+		4: neighbours
+		5: finish
+		8: i
+		9: j
+		10: k
+		11: filtered
+		12: moving
+		13: nodes
+		15: previous
+		18: start
+		20: distance
+		21: visited
+}
+
+subroutines
+{
+	0: GetNeighbours
+	1: IterativeStep
+	2: Algorithm
+	3: FindUsePath
+}
+
+rule("Find Use Path")
+{
+	event
+	{
+		Subroutine;
+		FindUsePath;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, path, Empty Array);
+		Set Player Variable(Event Player, start, Add(Position Of(Event Player), Multiply(Altitude Of(Event Player), Down)));
+		Call Subroutine(Algorithm);
+		Abort If(Compare(Player Variable(Event Player, distance), ==, Null));
+		Set Player Variable(Event Player, current, Value In Array(Player Variable(Event Player, nodes), Player Variable(Event Player, j)));
+		While(Compare(Player Variable(Event Player, current), !=, Player Variable(Event Player, start)));
+			Wait(0.016, Ignore Condition);
+			Modify Player Variable(Event Player, path, Append To Array, Player Variable(Event Player, current));
+			Set Player Variable(Event Player, j, Index Of Array Value(Player Variable(Event Player, nodes), Player Variable(Event Player,
+				current)));
+			Set Player Variable(Event Player, current, Value In Array(Player Variable(Event Player, previous), Player Variable(Event Player,
+				j)));
+		End;
+		Start Forcing Throttle(Event Player, 1, 1, 0, 1, 0, 1);
+		Set Player Variable(Event Player, moving, 2);
+		For Player Variable(Event Player, i, 0, Count Of(Player Variable(Event Player, path)), 1);
+			Set Player Variable(Event Player, current, Value In Array(Player Variable(Event Player, path), Subtract(Subtract(Count Of(
+				Player Variable(Event Player, path)), 1), Player Variable(Event Player, i))));
+			Start Facing(Event Player, Direction Towards(Position Of(Event Player), Player Variable(Event Player, current)), 180, To World,
+				Direction and Turn Rate);
+			While(Compare(Distance Between(Add(Position Of(Event Player), Multiply(Altitude Of(Event Player), Down)), Ray Cast Hit Position(
+				Add(Player Variable(Event Player, current), Multiply(2, Up)), Add(Player Variable(Event Player, current), Multiply(1000,
+				Down)), Null, Null, False)), >, Divide(Horizontal Speed Of(Event Player), 3)));
+				Wait(0.016, Ignore Condition);
+				Abort If(Is Button Held(Event Player, Interact));
+			End;
+		End;
+	}
+}
+
+rule("Shortest Path Algorithm")
+{
+	event
+	{
+		Subroutine;
+		Algorithm;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, previous, Empty Array);
+		Set Player Variable(Event Player, current, Player Variable(Event Player, start));
+		Set Player Variable(Event Player, nodes, Player Variable(Event Player, start));
+		Set Player Variable(Event Player, visited, Empty Array);
+		Set Player Variable(Event Player, distances, Empty Array);
+		Disable Inspector Recording;
+		While(Not(Or(Compare(Player Variable(Event Player, current), ==, Null), Is True For Any(Player Variable(Event Player, visited),
+			And(Compare(Distance Between(Current Array Element, Player Variable(Event Player, finish)), <, 0.800), Is In Line of Sight(Add(
+			Current Array Element, Up), Add(Player Variable(Event Player, finish), Up), Barriers Do Not Block LOS))))));
+			Wait(0.016, Ignore Condition);
+			Abort If(Compare(Count Of(Player Variable(Event Player, nodes)), >=, 1000));
+			Call Subroutine(IterativeStep);
+			Set Player Variable(Event Player, current, First Of(Sorted Array(Remove From Array(Player Variable(Event Player, nodes),
+				Player Variable(Event Player, visited)), Distance Between(Player Variable(Event Player, finish), Current Array Element))));
+		End;
+		Enable Inspector Recording;
+		Set Player Variable(Event Player, filtered, Filtered Array(Player Variable(Event Player, nodes), Is In Line of Sight(Add(
+			Current Array Element, Up), Add(Player Variable(Event Player, finish), Up), Barriers Do Not Block LOS)));
+		Set Player Variable(Event Player, j, Index Of Array Value(Player Variable(Event Player, nodes), First Of(Sorted Array(
+			Player Variable(Event Player, filtered), Distance Between(Current Array Element, Player Variable(Event Player, finish))))));
+		Set Player Variable(Event Player, distance, Value In Array(Player Variable(Event Player, distances), Player Variable(Event Player,
+			j)));
+	}
+}
+
+rule("Iterative Step")
+{
+	event
+	{
+		Subroutine;
+		IterativeStep;
+	}
+
+	actions
+	{
+		Call Subroutine(GetNeighbours);
+		Modify Player Variable(Event Player, nodes, Append To Array, Player Variable(Event Player, neighbours));
+		Set Player Variable(Event Player, distance, Value In Array(Player Variable(Event Player, distances), Index Of Array Value(
+			Player Variable(Event Player, nodes), Player Variable(Event Player, current))));
+		For Player Variable(Event Player, i, 0, Count Of(Player Variable(Event Player, neighbours)), 1);
+			Set Player Variable(Event Player, j, Index Of Array Value(Player Variable(Event Player, nodes), Value In Array(Player Variable(
+				Event Player, neighbours), Player Variable(Event Player, i))));
+			If(Or(Compare(Value In Array(Player Variable(Event Player, distances), Player Variable(Event Player, j)), ==, Null), Compare(Add(
+				Player Variable(Event Player, distance), 1), <, Value In Array(Player Variable(Event Player, distances), Player Variable(
+				Event Player, j)))));
+				Set Player Variable At Index(Event Player, previous, Player Variable(Event Player, j), Player Variable(Event Player, current));
+				Set Player Variable At Index(Event Player, distances, Player Variable(Event Player, j), Add(Player Variable(Event Player,
+					distance), 1));
+			End;
+		End;
+		Modify Player Variable(Event Player, visited, Append To Array, Player Variable(Event Player, current));
+	}
+}
+
+rule("Get Neighbours")
+{
+	event
+	{
+		Subroutine;
+		GetNeighbours;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, neighbours, Empty Array);
+		Modify Player Variable(Event Player, neighbours, Append To Array, Add(Player Variable(Event Player, current), Right));
+		Modify Player Variable(Event Player, neighbours, Append To Array, Add(Player Variable(Event Player, current), Left));
+		Modify Player Variable(Event Player, neighbours, Append To Array, Add(Player Variable(Event Player, current), Forward));
+		Modify Player Variable(Event Player, neighbours, Append To Array, Add(Player Variable(Event Player, current), Backward));
+		Set Player Variable(Event Player, neighbours, Filtered Array(Player Variable(Event Player, neighbours), Is In Line of Sight(Add(
+			Player Variable(Event Player, current), Up), Add(Current Array Element, Up), Barriers Do Not Block LOS)));
+		For Player Variable(Event Player, k, 0, Count Of(Player Variable(Event Player, neighbours)), 1);
+			Set Player Variable At Index(Event Player, neighbours, Player Variable(Event Player, k), Ray Cast Hit Position(Add(Value In Array(
+				Player Variable(Event Player, neighbours), Player Variable(Event Player, k)), Multiply(2, Up)), Add(Value In Array(
+				Player Variable(Event Player, neighbours), Player Variable(Event Player, k)), Multiply(1000, Down)), Null, Null, False));
+		End;
+		Set Player Variable(Event Player, neighbours, Filtered Array(Player Variable(Event Player, neighbours), Compare(Distance Between(
+			Current Array Element, Nearest Walkable Position(Current Array Element)), <, 1)));
+		For Player Variable(Event Player, k, 0, Count Of(Player Variable(Event Player, neighbours)), 1);
+			If(Is True For Any(Player Variable(Event Player, visited), Compare(Distance Between(Current Array Element, Value In Array(
+				Player Variable(Event Player, neighbours), Player Variable(Event Player, k))), <, 0.800)));
+				Set Player Variable At Index(Event Player, neighbours, Player Variable(Event Player, k), Null);
+			End;
+		End;
+		Set Player Variable(Event Player, neighbours, Filtered Array(Player Variable(Event Player, neighbours), Compare(
+			Current Array Element, !=, Null)));
+	}
+}
+
+rule("Go")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		If(Compare(Player Variable(Event Player, finish), ==, Null));
+			Set Player Variable(Event Player, finish, Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player),
+				Multiply(Facing Direction Of(Event Player), 1000)), Null, Null, False));
+		Else If(Compare(Player Variable(Event Player, moving), ==, 0));
+			Set Player Variable(Event Player, moving, 1);
+			Call Subroutine(FindUsePath);
+			Stop Forcing Throttle(Event Player);
+			Stop Facing(Event Player);
+			Set Player Variable(Event Player, finish, Null);
+			Set Player Variable(Event Player, moving, 0);
+		End;
+	}
+}
+
+rule("Fix")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Speed Of(Event Player) < 0.150;
+	}
+
+	actions
+	{
+		Abort If(Compare(Player Variable(Event Player, moving), <, 2));
+		Press Button(Event Player, Jump);
+		Start Facing(Event Player, Direction Towards(Position Of(Event Player), Player Variable(Event Player, current)), 180, To World,
+			Direction and Turn Rate);
+	}
+}
+
+rule("Rule 7")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Speed Of(Event Player), Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+	}
+}

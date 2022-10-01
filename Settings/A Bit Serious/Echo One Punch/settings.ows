@@ -1,0 +1,104 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Château Guillard
+				Necropolis
+				Petra
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Respawn As Random Hero: On
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Echo
+			{
+				Focusing Beam: Off
+				Health: 10%
+				Primary Fire: Off
+				Sticky Bombs: Off
+				Ultimate Ability Duplicate: Off
+			}
+
+			enabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}

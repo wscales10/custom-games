@@ -1,0 +1,215 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Game Length In Minutes: 15
+			Game Mode Start: Immediately
+			Score To Win: 10
+			Spawn Health Packs: Disabled
+		}
+	}
+}
+
+variables
+{
+	global:
+		17: Respawner
+
+	player:
+		5: FirstSpawn
+		15: UltInProgress
+		18: SetUltimateCharge
+		20: UltimateCharge
+}
+
+rule("Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.SetUltimateCharge = True;
+		If(Event Player.FirstSpawn);
+			Event Player.FirstSpawn = False;
+			All Players(All Teams).UltimateCharge = 0;
+		End;
+		If(Global.Respawner == Null && Number of Players(Opposite Team Of(Team Of(Event Player))) > 0);
+			Global.Respawner = Event Player;
+			Respawn(Remove From Array(All Players(All Teams), Event Player));
+			Start Forcing Player To Be Hero(All Living Players(All Teams), Hero Of(Event Player));
+			Remove From Array(All Players(All Teams), Event Player).SetUltimateCharge = True;
+			Wait(3, Ignore Condition);
+			Stop Forcing Player To Be Hero(All Players(All Teams));
+			Global.Respawner = Null;
+		End;
+	}
+}
+
+rule("Reset Scores")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Team Score(All Teams, 0);
+		Event Player.FirstSpawn = True;
+	}
+}
+
+rule("Save Ultimate Charge (1)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Respawner != Null;
+		Global.Respawner != Event Player;
+	}
+
+	actions
+	{
+		Event Player.UltimateCharge = (1 - Event Player.UltInProgress) * Ultimate Charge Percent(Event Player);
+	}
+}
+
+rule("Save Ultimate Charge (2)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.UltimateCharge = (1 - Event Player.UltInProgress) * Ultimate Charge Percent(Event Player);
+	}
+}
+
+rule("Ultimate Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.UltInProgress = 1;
+	}
+}
+
+rule("Ultimate End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Event Player.UltInProgress = 0;
+	}
+}
+
+rule("Set Ultimate Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) == 0;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Event Player.UltimateCharge);
+		Event Player.UltimateCharge = 0;
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}

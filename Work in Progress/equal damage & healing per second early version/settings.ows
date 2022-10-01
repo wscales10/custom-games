@@ -1,0 +1,175 @@
+Mathematically work out in game how much hps/dps is done and try to make everyone's the same
+
+settings
+{
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+		{
+			Hero Limit: Off
+			Score To Win: 20
+
+			enabled maps
+			{
+			}
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Living Players(All Teams), Has Spawned(Current Array Element))) == 2;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, A, 9999, 1, Destination and Rate);
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Living Players(All Teams), Has Spawned(Current Array Element))) != 2;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, A);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, D, Add, Event Damage);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, H, Add, Event Healing);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Custom String("{2} | H: {0} D: {1}", Divide(Player Variable(Event Player, H),
+			Player Variable(Event Player, B)), Divide(Player Variable(Event Player, D), Player Variable(Event Player, A)), Event Player),
+			Null, Null, Left, 0, White, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("Rule 6")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Round To Integer(Health(Event Player), To Nearest) < 200;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, B, 9999, 1, Destination and Rate);
+	}
+}
+
+rule("Rule 6")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		And(And(Is Alive(Event Player), Has Spawned(Event Player)), Compare(Round To Integer(Health(Event Player), To Nearest), <, 200))
+			== False;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, B);
+	}
+}

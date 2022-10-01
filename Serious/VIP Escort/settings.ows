@@ -1,0 +1,240 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Return To Lobby: Never
+		Swap Teams After Match: No
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			Allow Hero Switching: Off
+			Hero Limit: 1 Per Game
+
+			disabled maps
+			{
+				Blizzard World Winter
+				Busan
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				Ilios
+				King's Row Winter
+				Lijiang Tower
+				Lijiang Tower Lunar New Year
+				Nepal
+				Oasis
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Ashe
+				Baptiste
+				Doomfist
+				Hanzo
+				Junkrat
+				Moira
+				Reaper
+				Roadhog
+				Sigma
+				Sombra
+				Symmetra
+				Widowmaker
+				Wrecking Ball
+			}
+		}
+
+		Team 2
+		{
+			disabled heroes
+			{
+				Doomfist
+				Moira
+				Reaper
+				Sigma
+				Widowmaker
+			}
+		}
+
+		General
+		{
+			disabled heroes
+			{
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Ring, Green, Global Variable(A), 5, Visible To Position and Radius);
+		Disable Built-In Game Mode Completion;
+		Set Match Time(300);
+		Set Objective Description(All Players(Team 1), Custom String("Stop {0} from reaching the objective", Hero Of(Players In Slot(0,
+			Team 2)), Null, Null), Visible To and String);
+		Set Objective Description(Filtered Array(All Players(Team 2), Compare(Slot Of(Current Array Element), >, 0)), Custom String(
+			"Escort {0} to the objective", Hero Of(Players In Slot(0, Team 2)), Null, Null), Visible To and String);
+		Create Icon(All Players(Team 2), Global Variable(A), Circle, Visible To and Position, Green, True);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+	}
+}
+
+rule("VIP died")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		Slot 0;
+	}
+
+	actions
+	{
+		Start Rule(Sub0, Do Nothing);
+	}
+}
+
+rule("VIP left")
+{
+	event
+	{
+		Player Left Match;
+		Team 2;
+		Slot 0;
+	}
+
+	actions
+	{
+		Start Rule(Sub0, Do Nothing);
+	}
+}
+
+rule("Time Run Out")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Start Rule(Sub0, Do Nothing);
+	}
+}
+
+rule("Team 1 Win/Draw")
+{
+	event
+	{
+		Subroutine;
+		Sub0;
+	}
+
+	actions
+	{
+		If(Compare(Number of Living Players(Team 1), ==, 0));
+			Declare Match Draw;
+		Else;
+			Declare Team Victory(Team 1);
+		End;
+	}
+}
+
+rule("Team 2 Win")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Slot 0;
+	}
+
+	conditions
+	{
+		Global Variable(A) != Null;
+		Distance Between(Event Player, Global Variable(A)) < 5;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team 2);
+	}
+}
+
+rule("Slot 0")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Slot 0;
+	}
+
+	actions
+	{
+		Set Player Allowed Heroes(Event Player, Hero(Zenyatta));
+		Set Objective Description(Event Player, Custom String("Get to the objective alive", Null, Null, Null), Visible To and String);
+	}
+}
+
+rule("Set Objective Position")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(Team 2), Has Spawned(Current Array Element)) == True;
+		Global Variable(A) == Null;
+	}
+
+	actions
+	{
+		Set Global Variable(P, First Of(Filtered Array(All Players(Team 2), Has Spawned(Current Array Element))));
+		Set Global Variable(A, Last Of(Sorted Array(Append To Array(Append To Array(Append To Array(Empty Array, Objective Position(0)),
+			Objective Position(1)), Objective Position(2)), Distance Between(Current Array Element, Global Variable(P)))));
+	}
+}

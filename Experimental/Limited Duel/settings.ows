@@ -1,0 +1,321 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Max Spectators: 12
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 7
+
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+
+		Elimination
+		{
+			Draw After Match Time Elapsed With No Tiebreaker: 99
+			Hero Selection: Limited
+			Score To Win: 5
+			Tiebreaker After Match Time Elapsed: 77
+			Time To Capture: 2
+
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Necropolis
+				Nepal Sanctum
+				Nepal Shrine
+				Nepal Village
+			}
+		}
+
+		General
+		{
+			Health Pack Respawn Time Scalar: 73%
+			Hero Limit: Off
+			Respawn Time Scalar: 73%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Ammunition Clip Size Scalar: 73%
+			Damage Dealt: 137%
+			Healing Dealt: 137%
+			Jump Vertical Speed: 137%
+			Movement Gravity: 188%
+			Movement Speed: 137%
+			Projectile Gravity: 188%
+			Projectile Speed: 137%
+			Ultimate Duration: 73%
+			Ultimate Generation - Passive: 137%
+
+			Ashe
+			{
+				Coach Gun Cooldown Time: 73%
+				Coach Gun Knockback Scalar Enemy: 137%
+				Coach Gun Knockback Scalar Self: 137%
+				Dynamite Fuse Time Scalar: 73%
+			}
+
+			Doomfist
+			{
+				Meteor Strike Knockback Scalar: 137%
+				Rising Uppercut Knockback Scalar: 137%
+				Rocket Punch Knockback Scalar: 137%
+			}
+
+			Hanzo
+			{
+				Lunge Distance Scalar: 137%
+				Storm Arrows Quantity: 4
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 137%
+				Frag Launcher Knockback Scalar: 137%
+				Steel Trap Cooldown Time: 73%
+			}
+
+			McCree
+			{
+				Combat Roll Cooldown Time: 73%
+				Flashbang Cooldown Time: 73%
+			}
+
+			Mei
+			{
+				Blizzard Freeze Rate Scalar: 137%
+				Weapon Freeze Rate Scalar: 137%
+			}
+
+			Moira
+			{
+				Biotic Energy Maximum: 73%
+				Biotic Energy Recharge Rate: 137%
+				Biotic Orb Max Damage Scalar: 73%
+				Biotic Orb Max Healing Scalar: 73%
+			}
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 137%
+				Hover Jets Maximum Time: 73%
+				Hover Jets Recharge Rate: 137%
+				Hover Jets Vertical Speed Scalar: 137%
+				Jump Jet Acceleration Scalar: 188%
+				Jump Jet Cooldown Time: 73%
+				Rocket Launcher Knockback Scalar: 137%
+			}
+
+			Reaper
+			{
+				Shadow Step Cooldown Time: 73%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 137%
+				Experimental Barrier Recharge Rate: 137%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 137%
+			}
+
+			Sombra
+			{
+				Hack Cooldown Time: 73%
+				Stealth Cooldown Time: 73%
+				Translocator Cooldown Time: 73%
+			}
+
+			Symmetra
+			{
+				Sentry Turret Cooldown Time: 73%
+				Teleporter Cooldown Time: 73%
+			}
+
+			Tracer
+			{
+				Recall Cooldown Time: 73%
+			}
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 73%
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 137%
+				Minefield Knockback Scalar: 137%
+			}
+
+			disabled heroes
+			{
+				Bastion
+				Brigitte
+				D.Va
+				Lúcio
+				Mercy
+				Reinhardt
+				Roadhog
+				Torbjörn
+				Winston
+				Zarya
+			}
+		}
+
+		Team 2
+		{
+			Ammunition Clip Size Scalar: 73%
+			Damage Dealt: 137%
+			Healing Dealt: 137%
+			Jump Vertical Speed: 137%
+			Movement Gravity: 188%
+			Movement Speed: 137%
+			Projectile Gravity: 188%
+			Projectile Speed: 137%
+			Ultimate Duration: 73%
+			Ultimate Generation - Passive: 137%
+
+			Ashe
+			{
+				Coach Gun Cooldown Time: 73%
+				Coach Gun Knockback Scalar Enemy: 137%
+				Coach Gun Knockback Scalar Self: 137%
+				Dynamite Fuse Time Scalar: 73%
+			}
+
+			Doomfist
+			{
+				Meteor Strike Knockback Scalar: 137%
+				Rising Uppercut Knockback Scalar: 137%
+				Rocket Punch Knockback Scalar: 137%
+			}
+
+			Hanzo
+			{
+				Lunge Distance Scalar: 137%
+				Storm Arrows Quantity: 4
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 137%
+				Frag Launcher Knockback Scalar: 137%
+				Steel Trap Cooldown Time: 73%
+			}
+
+			McCree
+			{
+				Combat Roll Cooldown Time: 73%
+				Flashbang Cooldown Time: 73%
+			}
+
+			Mei
+			{
+				Blizzard Freeze Rate Scalar: 137%
+				Weapon Freeze Rate Scalar: 137%
+			}
+
+			Moira
+			{
+				Biotic Energy Maximum: 73%
+				Biotic Energy Recharge Rate: 137%
+				Biotic Orb Max Damage Scalar: 73%
+				Biotic Orb Max Healing Scalar: 73%
+			}
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 137%
+				Hover Jets Maximum Time: 73%
+				Hover Jets Recharge Rate: 137%
+				Hover Jets Vertical Speed Scalar: 137%
+				Jump Jet Acceleration Scalar: 188%
+				Jump Jet Cooldown Time: 73%
+				Rocket Launcher Knockback Scalar: 137%
+			}
+
+			Reaper
+			{
+				Shadow Step Cooldown Time: 73%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 137%
+				Experimental Barrier Recharge Rate: 137%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 137%
+			}
+
+			Sombra
+			{
+				Hack Cooldown Time: 73%
+				Stealth Cooldown Time: 73%
+				Translocator Cooldown Time: 73%
+			}
+
+			Symmetra
+			{
+				Sentry Turret Cooldown Time: 73%
+				Teleporter Cooldown Time: 73%
+			}
+
+			Tracer
+			{
+				Recall Cooldown Time: 73%
+			}
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 73%
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 137%
+				Minefield Knockback Scalar: 137%
+			}
+
+			disabled heroes
+			{
+				Bastion
+				Brigitte
+				D.Va
+				Lúcio
+				Mercy
+				Reinhardt
+				Roadhog
+				Torbjörn
+				Winston
+				Zarya
+			}
+		}
+	}
+}

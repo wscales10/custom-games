@@ -1,0 +1,1174 @@
+settings
+{
+	modes
+	{
+		Assault
+
+		Control
+
+		Escort
+
+		Hybrid
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+}
+
+variables
+{
+	global:
+		1: BotsNeeded
+		5: FromPlayer
+		15: Playing
+		17: Recording
+		21: FrameRate
+
+	player:
+		0: FromPlayer
+		1: Buttons
+		4: Team
+		5: FacingDirections
+		7: Hero
+		8: FacingThrottlesIndex
+		9: ButtonsIndex
+		13: ButtonNumber
+		14: StartPosition
+		15: Playback
+		16: Pressing
+		17: Recording
+		18: StartTime
+		19: Times
+		23: Throttles
+}
+
+subroutines
+{
+	0: Record
+	1: Play
+	2: RecordStop
+	3: Stop
+	4: Copy
+	5: Clear
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Inspector Recording;
+		Create HUD Text(Filtered Array(All Players(All Teams), Array Contains(Global Variable(Playing), Player Variable(
+			Current Array Element, FromPlayer))), Custom String("Playing", Null, Null, Null), Null, Null, Top, 0, Green, White, White,
+			Visible To and String, Default Visibility);
+		Set Global Variable(BotsNeeded, Empty Array);
+		Set Global Variable(Playing, Empty Array);
+		Set Global Variable(Recording, Empty Array);
+		Set Global Variable(FrameRate, 30);
+		Set Global Variable(W, Divide(1, Global Variable(FrameRate)));
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, FromPlayer, Event Player);
+		Create HUD Text(Filtered Array(Event Player, Player Variable(Event Player, Recording)), Custom String("Recording ({0}%)",
+			Round To Integer(Divide(Count Of(Player Variable(Event Player, FacingDirections)), 10), Down), Null, Null), Null, Null, Top, 0,
+			Red, White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("**RECORDING**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Record (Trigger)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Voice Line Left) == True;
+	}
+
+	actions
+	{
+		If(Compare(Player Variable(Event Player, Hero), !=, Null));
+			Modify Global Variable(BotsNeeded, Append To Array, Event Player);
+		End;
+		Modify Global Variable(Recording, Append To Array, Event Player);
+	}
+}
+
+rule("Record (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		Record;
+	}
+
+	actions
+	{
+		If(Player Variable(Event Player, Recording));
+			Abort;
+		End;
+		If(Player Variable(Event Player, Playback));
+			Call Subroutine(Stop);
+		End;
+		Call Subroutine(Clear);
+		Set Player Variable(Event Player, Hero, Hero Of(Event Player));
+		Set Player Variable(Event Player, Team, Team Of(Event Player));
+		Set Player Variable(Event Player, StartPosition, Position Of(Event Player));
+		Set Player Variable(Event Player, StartTime, Total Time Elapsed);
+		Set Player Variable(Event Player, Recording, True);
+	}
+}
+
+rule("Record Stop (Trigger)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Voice Line Right) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(RecordStop);
+	}
+}
+
+rule("Record Stop (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		RecordStop;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Recording, False);
+	}
+}
+
+rule("Record Limit")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Compare(Count Of(Player Variable(Event Player, FacingDirections)), ==, 1000), Compare(Count Of(Player Variable(Event Player,
+			Times)), ==, 1000)) == True;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String("Recording Time Limit Reached", Null, Null, Null));
+		Call Subroutine(RecordStop);
+	}
+}
+
+rule("Primary Fire On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 1);
+	}
+}
+
+rule("Primary Fire Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -1);
+	}
+}
+
+rule("Secondary Fire On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 2);
+	}
+}
+
+rule("Secondary Fire Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -2);
+	}
+}
+
+rule("Ability 1 On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 3);
+	}
+}
+
+rule("Ability 1 Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -3);
+	}
+}
+
+rule("Ability 2 On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 2) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 4);
+	}
+}
+
+rule("Ability 2 Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 2) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -4);
+	}
+}
+
+rule("Ultimate On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 5);
+	}
+}
+
+rule("Ultimate Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -5);
+	}
+}
+
+rule("Interact On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 6);
+	}
+}
+
+rule("Interact Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -6);
+	}
+}
+
+rule("Jump On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 7);
+	}
+}
+
+rule("Jump Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -7);
+	}
+}
+
+rule("Crouch On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Crouch) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 8);
+	}
+}
+
+rule("Crouch Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Crouch) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -8);
+	}
+}
+
+rule("Melee On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Melee) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 9);
+	}
+}
+
+rule("Melee Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Melee) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -9);
+	}
+}
+
+rule("Reload On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Reload) == True;
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, 10);
+	}
+}
+
+rule("Reload Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Reload) == False;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, Recording)));
+		Modify Player Variable(Event Player, Times, Append To Array, Subtract(Total Time Elapsed, Player Variable(Event Player,
+			StartTime)));
+		Modify Player Variable(Event Player, Buttons, Append To Array, -10);
+	}
+}
+
+rule("Facing & Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Recording) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, FacingDirections, Append To Array, Facing Direction Of(Event Player));
+		Modify Player Variable(Event Player, Throttles, Append To Array, World Vector Of(Throttle Of(Event Player), Event Player,
+			Rotation));
+		Wait(Global Variable(W), Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("**PLAYBACK**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Play (Trigger)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Voice Line Down) == True;
+	}
+
+	actions
+	{
+		If(Player Variable(Event Player, Recording));
+			Call Subroutine(RecordStop);
+		End;
+		If(Player Variable(Event Player, Playback));
+			Call Subroutine(Stop);
+		End;
+		If(Compare(Player Variable(Event Player, Hero), !=, Null));
+			Modify Global Variable(BotsNeeded, Append To Array, Event Player);
+		End;
+		Modify Global Variable(Playing, Append To Array, Event Player);
+	}
+}
+
+rule("Play (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		Play;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Player Variable(Event Player, StartPosition));
+		Set Player Variable(Event Player, ButtonsIndex, 0);
+		Set Player Variable(Event Player, FacingThrottlesIndex, 0);
+		Set Facing(Event Player, First Of(Player Variable(Event Player, FacingDirections)), To World);
+		Wait(Global Variable(W), Ignore Condition);
+		disabled Start Facing(Event Player, Value In Array(Player Variable(Event Player, FacingDirections), Add(Player Variable(Event Player,
+			FacingThrottlesIndex), 1)), Divide(Angle Between Vectors(Facing Direction Of(Event Player), Value In Array(Player Variable(
+			Event Player, FacingDirections), Add(Player Variable(Event Player, FacingThrottlesIndex), 1))), Subtract(Multiply(
+			Global Variable(W), Add(Player Variable(Event Player, FacingThrottlesIndex), 1)), Subtract(Total Time Elapsed, Player Variable(
+			Event Player, StartTime)))), To World, Direction and Turn Rate);
+		Set Player Variable(Event Player, StartTime, Total Time Elapsed);
+		Start Throttle In Direction(Event Player, Value In Array(Player Variable(Event Player, Throttles), Player Variable(Event Player,
+			FacingThrottlesIndex)), Square Root(Dot Product(Value In Array(Player Variable(Event Player, Throttles), Player Variable(
+			Event Player, FacingThrottlesIndex)), Value In Array(Player Variable(Event Player, Throttles), Player Variable(Event Player,
+			FacingThrottlesIndex)))), To World, Replace existing throttle, Direction and Magnitude);
+		Set Player Variable(Event Player, Playback, True);
+	}
+}
+
+rule("Add Bot")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Global Variable(BotsNeeded)) > 0;
+		Global Variable(FromPlayer) == Null;
+	}
+
+	actions
+	{
+		Set Global Variable(FromPlayer, First Of(Global Variable(BotsNeeded)));
+		Create Dummy Bot(Player Variable(Global Variable(FromPlayer), Hero), Player Variable(Global Variable(FromPlayer), Team), -1,
+			Player Variable(Global Variable(FromPlayer), StartPosition), First Of(Player Variable(Global Variable(FromPlayer),
+			FacingDirections)));
+	}
+}
+
+rule("Bot Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, FromPlayer, Global Variable(FromPlayer));
+		Call Subroutine(Copy);
+		Call Subroutine(Clear);
+		Modify Global Variable(BotsNeeded, Remove From Array By Index, 0);
+		Set Global Variable(FromPlayer, Null);
+	}
+}
+
+rule("Copy")
+{
+	event
+	{
+		Subroutine;
+		Copy;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Buttons, Player Variable(Player Variable(Event Player, FromPlayer), Buttons));
+		Set Player Variable(Event Player, FacingDirections, Player Variable(Player Variable(Event Player, FromPlayer), FacingDirections));
+		Set Player Variable(Event Player, StartPosition, Player Variable(Player Variable(Event Player, FromPlayer), StartPosition));
+		Set Player Variable(Event Player, Times, Player Variable(Player Variable(Event Player, FromPlayer), Times));
+		Set Player Variable(Event Player, Throttles, Player Variable(Player Variable(Event Player, FromPlayer), Throttles));
+	}
+}
+
+rule("Stop at End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Playback) == True;
+		Player Variable(Event Player, FacingThrottlesIndex) == Count Of(Player Variable(Event Player, FacingDirections));
+	}
+
+	actions
+	{
+		Call Subroutine(Stop);
+	}
+}
+
+rule("Stop (Trigger)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Voice Line Up) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Stop);
+	}
+}
+
+rule("Stop (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		Stop;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Playback, False);
+		Set Player Variable(Event Player, U, Empty Array);
+		Set Player Variable(Event Player, C, Empty Array);
+		Stop Holding Button(Event Player, Primary Fire);
+		Stop Holding Button(Event Player, Secondary Fire);
+		Stop Holding Button(Event Player, Ability 1);
+		Stop Holding Button(Event Player, Ability 2);
+		Stop Holding Button(Event Player, Ultimate);
+		Stop Holding Button(Event Player, Interact);
+		Stop Holding Button(Event Player, Jump);
+		Stop Holding Button(Event Player, Crouch);
+		Stop Holding Button(Event Player, Melee);
+		Stop Holding Button(Event Player, Reload);
+		Stop Facing(Event Player);
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+rule("Stop P")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), And(Compare(Player Variable(Current Array Element, FromPlayer), ==, Event Player), Compare(
+			Player Variable(Current Array Element, Playback), ==, True))) == False;
+	}
+
+	actions
+	{
+		Modify Global Variable(Playing, Remove From Array By Value, Event Player);
+	}
+}
+
+rule("Button On/Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Playback) == True;
+		Player Variable(Event Player, Pressing) == False;
+		Add(Value In Array(Player Variable(Event Player, Times), Player Variable(Event Player, ButtonsIndex)), Player Variable(
+			Event Player, StartTime)) < Total Time Elapsed;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Pressing, True);
+		Set Player Variable(Event Player, ButtonNumber, Value In Array(Player Variable(Event Player, Buttons), Player Variable(
+			Event Player, ButtonsIndex)));
+		If(Compare(Player Variable(Event Player, ButtonNumber), ==, 1));
+			Start Holding Button(Event Player, Primary Fire);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -1));
+			Stop Holding Button(Event Player, Primary Fire);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 2));
+			Start Holding Button(Event Player, Secondary Fire);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -2));
+			Stop Holding Button(Event Player, Secondary Fire);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 3));
+			Start Holding Button(Event Player, Ability 1);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -3));
+			Stop Holding Button(Event Player, Ability 1);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 4));
+			Start Holding Button(Event Player, Ability 2);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -4));
+			Stop Holding Button(Event Player, Ability 2);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 5));
+			Start Holding Button(Event Player, Ultimate);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -5));
+			Stop Holding Button(Event Player, Ultimate);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 6));
+			Start Holding Button(Event Player, Interact);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -6));
+			Stop Holding Button(Event Player, Interact);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 7));
+			Start Holding Button(Event Player, Jump);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -7));
+			Stop Holding Button(Event Player, Jump);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 8));
+			Start Holding Button(Event Player, Crouch);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -8));
+			Stop Holding Button(Event Player, Crouch);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 9));
+			Start Holding Button(Event Player, Melee);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -9));
+			Stop Holding Button(Event Player, Melee);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, 10));
+			Start Holding Button(Event Player, Reload);
+		Else If(Compare(Player Variable(Event Player, ButtonNumber), ==, -10));
+			Stop Holding Button(Event Player, Reload);
+		End;
+		Modify Player Variable(Event Player, ButtonsIndex, Add, 1);
+		Set Player Variable(Event Player, Pressing, False);
+	}
+}
+
+rule("Facing & Throttles index")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Playback) == True;
+	}
+
+	actions
+	{
+		Set Facing(Event Player, Value In Array(Player Variable(Event Player, FacingDirections), Player Variable(Event Player,
+			FacingThrottlesIndex)), To World);
+		Wait(Global Variable(W), Ignore Condition);
+		Modify Player Variable(Event Player, FacingThrottlesIndex, Add, 1);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Global Play")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Global Variable(Playing), Player Variable(Event Player, FromPlayer)) == True;
+		Has Spawned(Event Player) == True;
+		Count Of(Global Variable(BotsNeeded)) == 0;
+	}
+
+	actions
+	{
+		If(Is Dummy Bot(Event Player));
+			Call Subroutine(Play);
+		End;
+	}
+}
+
+rule("Global Play/Record")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Global Variable(Recording), Player Variable(Event Player, FromPlayer)) == True;
+		Has Spawned(Event Player) == True;
+		Count Of(Global Variable(BotsNeeded)) == 0;
+	}
+
+	actions
+	{
+		If(Is Dummy Bot(Event Player));
+			Call Subroutine(Play);
+		Else;
+			Call Subroutine(Record);
+		End;
+	}
+}
+
+rule("Stop R")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Recording) == False;
+	}
+
+	actions
+	{
+		Modify Global Variable(Recording, Remove From Array By Value, Event Player);
+	}
+}
+
+rule("Rule 44")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Rule 44")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Rule 46")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Communicating Any Emote(Host Player) == True;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team Of(Host Player));
+	}
+}
+
+rule("Clear (Trigger)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Group Up) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(Clear);
+		Small Message(Event Player, Custom String("Recording Cleared", Null, Null, Null));
+	}
+}
+
+rule("Clear (Subroutine)")
+{
+	event
+	{
+		Subroutine;
+		Clear;
+	}
+
+	actions
+	{
+		Set Player Variable(Player Variable(Event Player, FromPlayer), Hero, Null);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), Team, Null);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), Times, Empty Array);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), Buttons, Empty Array);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), FacingDirections, Empty Array);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), Throttles, Empty Array);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), StartPosition, Null);
+		Set Player Variable(Player Variable(Event Player, FromPlayer), StartTime, Null);
+	}
+}

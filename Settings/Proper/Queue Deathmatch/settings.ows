@@ -1,0 +1,229 @@
+settings
+{
+	main
+	{
+		Description: "No health packs, but you are fully healed when you kill someone. Get 5 more kills than the person in last place to win. Switching heroes is temporarily disabled if you die to the hero you switched to counter."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Dorado
+				Eichenwalde
+				Hanamura
+				Havana
+				Hollywood
+				Horizon Lunar Colony
+				King's Row
+				Paris
+				Petra
+				Temple of Anubis
+				Volskaya Industries
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Score To Win: 7
+			Spawn Health Packs: Disabled
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: Threat
+		11: LastKiller
+		13: NoSwitch
+}
+
+subroutines
+{
+	0: Reset
+}
+
+rule("Reduce Score")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Score Of(First Of(Sorted Array(All Players(All Teams), Score Of(Current Array Element)))) > 0;
+	}
+
+	actions
+	{
+		Modify Player Score(All Players(All Teams), -1 * Score Of(First Of(Sorted Array(All Players(All Teams), Score Of(
+			Current Array Element)))));
+	}
+}
+
+rule("Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Call Subroutine(Reset);
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Set Match Time(10);
+	}
+}
+
+rule("Game Time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 7;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.LastKiller = Attacker == Event Player ? Null : Hero Of(Attacker);
+		If(Event Player.LastKiller == Event Player.Threat);
+			Event Player.NoSwitch = True;
+			Start Forcing Player To Be Hero(Event Player, Hero Of(Event Player));
+		Else;
+			Call Subroutine(Reset);
+		End;
+	}
+}
+
+rule("Hero Switch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Event Player.H;
+	}
+
+	actions
+	{
+		Event Player.H = Hero Of(Event Player);
+		If(Event Player.LastKiller != Null);
+			Event Player.Threat = Event Player.LastKiller;
+		End;
+	}
+}
+
+rule("Reset")
+{
+	event
+	{
+		Subroutine;
+		Reset;
+	}
+
+	actions
+	{
+		Event Player.Threat = Null;
+		Event Player.NoSwitch = False;
+		Stop Forcing Player To Be Hero(Event Player);
+	}
+}
+
+rule("No Switch HUD")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(Event Player, !(Event Player.Threat == Null || Event Player.NoSwitch)), Custom String(
+			"If you die to {0} {1} again hero switching will be temporarily disabled", Hero Icon String(Event Player.Threat),
+			Event Player.Threat), Null, Null, Left, 0, White, White, White, Visible To and String, Default Visibility);
+	}
+}

@@ -1,0 +1,105 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica
+				Necropolis
+			}
+		}
+
+		disabled Elimination
+		{
+			Hero Selection: Random Mirrored
+			Score To Win: 5
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+	}
+}
+
+rule("Shorter Hero Selection Time")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Reduce Damage Dealt")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 0.050);
+	}
+}
+
+rule("Compensate for Bodyshots Only")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Was Critical Hit == False;
+		Event Damage < 0.100;
+	}
+
+	actions
+	{
+		Skip If(Compare(Multiply(Event Damage, 1999), >, 50), 2);
+		Damage(Victim, Event Player, Multiply(Multiply(Event Damage, 2000), 1999));
+		Abort;
+		Damage(Victim, Event Player, Multiply(Multiply(Event Damage, 500), 1999));
+		Damage(Victim, Event Player, Multiply(Multiply(Event Damage, 500), 1999));
+		Damage(Victim, Event Player, Multiply(Multiply(Event Damage, 500), 1999));
+		Damage(Victim, Event Player, Multiply(Multiply(Event Damage, 500), 1999));
+	}
+}

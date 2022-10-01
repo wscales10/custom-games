@@ -1,0 +1,408 @@
+settings
+{
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+		{
+			enabled maps
+			{
+				Horizon Lunar Colony
+			}
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 200%
+
+			Ashe
+			{
+				Coach Gun Knockback Scalar Enemy: 200%
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 200%
+			}
+
+			Brigitte
+			{
+				Shield Bash Knockback Scalar: 200%
+				Whip Shot Knockback Scalar: 200%
+			}
+
+			D.Va
+			{
+				Boosters Knockback Scalar: 200%
+				Call Mech Knockback Scalar: 200%
+				Self Destruct Knockback Scalar: 200%
+			}
+
+			Doomfist
+			{
+				Meteor Strike Knockback Scalar: 200%
+				Rising Uppercut Knockback Scalar: 200%
+				Rocket Punch Knockback Scalar: 200%
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 200%
+				Frag Launcher Knockback Scalar: 200%
+			}
+
+			Lúcio
+			{
+				Soundwave Knockback Scalar: 200%
+			}
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 200%
+				Rocket Launcher Knockback Scalar: 200%
+			}
+
+			Reinhardt
+			{
+				Charge Knockback Scalar: 200%
+				Rocket Hammer Knockback Scalar: 200%
+			}
+
+			Roadhog
+			{
+				Whole Hog Knockback Scalar: 200%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 200%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 200%
+			}
+
+			Winston
+			{
+				Jump Pack Knockback Scalar: 200%
+				Primal Rage Melee Knockback Scalar: 200%
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 200%
+				Minefield Knockback Scalar: 200%
+			}
+
+			Zarya
+			{
+				Particle Cannon Secondary Knockback Scalar: 200%
+			}
+
+			disabled heroes
+			{
+				Ana
+				Baptiste
+				Hanzo
+				McCree
+				Mei
+				Mercy
+				Moira
+				Orisa
+				Reaper
+				Sombra
+				Symmetra
+				Torbjörn
+				Tracer
+				Widowmaker
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Respawning(Event Player);
+		Enable Death Spectate All Players(Event Player);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, -1.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, -1.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, -1, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, -1, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, -0.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, -0.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 0, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 0, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 0.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 0.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 1, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 1, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 1.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 1.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 2, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 2, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 2.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 2.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 3, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 3, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 3.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 3.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 4, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 4, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 4.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 4.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 5, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 5, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 5.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 5.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 6, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 6, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 6.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 6.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 7, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 7, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 7.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 7.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 8, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 8, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 8.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 8.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 9, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 9, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 9.500, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 9.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 10, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 10, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 10.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 10.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 11, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 11, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 11.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 11.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 12, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 12, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 12.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 12.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 13, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 13, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 13.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 13.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 14, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 14, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 14.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 14.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 15, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 15, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 15.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 15.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 16, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 16, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 16.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 16.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 17, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 17, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 17.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 17.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 18, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 18, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 18.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 18.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 19, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 19, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 19.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 19.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 20, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 20, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 20.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 20.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 21, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 21, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 21.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 21.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 22, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 22, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 22.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 22.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 23, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 23, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 23.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 23.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 24, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 24, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 24.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 24.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 25, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 25, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 25.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 25.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 26, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 26, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 26.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 26.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 27, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 27, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 27.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 27.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 28, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 28, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 28.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 28.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 29, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 29, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 29.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 29.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 30, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 30, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 30.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 30.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 31, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 31, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 31.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 31.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 32, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 32, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 32.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 32.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 33, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 33, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 33.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 33.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 34, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 34, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 34.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 34.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 35, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 35, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 35.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 35.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 36, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 36, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 36.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 36.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 37, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 37, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 37.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 37.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 38, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 38, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 38.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 38.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 39, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 39, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 39.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 39.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 40, 1400), Multiply(Global Variable(M), Vector(4, 0, 1))),
+			Add(Vector(200, 40, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Add(Vector(-500, 40.500, 1400), Multiply(Global Variable(M), Vector(4, 0,
+			1))), Add(Vector(200, 40.500, -1400), Multiply(Global Variable(M), Vector(4, 0, 1))), Red, Visible To Position and Radius);
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("Chase Variable")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Global Variable(M, 10);
+		Chase Global Variable At Rate(M, 300, 0.200, Destination and Rate);
+	}
+}
+
+rule("Damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Z Component Of(Position Of(Event Player)) <= Subtract(Multiply(17, Global Variable(M)), Add(Multiply(4, X Component Of(Position Of(
+			Event Player))), 597.500));
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, Add(Multiply(0.164, Subtract(Global Variable(M), Divide(Add(Z Component Of(Position Of(Event Player)),
+			Add(Multiply(4, X Component Of(Position Of(Event Player))), 597.500)), 17))), 0.178));
+		Wait(0.016, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Number of Living Players(All Teams) == 1;
+	}
+
+	actions
+	{
+		Declare Player Victory(All Living Players(All Teams));
+		Set Status(All Living Players(All Teams), Null, Invincible, 9999);
+	}
+}

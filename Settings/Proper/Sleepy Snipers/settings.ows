@@ -1,0 +1,117 @@
+settings
+{
+	main
+	{
+		Description: "For three players. Ana can't use her gun, but her sleep dart cooldown is reduced to 2.16 seconds, and she can only be damaged by headshots. Health packs are enabled but respawn very slowly and do 20% less healing. The other team spawn with their ultimate available, but it probably won't help that much. First to three wins."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 12
+		Max Team 2 Players: 2
+		Return To Lobby: After A Game
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Elimination
+		{
+			Restrict Previously Used Heroes: After Round Won
+			Tiebreaker After Match Time Elapsed: 300
+
+			disabled maps
+			{
+				Black Forest Winter
+				Ecopoint: Antarctica Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Health Pack Respawn Time Scalar: 500%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Ana
+			{
+				Primary Fire: Off
+				Receive Headshots Only: On
+				Sleep Dart Cooldown Time: 18%
+				Ultimate Ability Nano Boost: Off
+			}
+
+			enabled heroes
+			{
+				Ana
+			}
+		}
+
+		Team 2
+		{
+			Spawn With Ultimate Ready: On
+
+			Hanzo
+			{
+				Storm Arrows: Off
+			}
+
+			McCree
+			{
+				Secondary Fire: Off
+			}
+
+			Mei
+			{
+				Cryo-Freeze: Off
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Secondary Fire: Off
+			}
+
+			Widowmaker
+			{
+				No Automatic Fire: On
+			}
+
+			Zenyatta
+			{
+				Orb of Harmony: Off
+				Primary Fire: Off
+			}
+
+			enabled heroes
+			{
+				Ashe
+				Hanzo
+				McCree
+				Mei
+				Torbjörn
+				Widowmaker
+				Zenyatta
+			}
+		}
+
+		General
+		{
+			Healing Received: 80%
+		}
+	}
+}

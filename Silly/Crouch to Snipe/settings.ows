@@ -1,0 +1,759 @@
+settings
+{
+	main
+	{
+		Description: "Crouching increases damage dealt and projectile speed and reduces projectile gravity and aim speed. Several heroes are modified in other ways."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 8
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Practice Range
+		{
+			Hero Limit: Off
+		}
+
+		Skirmish
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 40%
+			Projectile Gravity: 64%
+			Projectile Speed: 80%
+
+			Ana
+			{
+				Ammunition Clip Size Scalar: 25%
+				Healing Dealt: 50%
+				Healing Received: 50%
+				Health: 75%
+			}
+
+			Ashe
+			{
+				Damage Dealt: 60%
+				Dynamite Fuse Time Scalar: 1%
+				Ultimate Duration: 25%
+				Ultimate Generation B.O.B.: 448%
+			}
+
+			Baptiste
+			{
+				Ammunition Clip Size Scalar: 27%
+				Damage Dealt: 90%
+				Health: 75%
+			}
+
+			Bastion
+			{
+				Ammunition Clip Size Scalar: 70%
+				Damage Dealt: 60%
+				Healing Dealt: 175%
+				Projectile Speed: 500%
+				Self-Repair Maximum Time: 20%
+				Ultimate Duration: 150%
+			}
+
+			Brigitte
+			{
+				Barrier Shield Cooldown Time: 160%
+				Damage Dealt: 260%
+				Healing Received: 50%
+				Health: 50%
+				Primary Fire: Off
+				Quick Melee: Off
+				Whip Shot Knockback Scalar: 50%
+			}
+
+			D.Va
+			{
+				Health: 50%
+				Spawn With Ultimate Ready: On
+			}
+
+			Doomfist
+			{
+				Damage Dealt: 80%
+				Health: 60%
+				Jump Vertical Speed: 70%
+				Movement Gravity: 50%
+				Movement Speed: 170%
+				Rising Uppercut Knockback Scalar: 50%
+				Rocket Punch Knockback Scalar: 50%
+			}
+
+			Hanzo
+			{
+				Damage Dealt: 80%
+			}
+
+			Lúcio
+			{
+				Soundwave Knockback Scalar: 50%
+			}
+
+			Mei
+			{
+				Healing Dealt: 20%
+				Weapon Freeze Duration Scalar: 60%
+			}
+
+			Mercy
+			{
+				Ammunition Clip Size Scalar: 150%
+				Damage Dealt: 80%
+				Jump Vertical Speed: 110%
+				Movement Speed: 120%
+			}
+
+			Moira
+			{
+				Biotic Energy Maximum: 20%
+				Biotic Orb Max Damage Scalar: 30%
+				Biotic Orb Max Healing Scalar: 30%
+				Damage Dealt: 350%
+				Healing Dealt: 350%
+				Healing Received: 75%
+				Health: 75%
+				Movement Speed: 80%
+				Secondary Fire: Off
+				Ultimate Duration: 30%
+			}
+
+			Orisa
+			{
+				Ammunition Clip Size Scalar: 50%
+				Health: 50%
+				Protective Barrier Cooldown Time: 160%
+			}
+
+			Pharah
+			{
+				Damage Dealt: 90%
+			}
+
+			Reaper
+			{
+				Damage Dealt: 150%
+				Health: 60%
+				Movement Speed: 125%
+				Primary Fire: Off
+				Ultimate Generation - Combat Death Blossom: 400%
+				Ultimate Generation - Passive Death Blossom: 0%
+			}
+
+			Reinhardt
+			{
+				Barrier Field Cooldown Time: 160%
+				Charge Cooldown Time: 20%
+				Charge Knockback Scalar: 0%
+				Damage Dealt: 80%
+				Damage Received: 60%
+				Healing Received: 60%
+				Health: 50%
+			}
+
+			Roadhog
+			{
+				Damage Dealt: 120%
+				Healing Dealt: 75%
+				Healing Received: 75%
+				Health: 75%
+				Primary Fire: Off
+			}
+
+			Sigma
+			{
+				Healing Received: 75%
+				Health: 75%
+			}
+
+			Soldier: 76
+			{
+				Damage Dealt: 70%
+			}
+
+			Sombra
+			{
+				Ammunition Clip Size Scalar: 50%
+				Health: 75%
+			}
+
+			Symmetra
+			{
+				Damage Received: 20%
+				Healing Received: 20%
+				Health: 20%
+			}
+
+			Torbjörn
+			{
+				Damage Received: 20%
+				Healing Received: 20%
+				Health: 20%
+			}
+
+			Tracer
+			{
+				Ammunition Clip Size Scalar: 75%
+				Damage Dealt: 90%
+			}
+
+			Widowmaker
+			{
+				Health: 50%
+			}
+
+			Winston
+			{
+				Ammunition Clip Size Scalar: 25%
+				Barrier Projector Cooldown Time: 160%
+				Damage Dealt: 120%
+				Health: 75%
+				Jump Pack Acceleration Scalar: 210%
+				Jump Pack Knockback Scalar: 350%
+			}
+
+			Wrecking Ball
+			{
+				Ammunition Clip Size Scalar: 25%
+				Damage Dealt: 140%
+				Grappling Claw Knockback Scalar: 400%
+				Health: 50%
+				Jump Vertical Speed: 200%
+				Movement Gravity: 200%
+				Ultimate Ability Minefield: Off
+			}
+
+			Zarya
+			{
+				Ammunition Clip Size Scalar: 80%
+				Particle Cannon Secondary Knockback Scalar: 50%
+			}
+
+			Zenyatta
+			{
+				Ammunition Clip Size Scalar: 50%
+				Damage Dealt: 80%
+			}
+		}
+	}
+}
+
+rule("Rein Charge Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 10);
+		Set Move Speed(Event Player, 1000);
+	}
+}
+
+rule("Rein Charge End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 100);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Switch Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Player Variable(Event Player, H);
+		Hero Of(Event Player) != Null;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 100);
+		Clear Status(Event Player, Rooted);
+		Stop Forcing Throttle(Event Player);
+		Set Move Speed(Event Player, 100);
+		Set Player Variable(Event Player, H, Hero Of(Event Player));
+		Stop Facing(Event Player);
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Winston Jump Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Winston;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 440);
+	}
+}
+
+rule("Winston Jump End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Winston;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 100);
+	}
+}
+
+rule("Scope")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Projectile Speed(Event Player, 500);
+		Set Damage Dealt(Event Player, 125);
+		Set Projectile Gravity(Event Player, 1);
+		Set Aim Speed(Event Player, 50);
+	}
+}
+
+rule("No scope")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Projectile Speed(Event Player, 100);
+		Set Projectile Gravity(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+		Set Aim Speed(Event Player, 100);
+	}
+}
+
+rule("Ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 800);
+		Wait(1, Restart When True);
+		Set Move Speed(Event Player, 100);
+		Abort If Condition Is False;
+		Set Status(Event Player, Null, Frozen, 0.001);
+	}
+}
+
+rule("Reaper")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player), -7.300), 45, To World,
+			Cancel Contrary Motion);
+	}
+}
+
+rule("McCree")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		McCree;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Secondary Fire);
+		Wait(1.100, Restart When True);
+		Allow Button(Event Player, Secondary Fire);
+	}
+}
+
+rule("Tracer")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+		Is Using Ability 2(Event Player) == False;
+		Is True For Any(All Living Players(Opposite Team Of(Team Of(Event Player))), Is In Line of Sight(Eye Position(Event Player),
+			Eye Position(Current Array Element), Enemy Barriers Block LOS)) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, A, Filtered Array(All Living Players(Opposite Team Of(Team Of(Event Player))), And(
+			Is In View Angle(Event Player, Eye Position(Current Array Element), 50), Is In Line of Sight(Eye Position(Event Player),
+			Eye Position(Current Array Element), Enemy Barriers Block LOS))));
+		Wait(0.016, Ignore Condition);
+		Abort If(Compare(Count Of(Player Variable(Event Player, A)), ==, 0));
+		Set Player Variable(Event Player, P, First Of(Sorted Array(Player Variable(Event Player, A), Angle Between Vectors(
+			Facing Direction Of(Event Player), Vector Towards(Eye Position(Event Player), Eye Position(Current Array Element))))));
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Player Variable(Event Player, P))), 720,
+			To World, Direction and Turn Rate);
+		Wait(0.300, Ignore Condition);
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Rule 14")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.450, Ignore Condition);
+		Apply Impulse(Event Player, Up, 4.850, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+		Wait(0.550, Ignore Condition);
+		Apply Impulse(Event Player, Up, 3.500, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+		Wait(0.400, Ignore Condition);
+		Apply Impulse(Event Player, Up, 3.500, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+		Wait(0.400, Ignore Condition);
+		Apply Impulse(Event Player, Up, 3.500, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+		Wait(0.400, Ignore Condition);
+		Apply Impulse(Event Player, Up, 3.500, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+		Wait(0.400, Ignore Condition);
+		Apply Impulse(Event Player, Up, 3.500, To World, Cancel Contrary Motion);
+		Damage(Event Player, Null, 0.001);
+	}
+}
+
+rule("Moira")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 75);
+		Set Move Speed(Event Player, 300);
+		Start Facing(Event Player, Direction Towards(Event Player, First Of(Sorted Array(All Living Players(Opposite Team Of(Team Of(
+			Event Player))), Distance Between(Event Player, Current Array Element)))), Divide(1800, Distance Between(Event Player,
+			First Of(Sorted Array(All Living Players(Opposite Team Of(Team Of(Event Player))), Distance Between(Event Player,
+			Current Array Element))))), To World, Direction and Turn Rate);
+		Start Throttle In Direction(Event Player, Direction Towards(Event Player, First Of(Sorted Array(All Living Players(
+			Opposite Team Of(Team Of(Event Player))), Distance Between(Event Player, Current Array Element)))), Subtract(1, Divide(5, Add(
+			Distance Between(Event Player, First Of(Sorted Array(All Living Players(Opposite Team Of(Team Of(Event Player))),
+			Distance Between(Event Player, Current Array Element)))), 5))), To World, Replace existing throttle, Direction and Magnitude);
+	}
+}
+
+rule("Moira")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+rule("Moira")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 100);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("D.Va")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Aim Speed(Event Player, 10);
+		Set Move Speed(Event Player, 500);
+	}
+}
+
+rule("D.Va")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Aim Speed(Event Player, 100);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Bob")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Ashe;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Damage Dealt(Event Player, 800);
+	}
+}
+
+rule("Bob")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Ashe;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Damage Dealt(Event Player, 100);
+	}
+}
+
+rule("Doom")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+		Altitude Of(Event Player) > 1;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player), Max(Vertical Facing Angle Of(
+			Event Player), -5)), 100, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Doom")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Or(Not(Is Using Ability 2(Event Player)), Compare(Altitude Of(Event Player), <, 1)) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}

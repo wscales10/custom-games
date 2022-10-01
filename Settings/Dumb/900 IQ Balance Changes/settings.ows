@@ -1,0 +1,964 @@
+settings
+{
+	main
+	{
+		Description: "Lúcio: You can trap enemies in your soudwave before booping them. McCree: Every bullet doubles as a flashbang, and fan the hammer does twice as much damage. Orisa: New ability (Blink). Tracer: New Passive (Lifesteal). Zenyatta: 1000% damage increase, ultimate now gives teammates tranquil status. Baptiste: Immortality Field Cooldown 10s. Echo: 600 HP. Genji: 250 HP, fully heals when using ult. Junkrat: Grenades replaced with mines. Mei: 2x freeze rate, 600HP. Mercy: All abilities replaced by resurrect..."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+			}
+		}
+
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Dorado
+				Eichenwalde
+				Hanamura
+				Ilios Well
+				King's Row
+				Paris
+				Volskaya Industries
+				Workshop Island
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Baptiste
+			{
+				Immortality Field Cooldown Time: 40%
+			}
+
+			Echo
+			{
+				Health: 300%
+			}
+
+			Genji
+			{
+				Health: 125%
+			}
+
+			Junkrat
+			{
+				Concussion Mine Cooldown Time: 12%
+				Primary Fire: Off
+				Projectile Speed: 125%
+			}
+
+			Mei
+			{
+				Blizzard Freeze Rate Scalar: 200%
+				Damage Dealt: 73%
+				Health: 240%
+				Weapon Freeze Rate Scalar: 200%
+			}
+
+			Mercy
+			{
+				Damage Dealt: 200%
+				Guardian Angel: Off
+				Primary Fire: Off
+				Regeneration: Off
+				Resurrect Cooldown Time: 0%
+				Ultimate Ability Valkyrie: Off
+				Weapons Enabled: Caduceus Staff Only
+			}
+
+			Reaper
+			{
+				Healing Dealt: 10%
+			}
+
+			Sombra
+			{
+				Hack Cooldown Time: 500%
+				Spawn With Ultimate Ready: On
+				Ultimate Generation - Combat EMP: 0%
+				Ultimate Generation - Passive EMP: 0%
+			}
+
+			enabled heroes
+			{
+				Ana
+				Baptiste
+				Echo
+				Genji
+				Junkrat
+				Lúcio
+				McCree
+				Mei
+				Mercy
+				Orisa
+				Reaper
+				Reinhardt
+				Sombra
+				Tracer
+				Zenyatta
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: Array
+		1: Bcceleration
+		2: CanAbility
+		6: BlinkCharges
+		8: IsBlinking
+		11: Lucio
+		13: RayCastNormal
+		15: RayCastStart
+		16: RayCastEnd
+		17: RayCast
+		18: ChargeState
+		19: CooldownTime
+}
+
+rule("Lúcio")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	actions
+	{
+		Set Secondary Fire Enabled(Event Player, False);
+		Event Player.Array = Empty Array;
+	}
+}
+
+rule("Lúcio Grab")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+	}
+
+	actions
+	{
+		If(Count Of(Event Player.Array) == 0 && Event Player.CanAbility && Event Player.Lucio == Null && Ability Cooldown(Event Player,
+			Button(Secondary Fire)) == 0);
+			Event Player.Array = Filtered Array(Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))), Append To Array(
+				Event Player, Event Player.Lucio)), Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+				Enemy Barriers Block LOS) && Distance Between(Event Player, Current Array Element) < 8 && Is In View Angle(Event Player,
+				Eye Position(Current Array Element), 45) && !Has Status(Current Array Element, Phased Out));
+			Event Player.Array.Lucio = Event Player;
+			Modify Player Variable(Remove From Array(Players On Hero(Hero(Lúcio), All Teams), Event Player), Array, Remove From Array By Value,
+				Event Player.Array);
+		End;
+	}
+}
+
+rule("Grabbed by Lúcio")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Lucio != Null;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Stunned, 1);
+		Set Status(Event Player, Event Player.Lucio, Rooted, 9999);
+		Start Accelerating(Event Player, Event Player.Bcceleration, Square Root(Dot Product(Event Player.Bcceleration,
+			Event Player.Bcceleration)), 60, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Loop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Lucio != Null;
+	}
+
+	actions
+	{
+		Event Player.Bcceleration = 18 * (Velocity Of(Event Player.Lucio) - Velocity Of(Event Player)) + 81 * (Eye Position(
+			Event Player.Lucio) + 2 * Facing Direction Of(Event Player.Lucio) - World Vector Of(0.500 * Up, Event Player,
+			Rotation And Translation));
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Enable Secondary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Hero Of(Event Player) != Hero(Lúcio) || Count Of(Event Player.Array) > 0) == True;
+	}
+
+	actions
+	{
+		Wait(0.400, Abort When False);
+		Set Secondary Fire Enabled(Event Player, True);
+	}
+}
+
+rule("Lúcio Release")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Count Of(Event Player.Array) > 0;
+		(Is Firing Secondary(Event Player) || !Event Player.CanAbility) == True;
+	}
+
+	actions
+	{
+		Event Player.Array = Empty Array;
+	}
+}
+
+rule("Released by Lúcio")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Event Player.Lucio.Array, Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.Lucio = Null;
+		Stop Accelerating(Event Player);
+		Wait(0.600, Abort When False);
+		Clear Status(Event Player, Rooted);
+	}
+}
+
+rule("Release on LOS Loss")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Lucio != Null;
+		Is In Line of Sight(Eye Position(Event Player), Eye Position(Event Player.Lucio), Barriers Do Not Block LOS) == False;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Modify Player Variable(Event Player.Lucio, Array, Remove From Array By Value, Event Player);
+	}
+}
+
+rule("Can Ability")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Dead(Event Player) || Has Status(Event Player, Hacked) || Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen)
+			|| Has Status(Event Player, Stunned)) == True;
+	}
+
+	actions
+	{
+		Event Player.CanAbility = False;
+	}
+}
+
+rule("Can't Ability")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Dead(Event Player) || Has Status(Event Player, Hacked) || Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen)
+			|| Has Status(Event Player, Stunned)) == False;
+	}
+
+	actions
+	{
+		Event Player.CanAbility = True;
+	}
+}
+
+rule("Emote")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Lucio != Null;
+		Is On Ground(Event Player) == True;
+		Is Communicating Any Emote(Event Player) == False;
+	}
+
+	actions
+	{
+		If(Random Real(0, 1) < 0.500);
+			If(Random Real(0, 1) < 0.500);
+				Communicate(Event Player, Emote Up);
+			Else;
+				Communicate(Event Player, Emote Left);
+			End;
+		Else;
+			If(Random Real(0, 1) < 0.500);
+				Communicate(Event Player, Emote Right);
+			Else;
+				Communicate(Event Player, Emote Down);
+			End;
+		End;
+	}
+}
+
+rule("McCree Stun")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		McCree;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.RayCast = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 1000 * Facing Direction Of(
+			Event Player), All Players(Opposite Team Of(Team Of(Event Player))), Event Player, True);
+		Abort If(Distance Between(Event Player, Event Player.RayCast) > 900);
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, Event Player.RayCast, 3);
+		Event Player.Array = Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Is In Line of Sight(Eye Position(Current Array Element), Event Player.RayCast, Enemy Barriers Block LOS) && Distance Between(
+			Event Player.RayCast, Eye Position(Current Array Element)) <= 3);
+		Set Status(Event Player.Array, Event Player, Stunned, 0.700);
+		Damage(Event Player.Array, Event Player, 25);
+		Wait(0.100, Ignore Condition);
+		Event Player.Array = Empty Array;
+	}
+}
+
+rule("EMP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Sombra;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+		Ultimate Charge Percent(Event Player) != 100;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) + 25);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Trance")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Remove From Array(Players On Hero(Hero(Zenyatta), All Teams), Append To Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Is Using Ultimate(Current Array Element) && Distance Between(Eye Position(Event Player),
+			Eye Position(Current Array Element)) <= 10 && Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Enemy Barriers Block LOS)) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Disallow Button(Event Player, Primary Fire);
+		Disallow Button(Event Player, Secondary Fire);
+		Disallow Button(Event Player, Ability 1);
+		Disallow Button(Event Player, Ability 2);
+		Disallow Button(Event Player, Ultimate);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Melee);
+		Disallow Button(Event Player, Reload);
+		Set Aim Speed(Event Player, 0);
+	}
+}
+
+rule("No Trance")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Remove From Array(Players On Hero(Hero(Zenyatta), All Teams), Append To Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Is Using Ultimate(Current Array Element) && Distance Between(Eye Position(Event Player),
+			Eye Position(Current Array Element)) <= 10 && Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Enemy Barriers Block LOS)) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		Clear Status(Event Player, Phased Out);
+		Allow Button(Event Player, Primary Fire);
+		Allow Button(Event Player, Secondary Fire);
+		Allow Button(Event Player, Ability 1);
+		Allow Button(Event Player, Ability 2);
+		Allow Button(Event Player, Ultimate);
+		Allow Button(Event Player, Interact);
+		Allow Button(Event Player, Melee);
+		Allow Button(Event Player, Reload);
+		Set Aim Speed(Event Player, 100);
+	}
+}
+
+rule("Charge Cancel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		If(Event Player.ChargeState == Custom String("Charging"));
+			Event Player.ChargeState = Custom String("Cancelled");
+			Set Status(Event Player, Null, Knocked Down, 0.001);
+	}
+}
+
+rule("Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.500, Abort When False);
+		Event Player.ChargeState = Custom String("Charging");
+	}
+}
+
+rule("Not Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Using Ability 1(Event Player) && Hero Of(Event Player) == Hero(Reinhardt)) == False;
+	}
+
+	actions
+	{
+		If(Event Player.ChargeState == Custom String("Cancelled"));
+			Set Ability Cooldown(Event Player, Button(Ability 1), 0.200);
+		End;
+		Event Player.ChargeState = Custom String("Not Charging");
+	}
+}
+
+rule("Tracer Lifesteal")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Tracer;
+	}
+
+	actions
+	{
+		Heal(Event Player, Event Player, 0.300 * Event Damage);
+	}
+}
+
+rule("Mercy New Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Ability 2);
+	}
+}
+
+rule("Mercy New Ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Ability 2);
+	}
+}
+
+rule("Mercy New Passive")
+{
+	event
+	{
+		Player Died;
+		All;
+		Mercy;
+	}
+
+	actions
+	{
+		Wait(1.750, Ignore Condition);
+		Resurrect(Event Player);
+		Set Status(Event Player, Null, Invincible, 2.250);
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, Event Player, 2.500);
+		Play Effect(All Players(All Teams), Buff Impact Sound, White, Event Player, 100);
+	}
+}
+
+rule("Reaper")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 0.035);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Reaper Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		Reaper;
+	}
+
+	actions
+	{
+		Heal(Event Player, Event Player, 1200);
+	}
+}
+
+rule("Dragonblade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Genji;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+rule("Dragonblade End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Genji;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+rule("Junkrat new Primary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Junkrat;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Secondary Fire);
+		Press Button(Event Player, Ability 1);
+		Wait(0.667, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Blink")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+		Event Player.CanAbility == True;
+		Has Status(Event Player, Rooted) == False;
+		Event Player.BlinkCharges > 0;
+	}
+
+	actions
+	{
+		Abort If(Event Player.IsBlinking);
+		Event Player.IsBlinking = True;
+		Set Gravity(Event Player, 0);
+		If(Throttle Of(Event Player) == Vector(0, 0, 0));
+			Apply Impulse(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player), 0), 70, To World,
+				Cancel Contrary Motion);
+		Else;
+			Apply Impulse(Event Player, World Vector Of(Throttle Of(Event Player), Event Player, Rotation), 70, To World,
+				Cancel Contrary Motion);
+		End;
+		Wait(0.100, Ignore Condition);
+		Set Gravity(Event Player, 100);
+		Apply Impulse(Event Player, -1 * Velocity Of(Event Player), 0.001, To World, Cancel Contrary Motion);
+		Event Player.BlinkCharges -= 1;
+		Event Player.CooldownTime = 3;
+		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 20);
+		Event Player.IsBlinking = False;
+	}
+}
+
+rule("Remove on Dweath")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player.Lucio, Array, Remove From Array By Value, Event Player);
+	}
+}
+
+rule("Mercy new Primary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Melee);
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Orisa Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Orisa;
+	}
+
+	actions
+	{
+		Event Player.BlinkCharges = 3;
+		Chase Player Variable At Rate(Event Player, CooldownTime, 0, 1, Destination and Rate);
+	}
+}
+
+rule("Blink Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Orisa;
+	}
+
+	conditions
+	{
+		Event Player.CooldownTime == 0;
+		Event Player.BlinkCharges < 3;
+	}
+
+	actions
+	{
+		Event Player.BlinkCharges += 1;
+		Event Player.CooldownTime = 3;
+	}
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(Event Player, Hero Of(Event Player) == Hero(Orisa)), Icon String(Arrow: Up), Custom String("{0}{1}",
+			Filtered Array(Custom String(" "), Event Player.BlinkCharges == 3), Filtered Array(Custom String("o"),
+			Event Player.BlinkCharges < 3)), Event Player.BlinkCharges, Left, 0, White, Orange, White, Visible To and String,
+			Visible Never);
+		Create Beam Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player)), Event Player.Lucio != Null), Good Beam, Event Player, Eye Position(Event Player.Lucio) + Down,
+			Red, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Event Player.Lucio != Null && Is Using Ability 1(Event Player.Lucio)), Good Beam, Event Player, Eye Position(
+			Event Player.Lucio) + Down, Green, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Event Player.Lucio != Null && !Is Using Ability 1(Event Player.Lucio)), Good Beam, Event Player, Eye Position(
+			Event Player.Lucio) + Down, Yellow, Visible To Position and Radius);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Start Damage Modification(All Players(All Teams), Filtered Array(Players On Hero(Hero(McCree), All Teams), Is Firing Secondary(
+			Current Array Element)), 200, Receivers Damagers and Damage Percent);
+		Start Damage Modification(All Players(All Teams), Players On Hero(Hero(Zenyatta), All Teams), 1100,
+			Receivers Damagers and Damage Percent);
+	}
+}
+
+rule("Disable Secondary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Event Player.Array == Empty Array;
+	}
+
+	actions
+	{
+		Set Secondary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Ana TP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Ana;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.300, Abort When False);
+		Event Player.RayCastStart = Eye Position(Event Player);
+		Event Player.RayCastEnd = Event Player.RayCastStart + 60 * 4 * Facing Direction Of(Event Player);
+		Event Player.RayCast = Ray Cast Hit Position(Event Player.RayCastStart, Event Player.RayCastEnd, All Players(Opposite Team Of(
+			Team Of(Event Player))), Event Player, True);
+		Event Player.RayCastNormal = Ray Cast Hit Normal(Event Player.RayCastStart, Event Player.RayCastEnd, All Players(Opposite Team Of(
+			Team Of(Event Player))), Event Player, True);
+		Event Player.RayCast += (1.300 * Max(0, -1 * Y Component Of(Event Player.RayCastNormal)) + 0.715 * Max(0, 1 - 2 * Y Component Of(
+			Event Player.RayCastNormal) ^ 2)) * Event Player.RayCastNormal;
+		If(Distance Between(Event Player.RayCastStart, Event Player.RayCast) < 60 * 4 - 2);
+			Wait(Distance Between(Event Player.RayCastStart, Event Player.RayCast) / 60, Ignore Condition);
+			Teleport(Event Player, Event Player.RayCast);
+		End;
+	}
+}

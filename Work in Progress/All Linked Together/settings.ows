@@ -1,0 +1,143 @@
+settings
+{
+	main
+	{
+		Description: "Your team is chained together"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+		Return To Lobby: Never
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+		}
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		disabled Global.W = 6;
+		Global.Z = 0.900;
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.W = Square Root(10000 / Health(Event Player));
+		Event Player.B = Players In Slot(Slot Of(Event Player) + 1, Team Of(Event Player));
+		Event Player.C = Players In Slot(Slot Of(Event Player) - 1, Team Of(Event Player));
+		disabled Event Player.D = Velocity Of(Event Player.B) * Distance Between(Event Player, Event Player.B);
+		disabled Event Player.E = Velocity Of(Event Player.C) * Distance Between(Event Player, Event Player.C);
+		Event Player.D = 2 * Event Player.W * Global.Z * ((1 - 1 / Distance Between(Event Player, Event Player.B)) * (Velocity Of(
+			Event Player.B) - Velocity Of(Event Player)) + Dot Product(Vector Towards(Event Player, Event Player.B), Velocity Of(
+			Event Player.B) - Velocity Of(Event Player)) / Distance Between(Event Player, Event Player.B) ^ 2 * Direction Towards(
+			Event Player, Event Player.B)) + Event Player.W ^ 2 * (1 - 1 / Distance Between(Event Player, Event Player.B))
+			* Vector Towards(Event Player, Event Player.B);
+		Event Player.E = 2 * Event Player.W * Global.Z * ((1 - 1 / Distance Between(Event Player, Event Player.C)) * (Velocity Of(
+			Event Player.C) - Velocity Of(Event Player)) + Dot Product(Vector Towards(Event Player, Event Player.C), Velocity Of(
+			Event Player.C) - Velocity Of(Event Player)) / Distance Between(Event Player, Event Player.C) ^ 2 * Direction Towards(
+			Event Player, Event Player.C)) + Event Player.W ^ 2 * (1 - 1 / Distance Between(Event Player, Event Player.C))
+			* Vector Towards(Event Player, Event Player.C);
+		If(Event Player.B != Null && Is Alive(Event Player.B));
+			If(Event Player.C != Null && Is Alive(Event Player.C));
+				Event Player.A = Event Player.D + Event Player.E;
+			Else;
+				Event Player.A = Event Player.D;
+			End;
+		Else If(Event Player.C != Null && Is Alive(Event Player.C));
+			Event Player.A = Event Player.E;
+		Else;
+			Event Player.A = 0;
+		End;
+		Event Player.G = Event Player.A + 0 * Down;
+		Wait(0.016, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Event Player.G, Square Root(Dot Product(Event Player.G, Event Player.G)), 45, To World,
+			Direction Rate and Max Speed);
+		disabled Set Gravity(Event Player, 0);
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Beam Effect(Filtered Array(All Players(All Teams), Event Player.C != Null), Grapple Beam, (Eye Position(Event Player)
+			+ Position Of(Event Player)) / 2, (Eye Position(Event Player.C) + Position Of(Event Player.C)) / 2, White,
+			Visible To Position and Radius);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}w

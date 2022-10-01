@@ -1,0 +1,95 @@
+settings
+{
+	main
+	{
+		Description: "The higher up you are, the more damage you do"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 8
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Château Guillard
+				Havana
+				Hollywood
+				Ilios Well
+				Lijiang Control Center
+				Necropolis
+				Oasis City Center
+				Petra
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Damage Modification(All Players(All Teams), Event Player, 260 * ((Y Component Of(Eye Position(Event Player)) - Global.A) / (
+			Global.B - Global.A)) - 26, Receivers Damagers and Damage Percent);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Min Max")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Modify Global Variable(A, Min, Y Component Of(Eye Position(Event Player)));
+		Modify Global Variable(B, Max, Y Component Of(Eye Position(Event Player)));
+		Wait(1, Abort When False);
+		Loop If Condition Is True;
+	}
+}

@@ -1,0 +1,126 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Victim != Event Player;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Healing Dealt(Event Player, 0);
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Event Player) == True;
+		Event Player.A != Null;
+	}
+
+	actions
+	{
+		Resurrect(Event Player);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.A = Attacker;
+	}
+}

@@ -1,0 +1,335 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+	}
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Unkillable, 9999);
+		Set Player Variable(Event Player, G, Empty Array);
+		Chase Player Variable At Rate(Event Player, T, 0, 1, None);
+	}
+}
+
+rule("Knock Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Health(Event Player) == 1;
+	}
+
+	actions
+	{
+		Abort If(Has Status(Event Player, Knocked Down));
+		Set Player Variable(Event Player, T, 10);
+		Set Status(Event Player, Null, Hacked, 0.001);
+		Set Status(Event Player, Null, Knocked Down, 9999);
+		Create In-World Text(All Players(All Teams), Player Variable(Event Player, T), Add(Position Of(Event Player), Up), 2,
+			Clip Against Surfaces, Visible To Position and String, Red, Default Visibility);
+		Set Player Variable(Event Player, W, Last Text ID);
+	}
+}
+
+rule("Revive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) >= 0.300;
+		Has Status(Event Player, Knocked Down) == True;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Knocked Down);
+	}
+}
+
+rule("Tea")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(And(Has Status(Current Array Element, Knocked Down),
+			Is Alive(Current Array Element)), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, N, Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), And(Has Status(
+			Current Array Element, Knocked Down), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))));
+		Modify Player Variable(Player Variable(Event Player, N), G, Append To Array, Event Player);
+	}
+}
+
+rule("Oh No")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Player Variable(Event Player, G)) > 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, O, First Of(Player Variable(Event Player, G)));
+		Set Player Variable(Event Player, U, Min(Ultimate Charge Percent(Event Player), Min(Subtract(100, Ultimate Charge Percent(
+			Player Variable(Event Player, O))), 2.750)));
+		Set Ultimate Charge(Event Player, Subtract(Ultimate Charge Percent(Event Player), Player Variable(Event Player, U)));
+		Set Ultimate Charge(Player Variable(Event Player, O), Add(Ultimate Charge Percent(Player Variable(Event Player, O)),
+			Player Variable(Event Player, U)));
+		Set Player Variable(Event Player, H, Min(Subtract(Max Health(Event Player), Multiply(0.200, Player Variable(Event Player, M))),
+			Min(Subtract(Multiply(100, Player Variable(Player Variable(Event Player, O), M)), Max Health(Player Variable(Event Player,
+			O))), 3)));
+		Set Player Variable(Event Player, X, Subtract(Max Health(Event Player), Player Variable(Event Player, H)));
+		Set Player Variable(Player Variable(Event Player, O), X, Add(Max Health(Player Variable(Event Player, O)), Player Variable(
+			Event Player, H)));
+		Modify Player Variable(Event Player, G, Remove From Array By Index, 0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Update Raw Max Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Player Variable(Event Player, E);
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 100);
+		Wait(0.016, Ignore Condition);
+		Set Player Variable(Event Player, X, 0);
+		Set Player Variable(Event Player, M, Max Health(Event Player));
+		Set Player Variable(Event Player, E, Hero Of(Event Player));
+	}
+}
+
+rule("Remove Unkillable Status")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, T) == 0;
+	}
+
+	actions
+	{
+		Abort If(Not(Has Status(Event Player, Knocked Down)));
+		Clear Status(Event Player, Unkillable);
+		Set Player Variable(Event Player, D, True);
+	}
+}
+
+rule("Emote = Heal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating Any Emote(Event Player) == True;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(And(Has Status(Current Array Element, Knocked Down),
+			Is Alive(Current Array Element)), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))) == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, 0.250);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Kill")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, D) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Kill(Event Player, Player Variable(Event Player, K));
+		Wait(0.016, Abort When False);
+		Loop If Condition Is True;
+		Set Status(Event Player, Null, Unkillable, 9999);
+	}
+}
+
+rule("Set Max Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Round To Integer(Max Health(Event Player), To Nearest) != Player Variable(Event Player, X);
+		Has Spawned(Event Player) == True;
+		Player Variable(Event Player, X) != 0;
+		Hero Of(Event Player) == Player Variable(Event Player, E);
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, X, Round To Integer(Player Variable(Event Player, X), To Nearest));
+		Set Player Variable(Event Player, A, Health(Event Player));
+		Set Max Health(Event Player, Multiply(100, Divide(Player Variable(Event Player, X), Player Variable(Event Player, M))));
+		Wait(0.016, Ignore Condition);
+		Heal(Event Player, Null, Subtract(Player Variable(Event Player, A), Health(Event Player)));
+		Damage(Event Player, Null, Subtract(Health(Event Player), Player Variable(Event Player, A)));
+		Loop If Condition Is True;
+	}
+}
+
+rule("Destroy Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Dead(Event Player), Not(Has Status(Event Player, Knocked Down))) == True;
+		Player Variable(Event Player, W) != Null;
+	}
+
+	actions
+	{
+		Destroy In-World Text(Player Variable(Event Player, W));
+	}
+}
+
+rule("Is Dead")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, D, False);
+		Set Player Variable(Event Player, K, Null);
+	}
+}
+
+rule("Last Attacker")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Victim, K, Attacker);
+	}
+}

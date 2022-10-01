@@ -1,0 +1,117 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Torbjörn
+			}
+		}
+
+		General
+		{
+			Reinhardt
+			{
+				Barrier Field: Off
+				Charge: Off
+				Fire Strike: Off
+				Health: 25%
+				Ultimate Ability Earthshatter: Off
+			}
+
+			Torbjörn
+			{
+				Deploy Turret: Off
+				Health: 150%
+				Overload: Off
+				Ultimate Ability Molten Core: Off
+				Weapons Enabled: Forge Hammer Only
+			}
+		}
+	}
+}
+
+rule("Rein")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	actions
+	{
+		Remove All Health Pools From Player(Event Player);
+		Start Scaling Player(Event Player, 0.556, False);
+		Set Damage Dealt(Event Player, 73.333);
+		Add Health Pool To Player(Event Player, Health, 125, True, False);
+	}
+}
+
+rule("Torb")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Torbjörn;
+	}
+
+	actions
+	{
+		Remove All Health Pools From Player(Event Player);
+		Start Scaling Player(Event Player, 1.800, False);
+		Set Damage Dealt(Event Player, 136.364);
+		Add Health Pool To Player(Event Player, Armor, 125, True, False);
+	}
+}
+
+rule("Others")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Hero(Reinhardt), Hero(Torbjörn)), Hero Of(Event Player)) == False;
+	}
+
+	actions
+	{
+		Remove All Health Pools From Player(Event Player);
+		Stop Scaling Player(Event Player);
+		Set Damage Dealt(Event Player, 100);
+	}
+}

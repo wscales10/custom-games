@@ -1,0 +1,143 @@
+settings
+{
+	main
+	{
+		Description: "Mirrored Deathmatch. The hero that the most players have selected is played for the whole game. Health packs are disabled, but killing another player fully heals you. Smaller maps only."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Max Spectators: 6
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Blizzard World
+				Castillo
+				Château Guillard
+				Dorado
+				Ecopoint: Antarctica
+				Eichenwalde
+				Havana
+				Hollywood
+				King's Row
+				Necropolis
+				Paris
+				Petra
+			}
+		}
+
+		Team Deathmatch
+		{
+			Score To Win: 20
+
+			enabled maps
+			{
+				Black Forest
+				Blizzard World
+				Castillo
+				Château Guillard
+				Dorado
+				Ecopoint: Antarctica
+				Eichenwalde
+				Hollywood
+				King's Row
+				Necropolis
+				Paris
+				Petra
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Spawn Health Packs: Disabled
+		}
+	}
+}
+
+rule("Heal on Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Event Player, 50);
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, World Vector Of(Vector(0, 0.350, 0), Event Player,
+			Rotation And Translation), 0.700);
+	}
+}
+
+rule("Assembling Heroes")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(20);
+	}
+}
+
+rule("Pick Hero")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(0.250, Ignore Condition);
+		Set Global Variable(H, Last Of(Sorted Array(Sorted Array(All Heroes, Random Real(0, 1)), Count Of(Players On Hero(
+			Current Array Element, All Teams)))));
+	}
+}
+
+rule("Force Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global Variable(H) != Null;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Global Variable(H));
+	}
+}

@@ -1,0 +1,198 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Max Team 1 Players: 2
+		Max Team 2 Players: 6
+		Return To Lobby: Never
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		Elimination
+		{
+			Score To Win: 1
+		}
+
+		General
+		{
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Damage Received: 50%
+			Jump Vertical Speed: 150%
+			Movement Speed: 60%
+			Ultimate Duration: 200%
+		}
+
+		Team 2
+		{
+			Health: 200%
+		}
+	}
+}
+
+variables
+{
+	player:
+		3: thumper
+		21: lastNegativeVerticalSpeed
+		22: verticalSpeed
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	actions
+	{
+		Set Aim Speed(Event Player, 50);
+	}
+}
+
+rule("vertical speed prior to landing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Vertical Speed Of(Event Player) < 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, verticalSpeed, Vertical Speed Of(Event Player));
+		Wait(0.016, Ignore Condition);
+		Skip If(Compare(Player Variable(Event Player, verticalSpeed), >=, 0), 1);
+		Set Player Variable(Event Player, lastNegativeVerticalSpeed, Player Variable(Event Player, verticalSpeed));
+		Loop If Condition Is True;
+	}
+}
+
+rule("landing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(And(Compare(Hero Of(Event Player), ==, Hero(Doomfist)), Is Using Ultimate(Event Player)));
+		Set Player Variable(All Living Players(Opposite Team Of(Team Of(Event Player))), thumper, Event Player);
+		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, Subtract(100, Divide(1000, Subtract(10, Player Variable(
+			Event Player, lastNegativeVerticalSpeed)))));
+	}
+}
+
+rule("landing damage. knockback")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, thumper) != Null;
+	}
+
+	actions
+	{
+		Wait(Divide(Distance Between(Event Player, Player Variable(Event Player, thumper)), 60), Ignore Condition);
+		Damage(Event Player, Player Variable(Event Player, thumper), Round To Integer(Multiply(Subtract(1, Divide(Altitude Of(
+			Event Player), 2)), Divide(Multiply(-10, Player Variable(Player Variable(Event Player, thumper), lastNegativeVerticalSpeed)),
+			Distance Between(Event Player, Player Variable(Event Player, thumper)))), Down));
+		Apply Impulse(Event Player, Up, Multiply(-1.150, Divide(Player Variable(Player Variable(Event Player, thumper),
+			lastNegativeVerticalSpeed), Distance Between(Event Player, Player Variable(Event Player, thumper)))), To World,
+			Incorporate Contrary Motion);
+		Apply Impulse(Event Player, Direction Towards(Player Variable(Event Player, thumper), Event Player), Multiply(-2.300, Divide(
+			Player Variable(Player Variable(Event Player, thumper), lastNegativeVerticalSpeed), Distance Between(Event Player,
+			Player Variable(Event Player, thumper)))), To World, Incorporate Contrary Motion);
+		Wait(0.016, Ignore Condition);
+		Set Player Variable(Event Player, thumper, Null);
+	}
+}
+
+rule("knockdown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) <= 0.250;
+		Has Status(Event Player, Knocked Down) == False;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Knocked Down, 9999);
+		Wait(0.500, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("back up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) > 0.250;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Knocked Down);
+	}
+}
+
+rule("Rule 7")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Start Damage Modification(Filtered Array(All Players(All Teams), Compare(Normalized Health(Current Array Element), <=, 0.250)),
+			All Players(All Teams), 25, Receivers Damagers and Damage Percent);
+	}
+}

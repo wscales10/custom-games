@@ -1,0 +1,273 @@
+settings
+{
+	main
+	{
+		Description: "+60% speed boost while you're not firing, ultimate abilities make everyone happy"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Score To Win: 10
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ultimate Generation - Passive: 200%
+
+			Ana
+			{
+				Biotic Grenade: Off
+				No Automatic Fire: On
+			}
+
+			Ashe
+			{
+				No Automatic Fire: On
+			}
+
+			Hanzo
+			{
+				Storm Arrows: Off
+			}
+
+			Widowmaker
+			{
+				No Automatic Fire: On
+			}
+
+			Zenyatta
+			{
+				Primary Fire: Off
+			}
+
+			enabled heroes
+			{
+				Ana
+				Ashe
+				Hanzo
+				Widowmaker
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("Speed Nerf")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Firing Secondary(Event Player) || (Hero Of(Event Player) == Hero(Hanzo) && Is Firing Primary(Event Player))) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 70);
+	}
+}
+
+rule("Speed Buff")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Firing Secondary(Event Player) || (Hero Of(Event Player) == Hero(Hanzo) && Is Firing Primary(Event Player))) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 160);
+		Wait(1, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Ultimate Buff")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player).E = True;
+	}
+}
+
+rule("Hello Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Hello) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.H != Null);
+		Create In-World Text(Remove From Array(All Players(All Teams), Event Player), String("Hello"), Eye Position(Event Player), 1.500,
+			Do Not Clip, Visible To and Position, White, Default Visibility);
+		Event Player.H = Last Text ID;
+		Wait(4, Ignore Condition);
+		Destroy In-World Text(Event Player.H);
+		Event Player.H = Null;
+	}
+}
+
+rule("Heal")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+rule("Emote")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Event Player.E == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Knocked Down, 0.001);
+		Disallow Button(Event Player, Primary Fire);
+		Disallow Button(Event Player, Secondary Fire);
+		Disallow Button(Event Player, Ability 1);
+		Disallow Button(Event Player, Ability 2);
+		Disallow Button(Event Player, Ultimate);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Melee);
+		Disallow Button(Event Player, Reload);
+		Set Status(Event Player, Null, Rooted, 9999);
+		Wait(0.016, Ignore Condition);
+		Communicate(Event Player, Emote Up);
+	}
+}
+
+rule("Emote Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating Any Emote(Event Player) == True;
+		Event Player.E == True;
+	}
+
+	actions
+	{
+		Wait(0.150, Abort When False);
+		Allow Button(Event Player, Primary Fire);
+		Allow Button(Event Player, Secondary Fire);
+		Allow Button(Event Player, Ability 1);
+		Allow Button(Event Player, Ability 2);
+		Allow Button(Event Player, Ultimate);
+		Allow Button(Event Player, Interact);
+		Allow Button(Event Player, Melee);
+		Allow Button(Event Player, Reload);
+		Clear Status(Event Player, Rooted);
+		Event Player.E = False;
+	}
+}

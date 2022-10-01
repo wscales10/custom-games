@@ -1,0 +1,38 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Max Team 1 Players: 2
+		Max Team 2 Players: 2
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Elimination
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Ecopoint: Antarctica Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Hero Selection: Random Mirrored
+			Score To Win: 4
+		}
+	}
+}

@@ -1,0 +1,156 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Blizzard World
+				Dorado
+				Eichenwalde
+				Hollywood
+				Paris
+				Petra
+			}
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 10%
+			Jump Vertical Speed: 32%
+			Projectile Gravity: 0%
+			Projectile Speed: 500%
+		}
+	}
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 10);
+		Set Damage Dealt(Event Player, 0);
+	}
+}
+
+rule("Is On Ground")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 80);
+	}
+}
+
+rule("Is In Air")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Is In Spawn Room(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 125);
+		Set Damage Dealt(Event Player, 100);
+		Stop All Damage Over Time(Event Player);
+		Set Player Variable(Event Player, A, True);
+	}
+}
+
+rule("Ground Damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Player Variable(Event Player, A) == True;
+	}
+
+	actions
+	{
+		Start Damage Over Time(Event Player, Null, 9999, 125);
+	}
+}
+
+rule("Reset Var")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Dead(Event Player), Is In Spawn Room(Event Player)) == True;
+	}
+
+	actions
+	{
+		Stop All Damage Over Time(Event Player);
+		Set Player Variable(Event Player, A, False);
+	}
+}

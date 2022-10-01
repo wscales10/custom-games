@@ -1,0 +1,233 @@
+settings
+{
+	main
+	{
+		Description: "Try sniping people through walls"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Widowmaker
+			{
+				Ultimate Duration: 200%
+				Ultimate Generation Infra-Sight: 325%
+			}
+
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: Array
+		3: Damage
+		4: CurrentElement
+		8: Index
+		15: Pos
+		17: RayCast
+		19: Lambda
+}
+
+subroutines
+{
+	0: DamageSub
+}
+
+rule("DamageSub")
+{
+	event
+	{
+		Subroutine;
+		DamageSub;
+	}
+
+	actions
+	{
+		disabled Destroy All Effects;
+		Event Player.Array = Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player);
+		For Player Variable(Event Player, Index, 0, Count Of(Event Player.Array), 1);
+			Event Player.CurrentElement = Event Player.Array[Event Player.Index];
+			Event Player.Lambda = Dot Product(Vector Towards(Eye Position(Event Player), Eye Position(Event Player.CurrentElement)),
+				Event Player.F);
+			Event Player.Pos = Eye Position(Event Player) + Event Player.Lambda * Event Player.F;
+			Event Player.RayCast = Ray Cast Hit Position(Event Player.Pos, Eye Position(Event Player), Null, Null, False);
+			Event Player.RayCast += Event Player.Pos;
+			Event Player.RayCast /= 2;
+			If(!Is In Line of Sight(Eye Position(Event Player), Event Player.RayCast, Enemy Barriers Block LOS));
+				Event Player.Pos += Event Player.F;
+				disabled Create Beam Effect(Event Player, Grapple Beam, Event Player.RayCast, Event Player.Pos, White, None);
+				Event Player.RayCast = Ray Cast Hit Player(Event Player.RayCast, Event Player.Pos, Event Player.CurrentElement, Null, False);
+				Wait(0.016, Ignore Condition);
+				Damage(Event Player.RayCast, Event Player, Event Player.Damage);
+			End;
+		End;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, W, 0, 1, Destination and Rate);
+	}
+}
+
+rule("Scope")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.330, Abort When False);
+		Event Player.S = True;
+	}
+}
+
+rule("Unscope")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.S = False;
+	}
+}
+
+rule("Main Rule")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.S);
+		Event Player.F = Facing Direction Of(Event Player);
+		Stop Chasing Player Variable(Event Player, C);
+		Event Player.Damage = 12 + Event Player.C * 1.080;
+		Start Rule(DamageSub, Do Nothing);
+		Event Player.W = 0.500;
+	}
+}
+
+rule("Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	conditions
+	{
+		Event Player.S == True;
+		Is Firing Primary(Event Player) == False;
+		Event Player.W == 0;
+	}
+
+	actions
+	{
+		Event Player.C = 0;
+		Chase Player Variable Over Time(Event Player, C, 100, 0.900, Destination and Duration);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Heal")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}

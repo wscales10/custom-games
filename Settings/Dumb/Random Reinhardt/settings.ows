@@ -1,0 +1,218 @@
+settings
+{
+	main
+	{
+		Description: "Max health and ultimate charge are randomised when you spawn. Every time you charge or leave the ground your gravity is randomised. The speed of charges and fire strikes is randomised."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+	}
+}
+
+rule("Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100 * 10 ^ Random Real(-0.600, 1));
+		Set Gravity(Event Player, 129 * 4.100 ^ Random Real(-1, 1) - 29.200);
+	}
+}
+
+rule("Stop Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Hero Of(Event Player) == Hero(Reinhardt) && Is Using Ability 1(Event Player)) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Fire Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Projectile Speed(Event Player, 100 * 5 ^ Random Real(-1, 1));
+	}
+}
+
+rule("Stop Fire Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Hero Of(Event Player) == Hero(Reinhardt) && Is Using Ability 2(Event Player)) == False;
+	}
+
+	actions
+	{
+		Set Projectile Speed(Event Player, 100);
+	}
+}
+
+rule("Gravity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 129 * 4.100 ^ Random Real(-1, 1) - 29.200);
+	}
+}
+
+rule("Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 25 * Round To Integer(12 * 1.333 ^ Random Real(-1, 1) - 8, To Nearest));
+		Set Ultimate Charge(Event Player, Random Integer(0, 100));
+	}
+}
+
+rule("Game In Progress")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Set Match Time(0);
+	}
+}

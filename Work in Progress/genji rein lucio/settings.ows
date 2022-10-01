@@ -1,0 +1,135 @@
+settings
+{
+	main
+	{
+		Description: "[Team 1] Genji: 12x damage dealt, spawns with ultimate, no shurikens, can only move using dash, longer deflect cooldown. Reinhardt: Low damage, high knockback, shield goes down quick and regens quick, with long cooldown. Team 2: Normal"
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max Team 1 Players: 3
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			Game Mode Start: Immediately
+			Respawn Time Scalar: 50%
+
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Damage Received: 25%
+
+			Genji
+			{
+				Damage Dealt: 200%
+				Deflect Cooldown Time: 250%
+				Primary Fire: Off
+				Secondary Fire: Off
+				Spawn With Ultimate Ready: On
+				Ultimate Duration: 50%
+				Ultimate Generation - Combat Dragonblade: 10%
+			}
+
+			Lúcio
+			{
+				Ammunition Clip Size Scalar: 40%
+				Damage Dealt: 10%
+				Healing Dealt: 400%
+				Movement Speed: 80%
+			}
+
+			Reinhardt
+			{
+				Barrier Field Cooldown Time: 500%
+				Barrier Field Recharge Rate: 170%
+				Charge Cooldown Time: 80%
+				Charge Knockback Scalar: 150%
+				Damage Dealt: 20%
+				Fire Strike: Off
+				Rocket Hammer Knockback Scalar: 400%
+				Ultimate Generation - Combat Earthshatter: 500%
+			}
+
+			enabled heroes
+			{
+				Genji
+				Lúcio
+				Reinhardt
+			}
+		}
+
+		Team 2
+		{
+			Damage Dealt: 400%
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Genji;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Set Damage Dealt(Event Player, 600);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Team Of(Event Player) == Team 1 && Hero Of(Event Player) == Hero(Genji)) == False;
+	}
+
+	actions
+	{
+		Stop Forcing Throttle(Event Player);
+		Set Damage Dealt(Event Player, 100);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}

@@ -1,0 +1,255 @@
+settings
+{
+	modes
+	{
+		Assault
+		{
+			disabled maps
+			{
+				Hanamura Winter
+			}
+		}
+
+		Control
+		{
+			disabled maps
+			{
+				Lijiang Tower Lunar New Year
+			}
+		}
+
+		Escort
+
+		Hybrid
+		{
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hollywood Halloween
+				King's Row Winter
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			enabled heroes
+			{
+				Ana
+				Bastion
+				Doomfist
+				Genji
+				Hanzo
+				Lúcio
+				McCree
+				Mercy
+				Moira
+				Pharah
+				Reaper
+				Roadhog
+				Soldier: 76
+				Tracer
+				Zenyatta
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: Spread_Angle
+		1: Direction
+		2: Damager
+		3: Damage
+		12: Ammo
+		15: HitPosition
+		17: IsReloading
+		18: Distance
+		19: Target
+}
+
+subroutines
+{
+	0: TargetLoop
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Ammo, 300);
+		Create HUD Text(Event Player, String("{0} / {1}", Player Variable(Event Player, Ammo), 300, Null), Null, Null, Left, 0, White,
+			White, White, Visible To and String, Default Visibility);
+	}
+}
+
+rule("disable built-in primary fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("custom primary fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+		Player Variable(Event Player, Ammo) > 0;
+		Player Variable(Event Player, IsReloading) != True;
+		Is Using Ability 1(Event Player) == False;
+		Is Using Ability 2(Event Player) == False;
+		Is Using Ultimate(Event Player) == False;
+		Has Status(Event Player, Knocked Down) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Stunned) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Damager, Event Player);
+		Modify Player Variable(Event Player, Ammo, Subtract, 1);
+		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 30);
+		Set Player Variable(Event Player, Direction, Direction From Angles(Add(Horizontal Facing Angle Of(Event Player), Random Real(
+			Multiply(-1.000, Player Variable(Event Player, Spread_Angle)), Player Variable(Event Player, Spread_Angle))), Add(
+			Vertical Facing Angle Of(Event Player), Random Real(Multiply(-1.000, Player Variable(Event Player, Spread_Angle)),
+			Player Variable(Event Player, Spread_Angle)))));
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, Player Variable(Event Player, HitPosition), 0.010);
+		Call Subroutine(TargetLoop);
+		Damage(Player Variable(Event Player, Target), Player Variable(Event Player, Damager), Player Variable(Event Player, Damage));
+		Wait(0.033, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("decrease spread")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, Spread_Angle, 2, 0.500, Destination and Rate);
+	}
+}
+
+rule("increase spread")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+	}
+
+	actions
+	{
+		Wait(0.160, Abort When False);
+		Chase Player Variable At Rate(Event Player, Spread_Angle, 3, 4, Destination and Rate);
+	}
+}
+
+rule("reload")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Button Held(Event Player, Reload), Compare(Player Variable(Event Player, Ammo), ==, 0)) == True;
+	}
+
+	actions
+	{
+		Abort If(Or(Compare(Player Variable(Event Player, Ammo), ==, 300), Player Variable(Event Player, IsReloading)));
+		Set Player Variable(Event Player, IsReloading, True);
+		Wait(2.100, Ignore Condition);
+		Set Player Variable(Event Player, Ammo, 300);
+		Set Player Variable(Event Player, IsReloading, False);
+	}
+}
+
+rule("target loop")
+{
+	event
+	{
+		Subroutine;
+		TargetLoop;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Target, Ray Cast Hit Player(Eye Position(Player Variable(Event Player, Damager)), Add(
+			Eye Position(Player Variable(Event Player, Damager)), Multiply(1000, Player Variable(Event Player, Direction))), All Players(
+			Opposite Team Of(Team Of(Player Variable(Event Player, Damager)))), Player Variable(Event Player, Damager), False));
+		Set Player Variable(Event Player, HitPosition, Ray Cast Hit Position(Eye Position(Player Variable(Event Player, Damager)), Add(
+			Eye Position(Player Variable(Event Player, Damager)), Multiply(1000, Player Variable(Event Player, Direction))), All Players(
+			Opposite Team Of(Team Of(Player Variable(Event Player, Damager)))), Player Variable(Event Player, Damager), False));
+		Set Player Variable(Event Player, Distance, Distance Between(Eye Position(Player Variable(Event Player, Damager)), Player Variable(
+			Event Player, HitPosition)));
+		If(Compare(Player Variable(Event Player, Distance), <=, 35));
+			Set Player Variable(Event Player, Damage, 15);
+		Else If(Compare(Player Variable(Event Player, Distance), >=, 55));
+			Set Player Variable(Event Player, Damage, 7.500);
+		Else;
+			Set Player Variable(Event Player, Damage, Subtract(28.125, Multiply(0.375, Player Variable(Event Player, Distance))));
+		End;
+		Abort If(Compare(Player Variable(Event Player, Target), ==, Null));
+		Abort If(Or(Or(Compare(Hero Of(Player Variable(Event Player, Target)), !=, Hero(Genji)), Not(Is Using Ability 2(Player Variable(
+			Event Player, Target)))), Compare(Angle Between Vectors(World Vector Of(Forward, Player Variable(Event Player, Target),
+			Rotation), Player Variable(Event Player, Direction)), >, 90)));
+		Set Player Variable(Event Player, Damager, Player Variable(Event Player, Target));
+		Set Player Variable(Event Player, Direction, Facing Direction Of(Player Variable(Event Player, Damager)));
+		Loop;
+	}
+}

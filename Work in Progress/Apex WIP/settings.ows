@@ -1,0 +1,368 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Skirmish
+
+		General
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+}
+
+variables
+{
+	player:
+		0: HorizontalAngle
+		2: CanUseItems
+		7: NumHealthPacks
+		8: Index
+		14: InventoryOpen
+		15: HealthPackPosition
+		19: TargetPlayer
+}
+
+subroutines
+{
+	0: AddHealthPack
+	1: UseHealthPack
+}
+
+rule("Add Health Pack")
+{
+	event
+	{
+		Subroutine;
+		AddHealthPack;
+	}
+
+	actions
+	{
+		Set Global Variable(C, Vector(Multiply(4, Subtract(Random Integer(-95.000, 96), 0.500)), 0, Multiply(4, Subtract(Random Integer(
+			-95.000, 96), 0.500))));
+		Wait(0.016, Ignore Condition);
+		Loop If(Array Contains(Global Variable(P), Global Variable(C)));
+		Modify Global Variable(P, Append To Array, Global Variable(C));
+		Create Effect(All Players(All Teams), Orb, Yellow, Global Variable(C), 1, None);
+		Modify Global Variable(E, Append To Array, Last Created Entity);
+	}
+}
+
+rule("Add Health Packs")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Skip If(Compare(Count Of(Global Variable(P)), >=, 100), 1);
+		Call Subroutine(AddHealthPack);
+		Wait(3, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Pick up health pack")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global Variable(P), Compare(Distance Between(Event Player, Current Array Element), <, 2)) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, HealthPackPosition, First Of(Sorted Array(Global Variable(P), Distance Between(Event Player,
+			Current Array Element))));
+		Set Player Variable(Event Player, Index, Index Of Array Value(Global Variable(P), Player Variable(Event Player,
+			HealthPackPosition)));
+		Destroy Effect(Value In Array(Global Variable(E), Player Variable(Event Player, Index)));
+		Modify Player Variable(Event Player, NumHealthPacks, Add, 1);
+		Modify Global Variable(P, Remove From Array By Index, Player Variable(Event Player, Index));
+		Modify Global Variable(E, Remove From Array By Index, Player Variable(Event Player, Index));
+	}
+}
+
+rule("Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Multiply(4, Vector(Random Integer(-95.000, 95), 0, Random Integer(-95.000, 95))));
+	}
+}
+
+rule("Player setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Create HUD Text(Event Player, Custom String("Inventory", Null, Null, Null), Null, Custom String("Health Packs: {0}",
+			Player Variable(Event Player, NumHealthPacks), Null, Null), Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Player Variable(Event Player, InventoryOpen)), Custom String("Health Packs: {0}",
+			Player Variable(Event Player, NumHealthPacks), Null, Null), Add(Eye Position(Event Player), Multiply(50, Direction From Angles(
+			Player Variable(Event Player, HorizontalAngle), 0))), 4, Do Not Clip, Visible To Position and String, White,
+			Default Visibility);
+	}
+}
+
+rule("Sprint")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == False;
+		Is Firing Secondary(Event Player) == False;
+		Is Using Ability 1(Event Player) == False;
+		Is Using Ability 2(Event Player) == False;
+		Is Using Ultimate(Event Player) == False;
+		Is Crouching(Event Player) == False;
+		Z Component Of(Throttle Of(Event Player)) == 1;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 150);
+	}
+}
+
+rule("Stop sprint")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Or(Or(Is Firing Primary(Event Player), Is Firing Secondary(Event Player)), Is Using Ability 1(Event Player)), Or(Or(
+			Is Using Ability 2(Event Player), Is Using Ultimate(Event Player)), Or(Is Crouching(Event Player), Compare(Z Component Of(
+			Throttle Of(Event Player)), !=, 1)))) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Use health pack")
+{
+	event
+	{
+		Subroutine;
+		UseHealthPack;
+	}
+
+	actions
+	{
+		Abort If(Compare(Health(Event Player), ==, Max Health(Event Player)));
+		Modify Player Variable(Event Player, NumHealthPacks, Subtract, 1);
+		Heal(Event Player, Null, 75);
+	}
+}
+
+rule("Can use items")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Has Status(Event Player, Knocked Down) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Stunned) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, CanUseItems, True);
+	}
+}
+
+rule("Can't use items")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Or(Or(Is Dead(Event Player), Not(Has Spawned(Event Player))), Has Status(Event Player, Knocked Down)), Or(Or(Has Status(
+			Event Player, Asleep), Has Status(Event Player, Frozen)), Has Status(Event Player, Stunned))) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, CanUseItems, False);
+	}
+}
+
+rule("Loot Corpse")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Not(Is True For Any(All Dead Players(All Teams), Compare(Distance Between(Event Player, Current Array Element), <, 3))));
+		Set Player Variable(Event Player, TargetPlayer, First Of(Sorted Array(All Dead Players(All Teams), Distance Between(Event Player,
+			Current Array Element))));
+		Modify Player Variable(Event Player, NumHealthPacks, Add, Player Variable(Player Variable(Event Player, TargetPlayer),
+			NumHealthPacks));
+		Set Player Variable(Player Variable(Event Player, TargetPlayer), NumHealthPacks, 0);
+	}
+}
+
+disabled rule("Open/Close Inventory (Toggle)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		If(Player Variable(Event Player, InventoryOpen));
+			Set Player Variable(Event Player, InventoryOpen, False);
+			Set Primary Fire Enabled(Event Player, True);
+		Else;
+			Set Primary Fire Enabled(Event Player, False);
+			Set Player Variable(Event Player, HorizontalAngle, Horizontal Facing Angle Of(Event Player));
+			Set Player Variable(Event Player, InventoryOpen, True);
+		End;
+	}
+}
+
+rule("Use Inventory Item")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(Not(Player Variable(Event Player, InventoryOpen)));
+		If(And(True, Compare(Player Variable(Event Player, NumHealthPacks), >, 0)));
+			Start Rule(UseHealthPack, Do Nothing);
+		End;
+	}
+}
+
+rule("Open Inventory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+		Set Player Variable(Event Player, HorizontalAngle, Horizontal Facing Angle Of(Event Player));
+		Set Player Variable(Event Player, InventoryOpen, True);
+	}
+}
+
+rule("Close Inventory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, InventoryOpen, False);
+		Set Primary Fire Enabled(Event Player, True);
+	}
+}

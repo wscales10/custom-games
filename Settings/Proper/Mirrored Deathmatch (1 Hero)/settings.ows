@@ -1,0 +1,151 @@
+settings
+{
+	main
+	{
+		Description: "Mirrored Deathmatch. The hero that the most players have selected is played for the whole game. Health packs are disabled, but killing another player fully heals you. Smaller maps only."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Max Spectators: 6
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			Game Length In Minutes: 5
+			Score To Win: 10
+
+			enabled maps
+			{
+				Black Forest
+				Blizzard World
+				Castillo
+				Château Guillard
+				Dorado
+				Ecopoint: Antarctica
+				Eichenwalde
+				Havana
+				Hollywood
+				King's Row
+				Necropolis
+				Paris
+				Petra
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 5
+			Score To Win: 15
+
+			enabled maps
+			{
+				Black Forest
+				Blizzard World
+				Castillo
+				Château Guillard
+				Dorado
+				Ecopoint: Antarctica
+				Eichenwalde
+				Hollywood
+				King's Row
+				Necropolis
+				Paris
+				Petra
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Spawn Health Packs: Disabled
+		}
+	}
+}
+
+rule("Heal on Kill")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+		Play Effect(All Players(All Teams), Buff Explosion Sound, White, Event Player, 50);
+		Play Effect(All Players(All Teams), Good Explosion, Yellow, World Vector Of(Vector(0, 0.350, 0), Event Player,
+			Rotation And Translation), 0.700);
+	}
+}
+
+rule("Assembling Heroes")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(20);
+	}
+}
+
+rule("Pick Hero")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Wait(0.250, Ignore Condition);
+		Global.H = Last Of(Sorted Array(Sorted Array(All Heroes, Random Real(0, 1)), Count Of(Players On Hero(Current Array Element,
+			All Teams))));
+	}
+}
+
+rule("Force Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.H != Null;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Global.H);
+	}
+}

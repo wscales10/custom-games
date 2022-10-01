@@ -1,0 +1,654 @@
+settings
+{
+	main
+	{
+		Description: "Problems: Getting spat out end of portal, facing doesn't quite work, you don't come out backwards if you go in backwards, exclusive to moira, maybe ult charge should be in-world text that shows at bottom of screen?"
+	}
+
+	lobby
+	{
+		Max Team 1 Players: 3
+		Max Team 2 Players: 3
+	}
+
+	modes
+	{
+		Skirmish
+	}
+
+	heroes
+	{
+		General
+		{
+			Moira
+			{
+				Ultimate Ability Coalescence: Off
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Array0
+		1: Array1
+		2: Array2
+		4: StartEffects
+		5: EndEffects
+		8: ArrayIndex
+		9: StartIndex
+		10: ArrayLength
+		11: Index
+		15: PortalStarts
+		16: QortalEnds
+		20: Lock
+
+	player:
+		2: UltCharge
+		3: PreviousPos
+		4: RiftEnergy
+		8: Index
+		9: GlobalIndex
+		11: Teleporting
+		13: Next
+		15: PortalStart
+		16: QortalEnd
+		17: Reverse
+		18: WaitTime
+		20: UltState
+		21: StartSpeed
+		22: Path
+		23: Distance
+}
+
+subroutines
+{
+	0: TravelPath
+	1: CreatePortal
+	2: GetPath
+	3: DestroyPortal
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		disabled Disable Inspector Recording;
+		Set Global Variable(D, 2);
+		Set Global Variable(T, Empty Array);
+		Set Global Variable(PortalStarts, Empty Array);
+		Set Global Variable(QortalEnds, Empty Array);
+		Set Global Variable(StartEffects, Empty Array);
+		Set Global Variable(EndEffects, Empty Array);
+		Set Global Variable(Array0, Empty Array);
+		Set Global Variable(Array1, Empty Array);
+		Set Global Variable(Array2, Empty Array);
+		Set Global Variable(ArrayIndex, Empty Array);
+		Set Global Variable(ArrayLength, Empty Array);
+		Set Global Variable(StartIndex, Empty Array);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Filtered Array(Event Player, Compare(Player Variable(Event Player, UltState), ==, 2)), Custom String(
+			"Rift Energy: {0}%", Player Variable(Event Player, RiftEnergy), Null, Null), Null, Null, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, String("{0}%", Round To Integer(Player Variable(Event Player, UltCharge), Down), Null, Null), Null,
+			Null, Top, 0, White, White, White, Visible To and String, Default Visibility);
+		disabled Create Effect(Filtered Array(All Players(All Teams), Or(Compare(Player Variable(Event Player, Teleporting), ==, 3), And(Compare(
+			Hero Of(Event Player), ==, Hero(Moira)), Is Using Ability 1(Event Player)))), Cloud, Turquoise, Eye Position(Event Player), 1,
+			Visible To Position and Radius);
+	}
+}
+
+rule("Ult Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ultimate) == True;
+	}
+
+	actions
+	{
+		Abort If(Or(Compare(Player Variable(Event Player, Teleporting), !=, 0), Or(Compare(Player Variable(Event Player, UltState), !=, 0),
+			Compare(Player Variable(Event Player, UltCharge), <, 100))));
+		Stop Chasing Player Variable(Event Player, UltCharge);
+		Set Player Variable(Event Player, Teleporting, 4);
+		Set Player Variable(Event Player, UltState, 1);
+		Set Player Variable(Event Player, RiftEnergy, 100);
+		Set Player Variable(Event Player, UltCharge, 0);
+		Set Player Variable(Event Player, PortalStart, Position Of(Event Player));
+		Set Player Variable(Event Player, Path, Append To Array(Empty Array, Player Variable(Event Player, PortalStart)));
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Melee);
+		Set Move Speed(Event Player, 125);
+		Set Player Variable(Event Player, PreviousPos, Player Variable(Event Player, PortalStart));
+		Set Player Variable(Event Player, UltState, 2);
+	}
+}
+
+rule("Abort on Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, UltState, 0);
+	}
+}
+
+rule("RiftEnergy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 2;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, RiftEnergy, Subtract, Distance Between(Event Player, Player Variable(Event Player,
+			PreviousPos)));
+		Set Player Variable(Event Player, PreviousPos, Position Of(Event Player));
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Click to place portal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(Compare(Player Variable(Event Player, UltState), !=, 2));
+		Set Player Variable(Event Player, UltState, 3);
+	}
+}
+
+rule("Rift Energy 0%")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 2;
+		Player Variable(Event Player, RiftEnergy) <= 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, UltState, 3);
+	}
+}
+
+rule("Add Path Node")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 2;
+		Distance Between(Event Player, Last Of(Player Variable(Event Player, Path))) > 1.250;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Path, Append To Array, Position Of(Event Player));
+	}
+}
+
+rule("Place Portal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 3;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, RiftEnergy);
+		Set Player Variable(Event Player, QortalEnd, Position Of(Event Player));
+		Modify Player Variable(Event Player, Path, Append To Array, Player Variable(Event Player, QortalEnd));
+		Set Player Variable(Event Player, UltState, 4);
+	}
+}
+
+rule("Create Portal 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 4;
+		Global Variable(Lock) == False;
+	}
+
+	actions
+	{
+		Set Global Variable(Lock, True);
+		Call Subroutine(CreatePortal);
+		Set Global Variable(Lock, False);
+	}
+}
+
+rule("Create Portal 2")
+{
+	event
+	{
+		Subroutine;
+		CreatePortal;
+	}
+
+	actions
+	{
+		If(Compare(Add(Count Of(Global Variable(Array0)), Count Of(Player Variable(Event Player, Path))), <=, 1000));
+			Modify Global Variable(ArrayIndex, Append To Array, 0);
+			Modify Global Variable(StartIndex, Append To Array, Count Of(Global Variable(Array0)));
+			Modify Global Variable(Array0, Append To Array, Player Variable(Event Player, Path));
+		Else If(Compare(Add(Count Of(Global Variable(Array1)), Count Of(Player Variable(Event Player, Path))), <=, 1000));
+			Modify Global Variable(ArrayIndex, Append To Array, 1);
+			Modify Global Variable(StartIndex, Append To Array, Count Of(Global Variable(Array1)));
+			Modify Global Variable(Array1, Append To Array, Player Variable(Event Player, Path));
+		Else If(Compare(Add(Count Of(Global Variable(Array2)), Count Of(Player Variable(Event Player, Path))), <=, 1000));
+			Modify Global Variable(ArrayIndex, Append To Array, 2);
+			Modify Global Variable(StartIndex, Append To Array, Count Of(Global Variable(Array2)));
+			Modify Global Variable(Array2, Append To Array, Player Variable(Event Player, Path));
+		Else;
+			Abort;
+		End;
+		Modify Global Variable(ArrayLength, Append To Array, Count Of(Player Variable(Event Player, Path)));
+		Modify Global Variable(T, Append To Array, Add(Total Time Elapsed, 60));
+		Modify Global Variable(PortalStarts, Append To Array, Player Variable(Event Player, PortalStart));
+		Modify Global Variable(QortalEnds, Append To Array, Player Variable(Event Player, QortalEnd));
+		Create Effect(All Players(All Teams), Bad Aura, Purple, Add(Player Variable(Event Player, PortalStart), Up), 2, Visible To);
+		Modify Global Variable(StartEffects, Append To Array, Last Created Entity);
+		Play Effect(All Players(All Teams), Debuff Impact Sound, White, Player Variable(Event Player, PortalStart), 100);
+		Create Effect(All Players(All Teams), Bad Aura, Purple, Add(Player Variable(Event Player, QortalEnd), Up), 2, Visible To);
+		Play Effect(All Players(All Teams), Debuff Impact Sound, White, Player Variable(Event Player, QortalEnd), 100);
+		Modify Global Variable(EndEffects, Append To Array, Last Created Entity);
+		Set Player Variable(Event Player, UltState, 0);
+	}
+}
+
+rule("Ult End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 0;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, UltCharge, 100, 0.667, Destination and Rate);
+		Set Move Speed(Event Player, 100);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Allow Button(Event Player, Interact);
+		Allow Button(Event Player, Melee);
+	}
+}
+
+rule("Enter Portal Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global Variable(PortalStarts), Compare(Distance Between(Event Player, Current Array Element), <=, Global Variable(
+			D))) == True;
+		Player Variable(Event Player, Teleporting) == 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Teleporting, 1);
+		Set Player Variable(Event Player, GlobalIndex, Index Of Array Value(Global Variable(PortalStarts), First Of(Sorted Array(
+			Global Variable(PortalStarts), Distance Between(Event Player, Current Array Element)))));
+		Set Player Variable(Event Player, Reverse, False);
+		Set Player Variable(Event Player, Teleporting, 2);
+	}
+}
+
+rule("Enter Portal End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global Variable(QortalEnds), Compare(Distance Between(Event Player, Current Array Element), <=, Global Variable(
+			D))) == True;
+		Player Variable(Event Player, Teleporting) == 0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Teleporting, 1);
+		Set Player Variable(Event Player, GlobalIndex, Index Of Array Value(Global Variable(QortalEnds), First Of(Sorted Array(
+			Global Variable(QortalEnds), Distance Between(Event Player, Current Array Element)))));
+		Set Player Variable(Event Player, Reverse, True);
+		Set Player Variable(Event Player, Teleporting, 2);
+	}
+}
+
+rule("Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Teleporting) == 2;
+		Global Variable(Lock) == False;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Teleporting, 3);
+		Set Global Variable(Lock, True);
+		Call Subroutine(GetPath);
+		Set Global Variable(Lock, False);
+		Disallow Button(Event Player, Primary Fire);
+		Disallow Button(Event Player, Secondary Fire);
+		Disallow Button(Event Player, Ability 1);
+		Disallow Button(Event Player, Ability 2);
+		Disallow Button(Event Player, Ultimate);
+		Disallow Button(Event Player, Interact);
+		Disallow Button(Event Player, Jump);
+		Disallow Button(Event Player, Crouch);
+		Disallow Button(Event Player, Melee);
+		Disallow Button(Event Player, Reload);
+		Set Status(Event Player, Null, Hacked, 0.001);
+		Call Subroutine(TravelPath);
+		Allow Button(Event Player, Primary Fire);
+		Allow Button(Event Player, Secondary Fire);
+		Allow Button(Event Player, Ability 1);
+		Allow Button(Event Player, Ability 2);
+		Allow Button(Event Player, Ultimate);
+		Allow Button(Event Player, Interact);
+		Allow Button(Event Player, Jump);
+		Allow Button(Event Player, Crouch);
+		Allow Button(Event Player, Melee);
+		Allow Button(Event Player, Reload);
+		Set Player Variable(Event Player, Teleporting, 0);
+		Apply Impulse(Event Player, Multiply(-1, Velocity Of(Event Player)), 0.500, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("Get Path")
+{
+	event
+	{
+		Subroutine;
+		GetPath;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Index, Value In Array(Global Variable(ArrayIndex), Player Variable(Event Player, GlobalIndex)));
+		If(Compare(Player Variable(Event Player, Index), ==, 0));
+			Set Player Variable(Event Player, Path, Array Slice(Global Variable(Array0), Value In Array(Global Variable(StartIndex),
+				Player Variable(Event Player, GlobalIndex)), Value In Array(Global Variable(ArrayLength), Player Variable(Event Player,
+				GlobalIndex))));
+		Else If(Compare(Player Variable(Event Player, Index), ==, 1));
+			Set Player Variable(Event Player, Path, Array Slice(Global Variable(Array1), Value In Array(Global Variable(StartIndex),
+				Player Variable(Event Player, GlobalIndex)), Value In Array(Global Variable(ArrayLength), Player Variable(Event Player,
+				GlobalIndex))));
+		Else If(Compare(Player Variable(Event Player, Index), ==, 2));
+			Set Player Variable(Event Player, Path, Array Slice(Global Variable(Array2), Value In Array(Global Variable(StartIndex),
+				Player Variable(Event Player, GlobalIndex)), Value In Array(Global Variable(ArrayLength), Player Variable(Event Player,
+				GlobalIndex))));
+		Else;
+			Abort;
+		End;
+		If(Player Variable(Event Player, Reverse));
+			Set Player Variable(Event Player, Reverse, Player Variable(Event Player, Path));
+			For Player Variable(Event Player, Index, 0, Count Of(Player Variable(Event Player, Path)), 1);
+				Set Player Variable At Index(Event Player, Path, Player Variable(Event Player, Index), Value In Array(Player Variable(Event Player,
+					Reverse), Subtract(Subtract(Count Of(Player Variable(Event Player, Path)), Player Variable(Event Player, Index)), 1)));
+			End;
+		End;
+	}
+}
+
+rule("Void Effect")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, Teleporting) == 3;
+	}
+
+	actions
+	{
+		Play Effect(Remove From Array(All Players(All Teams), Event Player), Good Explosion, Sky Blue, Eye Position(Event Player), 0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Travel Path")
+{
+	event
+	{
+		Subroutine;
+		TravelPath;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Set Move Speed(Event Player, 500);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Set Invisible(Event Player, All);
+		Set Gravity(Event Player, 0);
+		Start Accelerating(Event Player, Direction Towards(Event Player, Player Variable(Event Player, Next)), Add(2.750, Divide(Multiply(
+			4, Subtract(Divide(Player Variable(Event Player, Distance), Player Variable(Event Player, WaitTime)), Player Variable(
+			Event Player, StartSpeed))), Player Variable(Event Player, WaitTime))), 60, To World, Direction Rate and Max Speed);
+		Start Facing(Event Player, Multiply(1, Velocity Of(Event Player)), 300, To World, Direction and Turn Rate);
+		For Player Variable(Event Player, Index, 1, Count Of(Player Variable(Event Player, Path)), 1);
+			If(Is Alive(Event Player));
+				Set Player Variable(Event Player, Next, Value In Array(Player Variable(Event Player, Path), Player Variable(Event Player, Index)));
+				Set Player Variable(Event Player, StartSpeed, Speed Of In Direction(Event Player, Direction Towards(Event Player, Player Variable(
+					Event Player, Next))));
+				Set Player Variable(Event Player, Distance, Distance Between(Event Player, Player Variable(Event Player, Next)));
+				Set Player Variable(Event Player, WaitTime, Divide(Player Variable(Event Player, Distance), 27.500));
+				Wait(Player Variable(Event Player, WaitTime), Ignore Condition);
+				If(Compare(Distance Between(Event Player, Player Variable(Event Player, Next)), >, 1));
+					Teleport(Event Player, Player Variable(Event Player, Next));
+				End;
+			End;
+		End;
+		Stop Facing(Event Player);
+		Stop Accelerating(Event Player);
+		Set Gravity(Event Player, 100);
+		Set Invisible(Event Player, None);
+		Clear Status(Event Player, Phased Out);
+		Set Move Speed(Event Player, 100);
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Reset Ability to Teleport")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, UltState) == 0;
+		Is True For Any(Global Variable(PortalStarts), Compare(Distance Between(Event Player, Current Array Element), <=, Global Variable(
+			D))) == False;
+		Is True For Any(Global Variable(QortalEnds), Compare(Distance Between(Event Player, Current Array Element), <=, Global Variable(
+			D))) == False;
+	}
+
+	actions
+	{
+		Abort If(Compare(Player Variable(Event Player, Teleporting), !=, 4));
+		Set Player Variable(Event Player, Teleporting, 0);
+	}
+}
+
+rule("Portal Despawn")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(Lock) == False;
+		Count Of(Global Variable(T)) > 0;
+		Total Time Elapsed > First Of(Global Variable(T));
+	}
+
+	actions
+	{
+		Set Global Variable(Lock, True);
+		Call Subroutine(DestroyPortal);
+		Set Player Variable(Filtered Array(All Players(All Teams), Compare(Player Variable(Current Array Element, Teleporting), ==, 2)),
+			Teleporting, 0);
+		Set Global Variable(Lock, False);
+	}
+}
+
+rule("Destroy Portal")
+{
+	event
+	{
+		Subroutine;
+		DestroyPortal;
+	}
+
+	actions
+	{
+		If(Compare(First Of(Global Variable(ArrayIndex)), ==, 0));
+			For Global Variable(Index, 0, First Of(Global Variable(ArrayLength)), 1);
+				Modify Global Variable(Array0, Remove From Array By Index, First Of(Global Variable(StartIndex)));
+			End;
+		Else If(Compare(First Of(Global Variable(ArrayIndex)), ==, 1));
+			For Global Variable(Index, 0, First Of(Global Variable(ArrayLength)), 1);
+				Modify Global Variable(Array1, Remove From Array By Index, First Of(Global Variable(StartIndex)));
+			End;
+		Else If(Compare(First Of(Global Variable(ArrayIndex)), ==, 2));
+			For Global Variable(Index, 0, First Of(Global Variable(ArrayLength)), 1);
+				Modify Global Variable(Array2, Remove From Array By Index, First Of(Global Variable(StartIndex)));
+			End;
+		End;
+		Destroy Effect(First Of(Global Variable(StartEffects)));
+		Destroy Effect(First Of(Global Variable(EndEffects)));
+		Modify Global Variable(StartEffects, Remove From Array By Index, 0);
+		Modify Global Variable(EndEffects, Remove From Array By Index, 0);
+		Modify Global Variable(PortalStarts, Remove From Array By Index, 0);
+		Modify Global Variable(QortalEnds, Remove From Array By Index, 0);
+		Modify Global Variable(T, Remove From Array By Index, 0);
+		Modify Global Variable(ArrayIndex, Remove From Array By Index, 0);
+		Modify Global Variable(StartIndex, Remove From Array By Index, 0);
+		Modify Global Variable(ArrayLength, Remove From Array By Index, 0);
+	}
+}

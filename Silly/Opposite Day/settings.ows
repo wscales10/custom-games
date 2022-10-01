@@ -1,0 +1,215 @@
+settings
+{
+	main
+	{
+		Description: "While you're using your ultimate, you can damage the enemy (or yourself) or heal your teammates (or yourself). While you're not using your ultimate..."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Expanse
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ultimate Generation: 500%
+			Ultimate Generation - Combat: 500%
+			Ultimate Generation - Passive: 20%
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Global Variable(M, 26);
+	}
+}
+
+rule("Not Ulting")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+		Has Spawned(Event Player) == True;
+		Global Variable(M) > 0;
+	}
+
+	actions
+	{
+		Set Damage Dealt(Event Player, Divide(100, Global Variable(M)));
+		Set Healing Dealt(Event Player, Divide(100, Global Variable(M)));
+		Set Player Variable(Event Player, U, False);
+	}
+}
+
+rule("Enemy Damage => Heal")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, U) == False;
+		Array Contains(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Victim) == True;
+	}
+
+	actions
+	{
+		Heal(Victim, Event Player, Multiply(Add(Global Variable(M), 1), Event Damage));
+	}
+}
+
+rule("Self Damage => Heal")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, U) == False;
+		Victim == Event Player;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Multiply(Add(Global Variable(M), 1), Event Damage));
+	}
+}
+
+rule("Ally Healing => Damage")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, U) == False;
+		Team Of(Event Player) == Team Of(Healee);
+		Event Player != Healee;
+	}
+
+	actions
+	{
+		Damage(Healee, Event Player, Multiply(Add(Global Variable(M), 1), Multiply(Global Variable(M), Event Healing)));
+	}
+}
+
+rule("Self Healing => Damage")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, U) == False;
+		Healee == Event Player;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, Multiply(Add(Global Variable(M), 1), Event Healing));
+	}
+}
+
+rule("Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, U, True);
+		Set Healing Dealt(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+	}
+}
+
+rule("DOT Replacement")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) == 1;
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 0.400);
+	}
+}

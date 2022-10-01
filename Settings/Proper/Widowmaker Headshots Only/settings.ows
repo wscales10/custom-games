@@ -1,0 +1,134 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica
+				Ilios Ruins
+				Necropolis
+			}
+		}
+
+		disabled Elimination
+		{
+			Hero Selection: Random Mirrored
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Score To Win: 10
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Receive Headshots Only: On
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 50%
+			}
+
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+	}
+}
+
+rule("Skip Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Heal")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+disabled rule("Widowmaker Penalty")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Widowmaker;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.H += 0.500;
+		Modify Player Variable(Event Player, H, Min, 100);
+		Set Max Health(Event Player, 100 - Event Player.H);
+		Wait(0.100, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("Reset Max Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.H = 0;
+		Set Max Health(Event Player, 100);
+		Wait(0.100, Ignore Condition);
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}

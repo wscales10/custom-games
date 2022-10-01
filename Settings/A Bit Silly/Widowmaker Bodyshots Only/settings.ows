@@ -1,0 +1,126 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica
+				Ilios Ruins
+				Necropolis
+			}
+		}
+
+		disabled Elimination
+		{
+			Hero Selection: Random Mirrored
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Score To Win: 10
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 50%
+			}
+
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+	}
+}
+
+rule("Skip Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Heal")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}
+
+rule("Reduce Damage Dealt")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 0.050);
+	}
+}
+
+rule("Compensate for Bodyshots Only")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Was Critical Hit == False;
+		Event Damage < 0.100;
+	}
+
+	actions
+	{
+		Skip If(Event Damage * 1999 > 50, 2);
+		Damage(Victim, Event Player, Event Damage * 2000 * 1999);
+		Abort;
+		Damage(Victim, Event Player, Event Damage * 500 * 1999);
+		Damage(Victim, Event Player, Event Damage * 500 * 1999);
+		Damage(Victim, Event Player, Event Damage * 500 * 1999);
+		Damage(Victim, Event Player, Event Damage * 500 * 1999);
+	}
+}

@@ -1,0 +1,383 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 50%
+			Movement Speed: 80%
+			Ultimate Generation: 250%
+
+			Reinhardt
+			{
+				Charge Cooldown Time: 40%
+				Fire Strike Cooldown Time: 400%
+			}
+
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		4: JumpPadEnabled
+		13: OnTime
+		14: OffTime
+
+	player:
+		0: Angle
+}
+
+rule("Jump Pad")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		(Absolute Value(X Component Of(Position Of(Event Player))) < 16) == (Absolute Value(Z Component Of(Position Of(Event Player)))
+			< 16);
+		Global.JumpPadEnabled == True;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Up, 15, To World, Cancel Contrary Motion);
+		Play Effect(All Players(All Teams), Debuff Impact Sound, White, Event Player, 100);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Disable Built-In Game Mode Announcer;
+		Global.OnTime = 1;
+		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(-20, 0, -16), Vector(20, 0,
+			-16), Green, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(16, 0, -20), Vector(16, 0, 20),
+			Green, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(20, 0, 16), Vector(-20, 0, 16),
+			Green, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(-16, 0, 20), Vector(-16, 0,
+			-20), Green, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(-20, 0, -16), Vector(20, 0,
+			-16), Red, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(16, 0, -20), Vector(16, 0,
+			20), Red, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(20, 0, 16), Vector(-20, 0,
+			16), Red, Visible To Position and Radius);
+		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(-16, 0, 20), Vector(-16, 0,
+			-20), Red, Visible To Position and Radius);
+	}
+}
+
+rule("Player Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Angle = Random Real(0, 360);
+		Teleport(Event Player, 18 / Sine From Degrees(Event Player.Angle % 90 + 45) * Direction From Angles(Event Player.Angle + 45, 0));
+		Set Facing(Event Player, Direction From Angles(Event Player.Angle - 135, 0), To World);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Enable Jump Pad")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Total Time Elapsed > Global.OnTime;
+		Global.OnTime > Global.OffTime;
+	}
+
+	actions
+	{
+		Global.JumpPadEnabled = True;
+		Global.OffTime = Global.OnTime + Random Integer(6, 30);
+	}
+}
+
+rule("Disable Jump Pad")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Total Time Elapsed > Global.OffTime;
+		Global.OffTime > Global.OnTime;
+	}
+
+	actions
+	{
+		Global.JumpPadEnabled = False;
+		Global.OnTime = Global.OffTime + 4;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	actions
+	{
+		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player)
+			&& Global.JumpPadEnabled && Global.OffTime - Total Time Elapsed > 4), Sphere, Green, World Vector Of(Vector(2, 0.500, 0),
+			Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player) && !Global.JumpPadEnabled), Sphere, Red,
+			World Vector Of(Vector(2, 2.500, 0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player) && (
+			Global.JumpPadEnabled ? Global.OffTime - Total Time Elapsed < 4 : Global.OnTime - Total Time Elapsed < 1.500)), Sphere, Yellow,
+			World Vector Of(Vector(2, 1.500, 0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+	}
+}
+
+rule("Win")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 20;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Game In Progress")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Cancel Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.C);
+		Cancel Primary Action(Event Player);
+	}
+}
+
+rule("Is Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Event Player.C = True;
+	}
+}
+
+rule("Is Not Charging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.C = False;
+	}
+}
+
+rule("Rule 13")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Ability == Button(Ultimate);
+	}
+
+	actions
+	{
+		Victim.S = Event Player;
+		Wait(5, Ignore Condition);
+		If(Victim.S == Event Player);
+			Victim.V = Null;
+		End;
+	}
+}
+
+rule("Rule 14")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Victim.S == Event Player;
+	}
+
+	actions
+	{
+		Event Player.U = True;
+	}
+}
+
+rule("Rule 15")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+		Event Player.U == True;
+	}
+
+	actions
+	{
+		Wait(0.250, Ignore Condition);
+		Set Ultimate Charge(Event Player, 100);
+		Event Player.U = False;
+	}
+}

@@ -1,0 +1,249 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Return To Lobby: Never
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Island
+			}
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 15
+
+			enabled maps
+			{
+				Workshop Island
+			}
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Genji
+			{
+				Primary Fire: Off
+				Secondary Fire: Off
+			}
+		}
+	}
+}
+
+rule("Genji")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Hero Of(Event Player) == Hero(Genji) || Hero Being Duplicated(Event Player) == Hero(Genji)) == True;
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 100);
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+	}
+}
+
+rule("Not Genji")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Hero(Genji);
+		Hero Being Duplicated(Event Player) != Hero(Genji);
+	}
+
+	actions
+	{
+		Set Max Health(Event Player, 5000 / Max Health(Event Player));
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(Team 1), String("{0} - {1}", Global.A, Global.B), Null, Null, Top, 0, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(Team 2), String("{0} - {1}", Global.B, Global.A), Null, Null, Top, 0, White, White, White,
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("Team 1++")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+	}
+
+	actions
+	{
+		Global.A += 1;
+	}
+}
+
+rule("Team 2++")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+	}
+
+	actions
+	{
+		Global.B += 1;
+	}
+}
+
+rule("Team 1--")
+{
+	event
+	{
+		Player Died;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+		Array Contains(Array(Null, Event Player), Attacker) == True;
+	}
+
+	actions
+	{
+		Global.A -= 1;
+	}
+}
+
+rule("Team 2--")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+		Array Contains(Array(Null, Event Player), Attacker) == True;
+	}
+
+	actions
+	{
+		Global.B -= 1;
+	}
+}
+
+rule("Team 1 Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+		Global.A >= 30;
+		Global.A > Global.B;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team 1);
+	}
+}
+
+rule("Team 2 Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Skirmish);
+		Global.B >= 30;
+		Global.B > Global.A;
+	}
+
+	actions
+	{
+		Declare Team Victory(Team 2);
+	}
+} 

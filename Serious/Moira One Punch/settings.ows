@@ -1,0 +1,53 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max FFA Players: 8
+		Max Spectators: 12
+		Return To Lobby: After A Game
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Château Guillard
+				Ecopoint: Antarctica
+				Necropolis
+				Petra
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Moira
+			{
+				Biotic Orb: Off
+				Fade Cooldown Time: 0%
+				Health: 10%
+				Secondary Fire: Off
+				Ultimate Ability Coalescence: Off
+			}
+
+			enabled heroes
+			{
+				Moira
+			}
+		}
+	}
+}

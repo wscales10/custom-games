@@ -1,0 +1,152 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Q = Empty Array;
+	}
+}
+
+rule("Queue")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+		If(Event Player.L == 0);
+			Modify Global Variable(Q, Append To Array, Event Player);
+		End;
+	}
+}
+
+rule("Relegate")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.L = 0;
+		Modify Global Variable(Q, Remove From Array By Index, Index Of Array Value(Global.Q, Event Player));
+	}
+}
+
+rule("Move Up")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Players(All Teams), Current Array Element.L == 1)) < 2;
+		Count Of(Global.Q) > 0;
+		Count Of(Filtered Array(All Players(All Teams), Has Spawned(Current Array Element))) > 2;
+	}
+
+	actions
+	{
+		Global.C = First Of(Global.Q);
+		Global.C.L = 1;
+		Teleport(Global.C, Vector(X Component Of(Position Of(Global.C)), 46, Z Component Of(Position Of(Global.C))));
+		Modify Global Variable(Q, Remove From Array By Value, Global.C);
+		Wait(0.100, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Enable Death Spectate All Players(Event Player);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Respawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Filtered Array(All Players(All Teams), Has Spawned(Current Array Element))) <= 2;
+		Event Player.L == 1;
+	}
+
+	actions
+	{
+		Event Player.L = 0;
+		Respawn(Event Player);
+	}
+}

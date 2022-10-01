@@ -1,0 +1,171 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Expanse
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Movement Speed: 200%
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 200%
+				Hover Jets Maximum Time: 20%
+				Hover Jets Recharge Rate: 10%
+				Hover Jets Vertical Speed Scalar: 200%
+				Jump Jet Cooldown Time: 30%
+				Rocket Launcher Knockback Scalar: 200%
+			}
+
+			Widowmaker
+			{
+				Grappling Hook Cooldown Time: 20%
+			}
+		}
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 0);
+		Start Accelerating(Event Player, Multiply(-1, Ray Cast Hit Normal(Event Player, World Vector Of(Multiply(200, Down), Event Player,
+			Rotation And Translation), All Players(All Teams), Event Player, True)), 17.500, 60, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Abort If(Compare(Y Component Of(Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(Down,
+			5)), Null, Event Player, True)), <, Y Component Of(Position Of(Event Player))));
+		Apply Impulse(Event Player, Up, 6, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("No Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Damage Modification(Event Player, Event Player, 0, Receivers Damagers and Damage Percent);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Set Secondary Fire Enabled(Event Player, False);
+		Set Healing Dealt(Event Player, 0);
+	}
+}
+
+disabled rule("Rule 6")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Secondary Fire) == True;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Melee);
+	}
+}
+
+rule("Rule 7")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Max Health(Event Player));
+	}
+}

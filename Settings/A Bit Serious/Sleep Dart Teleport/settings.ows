@@ -1,0 +1,152 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Château Guillard
+				Ecopoint: Antarctica
+				Necropolis
+				Petra
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Score To Win: 10
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ana
+			{
+				Sleep Dart Cooldown Time: 50%
+			}
+
+			enabled heroes
+			{
+				Ana
+			}
+		}
+	}
+}
+
+variables
+{
+	player:
+		13: RayCastNormal
+		15: RayCastStart
+		16: RayCastEnd
+		17: RayCast
+}
+
+rule("TP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Ana;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.300, Abort When False);
+		Event Player.RayCastStart = Eye Position(Event Player);
+		Event Player.RayCastEnd = Event Player.RayCastStart + 1200 * Facing Direction Of(Event Player);
+		Event Player.RayCast = Ray Cast Hit Position(Event Player.RayCastStart, Event Player.RayCastEnd, All Players(Opposite Team Of(
+			Team Of(Event Player))), Event Player, True);
+		Event Player.RayCastNormal = Ray Cast Hit Normal(Event Player.RayCastStart, Event Player.RayCastEnd, All Players(Opposite Team Of(
+			Team Of(Event Player))), Event Player, True);
+		If(Distance Between(Event Player.RayCast, Event Player.RayCastEnd) > 0.100);
+			Event Player.RayCast += (1.300 * Max(0, -1 * Y Component Of(Event Player.RayCastNormal)) + 0.715 * Max(0, 1 - 2 * Y Component Of(
+				Event Player.RayCastNormal) ^ 2)) * Event Player.RayCastNormal;
+			Wait(Distance Between(Event Player.RayCastStart, Event Player.RayCast) / 60, Ignore Condition);
+			Teleport(Event Player, Event Player.RayCast);
+		End;
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Score Of(Event Player) >= 10;
+	}
+
+	actions
+	{
+		Declare Player Victory(Event Player);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Completion;
+		Set Match Time(0);
+	}
+}
+
+rule("Game in Progress")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}

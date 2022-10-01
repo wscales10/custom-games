@@ -1,0 +1,384 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Skirmish
+		{
+			enabled maps
+			{
+				Blizzard World
+				Eichenwalde
+				Hanamura
+				Junkertown
+				King's Row
+				Lijiang Tower
+				Nepal
+				Numbani
+				Route 66
+				Temple of Anubis
+				Volskaya Industries
+				Watchpoint: Gibraltar
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Health Pack Respawn Time Scalar: 350%
+			Respawn Time Scalar: 20%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Baptiste
+				Doomfist
+				Hanzo
+				Junkrat
+				Moira
+				Orisa
+				Reinhardt
+				Sigma
+				Symmetra
+				Widowmaker
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Ana
+				Bastion
+				Lúcio
+				Mei
+				Roadhog
+				Soldier: 76
+				Sombra
+				Torbjörn
+				Zarya
+				Zenyatta
+			}
+		}
+
+		General
+		{
+			Damage Dealt: 250%
+			Damage Received: 40%
+			Health: 200%
+			Movement Gravity: 117%
+			Movement Speed: 108%
+			Ultimate Generation - Passive: 150%
+
+			enabled heroes
+			{
+				McCree
+				Reaper
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		1: Hero1
+		2: Hero2
+		12: Maps
+		15: Player1
+		16: Player2
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Objective Description(All Players(All Teams), Custom String("", Null, Null, Null), Visible To and String);
+		Set Global Variable(Maps, Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Map(Hanamura), Map(Eichenwalde)), Map(
+			King's Row)), Map(Route 66)), Map(Lijiang Tower)), Map(Watchpoint: Gibraltar)), Map(Junkertown)), Map(Temple of Anubis)), Map(
+			Blizzard World)), Map(Numbani)), Map(Volskaya Industries)), Map(Nepal)));
+		Set Global Variable(Hero1, Value In Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Hero(Widowmaker), Hero(
+			Reinhardt)), Hero(Symmetra)), Hero(McCree)), Hero(Moira)), Hero(Hanzo)), Hero(Junkrat)), Hero(Reaper)), Hero(Doomfist)), Hero(
+			Orisa)), Hero(Baptiste)), Hero(Sigma)), Index Of Array Value(Global Variable(Maps), Current Map)));
+		Set Global Variable(Hero2, Value In Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Hero(Ana), Hero(Bastion)),
+			Hero(Lúcio)), Hero(McCree)), Hero(Mei)), Hero(Reaper)), Hero(Roadhog)), Hero(Soldier: 76)), Hero(Sombra)), Hero(Torbjörn)),
+			Hero(Zarya)), Hero(Zenyatta)), Index Of Array Value(Global Variable(Maps), Current Map)));
+		Wait(3, Ignore Condition);
+		Set Global Variable(G, 1);
+		Wait(10, Ignore Condition);
+		Set Global Variable(G, 2);
+	}
+}
+
+rule("Set Player 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) > 0;
+		Number of Players(Team 1) > 0;
+	}
+
+	actions
+	{
+		Set Global Variable(Player1, Random Value In Array(All Players(Team 1)));
+	}
+}
+
+rule("Set Player 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) > 0;
+		Number of Players(Team 2) > 0;
+	}
+
+	actions
+	{
+		Set Global Variable(Player2, Random Value In Array(All Players(Team 2)));
+	}
+}
+
+rule("Team 1 Heroes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global Variable(Player1) != Null;
+	}
+
+	actions
+	{
+		If(Compare(Event Player, ==, Global Variable(Player1)));
+			Set Player Allowed Heroes(Event Player, Global Variable(Hero1));
+		Else;
+			Set Player Allowed Heroes(Event Player, Remove From Array(Allowed Heroes(Event Player), Global Variable(Hero1)));
+		End;
+	}
+}
+
+rule("Team 2 Heroes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Global Variable(Player2) != Null;
+	}
+
+	actions
+	{
+		If(Compare(Event Player, ==, Global Variable(Player2)));
+			Set Player Allowed Heroes(Event Player, Global Variable(Hero2));
+		Else;
+			Set Player Allowed Heroes(Event Player, Remove From Array(Allowed Heroes(Event Player), Global Variable(Hero2)));
+		End;
+	}
+}
+
+rule("Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Damage Modification(All Players(All Teams), Event Player, Multiply(Divide(5, 9), Subtract(90, Arctangent In Degrees(Subtract(
+			Health(Event Player), 800), 26))), Receivers Damagers and Damage Percent);
+		Start Damage Modification(Event Player, All Players(All Teams), Subtract(100, Divide(1850, Add(Health(Event Player), 37))),
+			Receivers Damagers and Damage Percent);
+		Chase Player Variable At Rate(Event Player, T, 0, 1, Destination and Rate);
+		Disable Built-In Game Mode Respawning(Event Player);
+		Set Global Variable(A, Total Time Elapsed);
+	}
+}
+
+rule("Secondary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, T, Max, 0.250);
+	}
+}
+
+rule("Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, T, Max, 0.600);
+		Press Button(Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), And(Is Using Ultimate(Current Array Element),
+			Compare(Distance Between(Current Array Element, Event Player), <=, 10))), Primary Fire);
+	}
+}
+
+rule("Ability 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, T, Max, 0.500);
+		Press Button(Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), And(Is Using Ultimate(Current Array Element),
+			Compare(Distance Between(Current Array Element, Event Player), <=, 10))), Primary Fire);
+	}
+}
+
+rule("Ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Or(Is Using Ultimate(Event Player), Compare(Ultimate Charge Percent(Event Player), <, 5)) == True;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, T, Max, 0.450);
+	}
+}
+
+rule("Speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Multiply(100, Square Root(Normalized Health(Event Player))));
+		Wait(0.200, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Damage Stun")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, T) == 0;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Attacker, Knocked Down, Add(Raise To Power(Divide(Event Damage, 215), 2), Divide(Event Damage, 4800)));
+	}
+}
+
+rule("Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global Variable(G) == 2;
+		Multiply(Number of Living Players(Team 1), Number of Living Players(Team 2)) == 0;
+		Is True For All(All Players(All Teams), Has Spawned(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Set Slow Motion(75);
+		Wait(1.750, Ignore Condition);
+		If(Compare(Number of Living Players(All Teams), ==, 0));
+			Declare Match Draw;
+		Else;
+			Declare Team Victory(Team Of(All Living Players(All Teams)));
+		End;
+	}
+}

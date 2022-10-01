@@ -1,0 +1,323 @@
+settings
+{
+	main
+	{
+		Description: "Go to the start position indicated by the blue text, and practice some Reinhardt charges. Press Interact to reset. Swap to the opposite team to try out a different charge (two charges for every quick play/competitive map)."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Assault
+		{
+			disabled maps
+			{
+				Hanamura Winter
+			}
+		}
+
+		Control
+		{
+			disabled maps
+			{
+				Lijiang Tower Lunar New Year
+			}
+		}
+
+		Escort
+
+		Hybrid
+		{
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hollywood Halloween
+				King's Row Winter
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Manual
+			Respawn Time Scalar: 25%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Reinhardt
+			{
+				Charge Cooldown Time: 50%
+				Spawn With Ultimate Ready: On
+				Ultimate Generation - Passive Earthshatter: 500%
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Map
+		1: StartPos1
+		2: BotPos1
+		3: StartPos2
+		4: BotPos2
+		12: Master
+		18: Spawn1
+		19: Spawn2
+
+	player:
+		17: Reset
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Map = Current Map;
+		Global.I = Index Of Array Value(Array(Map(Hanamura), Map(Junkertown), Map(Temple of Anubis), Map(Paris), Map(Volskaya Industries),
+			Map(Blizzard World), Map(Eichenwalde), Map(Hollywood), Map(King's Row), Map(Numbani), Map(Dorado), Map(Havana), Map(Rialto),
+			Map(Route 66), Map(Watchpoint: Gibraltar), Map(Busan), Map(Ilios), Map(Lijiang Tower), Map(Nepal), Map(Oasis), Map(
+			Horizon Lunar Colony)), Current Map);
+		Global.StartPos1 = Array(Vector(-13, 3, -56), Vector(38, 9, -56), Vector(-23, 7, 100), Vector(-13, 14, -37), Vector(-27, -3, 50),
+			Vector(-7, 6, 49), Vector(79, 13, -76), Vector(-37, 14, -20), Vector(-87, -1, -59), Vector(74, 6, -6), Vector(168, 11, 24),
+			Vector(98, 7, -45), Vector(-18, 0, -84), Vector(14, 2, 2), Vector(51, 9, -48), Vector(232, 16, 204), Vector(330, -24, -29),
+			Vector(71, 94, 142), Vector(72, 130, -12), Vector(121, 6, -235), Vector(-38, 10, -125))[Global.I];
+		Global.StartPos2 = Array(Vector(33, 0, -4), Vector(41, 16, -90), Vector(-25, 1, 14), Vector(-44, 14, -18), Vector(-24, 1, 72),
+			Vector(7, 0, 49), Vector(38, 11, -98), Vector(-38, 2, -7), Vector(-84, 1, -22), Vector(102, -2, 18), Vector(118, 8, -1),
+			Vector(-6, 12, -64), Vector(111, 6, -33), Vector(-41, 9, -21), Vector(20, -2, -134), Vector(49, 10, -122), Vector(70, 69,
+			-169), Vector(-5, -1, -37), Vector(-174, -93, -9), Vector(164, 4, 268), Vector(93, 13, -71))[Global.I];
+		Global.BotPos1 = Array(Vector(-5, 1, -4), Vector(38, 9, -76), Vector(-38, 2, 39), Vector(-25, 10, -26), Vector(10, -4, 45), Vector(
+			15, 0, 43), Vector(81, 13, -94), Vector(-18, 2, 16), Vector(-38, 0, -22), Vector(70, 6, 17), Vector(167, 12, 51), Vector(91, 4,
+			-72), Vector(-23, -1, -69), Vector(55, 2, 3), Vector(13, 3, -67), Vector(233, 16, 213), Vector(336, -24, -34), Vector(12, 94,
+			153), Vector(69, 130, 16), Vector(129, 8, -251), Vector(-19, 9, -139))[Global.I];
+		Global.BotPos2 = Array(Vector(27, 0, -4), Vector(-3, 11, -64), Vector(-22, 5, 32), Vector(-44, 14, -14), Vector(-11, 1, 78),
+			Vector(14, 2, 67), Vector(66, 12, -96), Vector(-30, 2, -1), Vector(-109, 0, -8), Vector(109, -3, 16), Vector(119, 10, 6),
+			Vector(-2, 12, -81), Vector(82, 4, -26), Vector(-67, 10, -17), Vector(41, -5, -127), Vector(45, 10, -113), Vector(72, 68,
+			-154), Vector(-5, -1, -41), Vector(-190, -94, 0), Vector(135, 4, 273), Vector(55, 14, -79))[Global.I];
+		Create Effect(Filtered Array(Global.Master, Team Of(Current Array Element) == Team 1), Ring, Sky Blue, Global.StartPos1, 1,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Global.Master, Team Of(Current Array Element) == Team 2), Ring, Sky Blue, Global.StartPos2, 1,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(All Players(Team 2), Global.Master != Current Array Element), Ring, Red, Global.BotPos1, 1,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(All Players(Team 1), Global.Master != Current Array Element), Ring, Red, Global.BotPos2, 1,
+			Visible To Position and Radius);
+		Global.Spawn1 = Array(0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 2, 1, 0, 1, 0, 0, 0, 0, 0, 0)[Global.I];
+		Global.Spawn2 = Array(0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0)[Global.I];
+		Start Forcing Spawn Room(Team 1, Global.Spawn1);
+		Start Forcing Spawn Room(Team 2, Global.Spawn2);
+		Create Icon(Filtered Array(All Players(Team 1), Global.Master == Current Array Element && Number of Living Players(Team 2)
+			> 0 && !Is In Line of Sight(Global.StartPos1 + 2 * Up, Eye Position(All Players(Team 2)), Barriers Do Not Block LOS)),
+			All Players(Team 2), Skull, Visible To and Position, Orange, True);
+		Create Icon(Filtered Array(All Players(Team 2), Global.Master == Current Array Element && Number of Living Players(Team 1)
+			> 0 && !Is In Line of Sight(Global.StartPos2 + 2 * Up, Eye Position(All Players(Team 1)), Barriers Do Not Block LOS)),
+			All Players(Team 1), Skull, Visible To and Position, Orange, True);
+		Create In-World Text(Filtered Array(All Players(Team 1), Global.Master == Current Array Element && !Is Using Ability 1(
+			Current Array Element) && Distance Between(Current Array Element, Global.StartPos1) > 2), Custom String("Start Here"),
+			Global.StartPos1, 2, Do Not Clip, Visible To and String, Sky Blue, Default Visibility);
+		Create In-World Text(Filtered Array(All Players(Team 2), Global.Master == Current Array Element && !Is Using Ability 1(
+			Current Array Element) && Distance Between(Current Array Element, Global.StartPos2) > 2), Custom String("Start Here"),
+			Global.StartPos2, 2, Do Not Clip, Visible To and String, Sky Blue, Default Visibility);
+	}
+}
+
+disabled rule("StartPos")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		If(Team Of(Event Player) == Team 1);
+			Global.StartPos1 = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 100 * Facing Direction Of(
+				Event Player), Empty Array, Empty Array, False);
+			Global.StartPos1 = Vector(Round To Integer(X Component Of(Global.StartPos1), To Nearest), Round To Integer(Y Component Of(
+				Global.StartPos1), To Nearest), Round To Integer(Z Component Of(Global.StartPos1), To Nearest));
+		Else;
+			Global.StartPos2 = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 100 * Facing Direction Of(
+				Event Player), Empty Array, Empty Array, False);
+			Global.StartPos2 = Vector(Round To Integer(X Component Of(Global.StartPos2), To Nearest), Round To Integer(Y Component Of(
+				Global.StartPos2), To Nearest), Round To Integer(Z Component Of(Global.StartPos2), To Nearest));
+		End;
+	}
+}
+
+disabled rule("BotPos")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Team Of(Event Player) == Team 1);
+			Global.BotPos1 = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 100 * Facing Direction Of(
+				Event Player), Empty Array, Empty Array, False);
+			Global.BotPos1 = Vector(Round To Integer(X Component Of(Global.BotPos1), To Nearest), Round To Integer(Y Component Of(
+				Global.BotPos1), To Nearest), Round To Integer(Z Component Of(Global.BotPos1), To Nearest));
+		Else;
+			Global.BotPos2 = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 100 * Facing Direction Of(
+				Event Player), Empty Array, Empty Array, False);
+			Global.BotPos2 = Vector(Round To Integer(X Component Of(Global.BotPos2), To Nearest), Round To Integer(Y Component Of(
+				Global.BotPos2), To Nearest), Round To Integer(Z Component Of(Global.BotPos2), To Nearest));
+		End;
+	}
+}
+
+rule("Spawn Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Global.Master != Event Player || Current Game Mode == Game Mode(Control));
+			Event Player.Reset = True;
+		Else If(Current Game Mode == Game Mode(Assault) && Team Of(Event Player) == Team 1 && Global.Spawn1 == 1);
+			Teleport(Event Player, Nearest Walkable Position(Objective Position(0)));
+		End;
+	}
+}
+
+rule("Create Bot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Number of Players(Opposite Team Of(Team Of(Event Player))) == 0;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Destroy All Dummy Bots;
+		Create Dummy Bot(Hero(Reinhardt), Opposite Team Of(Team Of(Event Player)), -1, Vector(0, 0, 0), Vector(0, 0, 0));
+	}
+}
+
+rule("Reset All")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Global.Master = Event Player;
+		All Players(All Teams).Reset = True;
+	}
+}
+
+rule("Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Reset == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, 1000);
+		If(Global.Master == Event Player);
+			Set Ultimate Charge(Event Player, 100);
+			If(Team Of(Event Player) == Team 1);
+				Teleport(Event Player, Global.StartPos1);
+			Else;
+				Teleport(Event Player, Global.StartPos2);
+			End;
+		Else;
+			If(Team Of(Event Player) == Team 1);
+				Teleport(Event Player, Global.BotPos2);
+			Else;
+				Teleport(Event Player, Global.BotPos1);
+			End;
+		End;
+		Event Player.Reset = False;
+	}
+}
+
+rule("Init Master")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.Master == Null;
+	}
+
+	actions
+	{
+		Global.Master = Event Player;
+	}
+}

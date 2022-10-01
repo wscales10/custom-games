@@ -1,0 +1,1701 @@
+settings
+{
+	main
+	{
+		Description: "Press \"group up\" to teleport your bots to you at a cost of 10% ultimate charge. Other than that, it's fairly self explanatory. Made by Cuddles#21550."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Max Team 1 Players: 3
+		Max Team 2 Players: 3
+		Return To Lobby: Never
+		Team Balancing: After A Game
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Competitive Rules: On
+		}
+
+		disabled Control
+		{
+			Competitive Rules: On
+		}
+
+		disabled Deathmatch
+		{
+			Score To Win: 30
+		}
+
+		disabled Escort
+		{
+			Competitive Rules: On
+		}
+
+		disabled Hybrid
+		{
+			Competitive Rules: On
+		}
+
+		Skirmish
+		{
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Tower Lunar New Year
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Hero Limit: Off
+			Skins: Off
+		}
+	}
+}
+
+variables
+{
+	global:
+		11: TotalNumberOfPlayers
+		14: NumberOfPlayersInTeamOne
+		15: FocusedPlayer
+		19: NumberOfPlayersInTeamTwo
+
+	player:
+		0: NumBots
+		2: CanControl
+		3: dumbDPS
+		4: isSetup
+		5: comboingHanzo
+		7: HealingTime
+		8: CanAim
+		11: HelloList
+		12: CanMove
+		13: HelloTime
+		14: Overridden
+		17: SpawnPosition
+		18: Subjects
+		19: TeamLeader
+		20: turret_pos
+		22: MeiWallTargetPosition
+		25: anti_zzzer
+}
+
+disabled rule("*** SETUP ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Inspector Recording;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.TeamLeader = Event Player;
+		Event Player.Subjects = Empty Array;
+		Event Player.isSetup = True;
+	}
+}
+
+rule("Tip")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Custom String(
+			"Tip: You can teleport your bots to you by pressing 'group up' for a cost of 10% ult charge"));
+	}
+}
+
+rule("Spawn Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.SpawnPosition = Position Of(Event Player);
+	}
+}
+
+rule("Queue Bots (Team 1)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Between Rounds == False;
+		Global.NumberOfPlayersInTeamOne != Count Of(Filtered Array(All Players(Team 1), !Is Dummy Bot(Current Array Element)));
+		Is True For All(All Players(All Teams), Current Array Element.isSetup) == True;
+	}
+
+	actions
+	{
+		Global.NumberOfPlayersInTeamOne = Count Of(Filtered Array(All Players(Team 1), !Is Dummy Bot(Current Array Element)));
+		Filtered Array(All Players(Team 1), !Is Dummy Bot(Current Array Element)).NumBots = Round To Integer(
+			6 / Global.NumberOfPlayersInTeamOne, Down) - 1;
+	}
+}
+
+rule("Queue Bots (Team 2)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Between Rounds == False;
+		Global.NumberOfPlayersInTeamTwo != Count Of(Filtered Array(All Players(Team 2), !Is Dummy Bot(Current Array Element)));
+		Is True For All(All Players(All Teams), Current Array Element.isSetup) == True;
+	}
+
+	actions
+	{
+		Global.NumberOfPlayersInTeamTwo = Count Of(Filtered Array(All Players(Team 2), !Is Dummy Bot(Current Array Element)));
+		Filtered Array(All Players(Team 2), !Is Dummy Bot(Current Array Element)).NumBots = Round To Integer(
+			6 / Global.NumberOfPlayersInTeamTwo, Down) - 1;
+	}
+}
+
+rule("Extra Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For All(All Players(All Teams), Current Array Element.isSetup) == True;
+		Is Between Rounds == False;
+		Global.TotalNumberOfPlayers != Count Of(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element)));
+	}
+
+	actions
+	{
+		Global.TotalNumberOfPlayers = Count Of(Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element)));
+	}
+}
+
+rule("Add Bots")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For Any(All Players(All Teams), Has Spawned(Current Array Element) && Number of Players(Team Of(Current Array Element))
+			< 6 && Count Of(Current Array Element.Subjects) < Current Array Element.NumBots) == True;
+		Is Assembling Heroes == False;
+		Is Between Rounds == False;
+		Is True For All(All Players(All Teams), Current Array Element.isSetup) == True;
+	}
+
+	actions
+	{
+		Global.FocusedPlayer = First Of(Filtered Array(All Players(All Teams), Has Spawned(Current Array Element) && Number of Players(
+			Team Of(Current Array Element)) < 6 && Count Of(Current Array Element.Subjects) < Current Array Element.NumBots));
+		Create Dummy Bot(Hero Of(Global.FocusedPlayer), Team Of(Global.FocusedPlayer), -1, Global.FocusedPlayer.SpawnPosition,
+			Facing Direction Of(Global.FocusedPlayer));
+		Wait(0.500, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Bot Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Respawn(Event Player);
+		Event Player.TeamLeader = Global.FocusedPlayer;
+		Modify Player Variable(Event Player.TeamLeader, Subjects, Append To Array, Event Player);
+		Chase Player Variable At Rate(Event Player, HelloTime, 0, 1, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, HealingTime, 0, 1, Destination and Rate);
+		Event Player.isSetup = True;
+	}
+}
+
+rule("Destroy Dummy Bots on Assembling Heroes")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Filtered Array(All Players(All Teams), !Is Dummy Bot(Current Array Element)).Subjects = Empty Array;
+		Set Match Time(25);
+	}
+}
+
+disabled rule("*** TEAM DEATHMATCH ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Team Deathmatch")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Team Deathmatch);
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+	}
+}
+
+rule("Team Deathmatch Increase Score")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Team Deathmatch);
+		Is Dummy Bot(Victim) == False;
+	}
+
+	actions
+	{
+		Modify Team Score(Team Of(Event Player), 1);
+	}
+}
+
+rule("Team Deathmatch Reduce Score")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Current Game Mode == Game Mode(Team Deathmatch);
+		Attacker == Null;
+	}
+
+	actions
+	{
+		Modify Team Score(Team Of(Event Player), 1);
+	}
+}
+
+disabled rule("*** BUTTONS ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Start Primary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(Is True For Any(Players On Hero(Hero(Symmetra), Opposite Team Of(Team Of(Event Player))), Distance Between(
+			Current Array Element.turret_pos, Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ Facing Direction Of(Event Player) * 1000, All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, True))
+			< 0.500));
+		Start Holding Button(Event Player.Subjects, Primary Fire);
+	}
+}
+
+rule("Stop Primary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Primary Fire);
+	}
+}
+
+rule("Start Secondary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Secondary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(Is True For Any(Players On Hero(Hero(Symmetra), Opposite Team Of(Team Of(Event Player))), Distance Between(
+			Current Array Element.turret_pos, Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ Facing Direction Of(Event Player) * 1000, All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, True))
+			< 0.500));
+		Start Holding Button(Event Player.Subjects, Secondary Fire);
+	}
+}
+
+rule("Stop Secondary Fire")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Secondary Fire);
+	}
+}
+
+rule("Start Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Ability 1) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Subjects, Ability 1);
+	}
+}
+
+rule("Stop Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Ability 1)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Ability 1);
+	}
+}
+
+rule("Start Ability 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Ability 2) == True;
+	}
+
+	actions
+	{
+		Abort If(Is True For Any(Players On Hero(Hero(Symmetra), Opposite Team Of(Team Of(Event Player))), Distance Between(
+			Current Array Element.turret_pos, Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ Facing Direction Of(Event Player) * 1000, All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, True))
+			< 0.500));
+		Start Holding Button(Event Player.Subjects, Ability 2);
+	}
+}
+
+rule("Stop Ability 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Ability 2)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Ability 2);
+	}
+}
+
+rule("Start Ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Ultimate) == True;
+	}
+
+	actions
+	{
+		If(Hero Of(Event Player) == Hero(Zarya));
+			Start Holding Button(Filtered Array(Event Player.Subjects, Hero Of(Current Array Element) != Hero(Hanzo)), Ultimate);
+		Else;
+			Start Holding Button(Event Player.Subjects, Ultimate);
+		End;
+	}
+}
+
+rule("Stop Ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Ultimate)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Ultimate);
+	}
+}
+
+rule("Start Interact")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Subjects, Interact);
+	}
+}
+
+rule("Stop Interact")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Interact)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Interact);
+	}
+}
+
+rule("Start Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Subjects, Jump);
+	}
+}
+
+rule("Stop Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Jump)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Jump);
+	}
+}
+
+rule("Start Crouch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Event Player.CanControl == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Subjects, Crouch);
+	}
+}
+
+rule("Stop Crouch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Crouch)) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Subjects, Crouch);
+	}
+}
+
+rule("Melee")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Button Held(Event Player, Melee) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.CanControl);
+		Press Button(Event Player.Subjects, Melee);
+	}
+}
+
+rule("Reload")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Button Held(Event Player, Reload) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.CanControl);
+		Press Button(Event Player.Subjects, Reload);
+	}
+}
+
+disabled rule("*** MECHANICS ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Dummy Bot(Event Player) == True;
+		Event Player.TeamLeader.CanControl == True;
+		Event Player.CanAim == True;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Ray Cast Hit Position(Eye Position(
+			Event Player.TeamLeader), Eye Position(Event Player.TeamLeader) + 55 * Facing Direction Of(Event Player.TeamLeader),
+			All Players(Opposite Team Of(Team Of(Event Player))), Append To Array(Event Player.TeamLeader.Subjects,
+			Event Player.TeamLeader), True)), 720, To World, Direction and Turn Rate);
+	}
+}
+
+rule("Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Dummy Bot(Event Player) == True;
+		Event Player.TeamLeader.CanControl == True;
+		Event Player.CanMove == True;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, 180 * Max(0, 5.500 - Speed Of In Direction(Event Player.TeamLeader, World Vector Of(
+			Throttle Of(Event Player.TeamLeader), Event Player.TeamLeader, Rotation))) * World Vector Of(Throttle Of(
+			Event Player.TeamLeader), Event Player.TeamLeader, Rotation) + (Absolute Value(Vertical Facing Angle Of(
+			Event Player.TeamLeader)) * (1 - Z Component Of(Throttle Of(Event Player.TeamLeader))) + 90 * (1 + Z Component Of(Throttle Of(
+			Event Player.TeamLeader)))) * World Vector Of(Throttle Of(Event Player.TeamLeader), Event Player, Rotation) + (
+			90 - Absolute Value(Vertical Facing Angle Of(Event Player.TeamLeader))) * (1 - Z Component Of(Throttle Of(
+			Event Player.TeamLeader))) * Direction Towards(Event Player, Event Player.TeamLeader), Square Root(Dot Product(Throttle Of(
+			Event Player.TeamLeader), Throttle Of(Event Player.TeamLeader))), To World, Replace existing throttle,
+			Direction and Magnitude);
+	}
+}
+
+rule("Can Aim")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Knocked Down) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Stunned) == False;
+		Is Dead(Event Player) == False;
+		Event Player.Overridden == False;
+	}
+
+	actions
+	{
+		Event Player.CanAim = True;
+	}
+}
+
+rule("Can't Aim")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Has Status(Event Player, Knocked Down) || Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen) || Has Status(
+			Event Player, Stunned) || Is Dead(Event Player) || Event Player.Overridden) == True;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+		Event Player.CanAim = False;
+	}
+}
+
+rule("Can Move")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.CanAim == True;
+		Has Status(Event Player, Rooted) == False;
+	}
+
+	actions
+	{
+		Event Player.CanMove = True;
+	}
+}
+
+rule("Can't Move")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.CanAim && !Has Status(Event Player, Rooted)) == False;
+	}
+
+	actions
+	{
+		Stop Throttle In Direction(Event Player);
+		Event Player.CanMove = False;
+	}
+}
+
+rule("Can Control")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Has Status(Event Player, Knocked Down) == False;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Hacked) == False;
+		Has Status(Event Player, Stunned) == False;
+		Is Dead(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.CanControl = True;
+	}
+}
+
+rule("Can't Control")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(Has Status(Event Player, Knocked Down) || Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen) || Has Status(
+			Event Player, Hacked) || Has Status(Event Player, Stunned) || Is Dead(Event Player)) == True;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player.Subjects);
+		Stop Throttle In Direction(Event Player.Subjects);
+		Event Player.CanControl = False;
+	}
+}
+
+rule("Switch Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Hero Of(Event Player) != Hero Of(Event Player.TeamLeader);
+		(Is In Spawn Room(Event Player) || Is Dead(Event Player)) == True;
+		Hero Of(Event Player.TeamLeader) != Null;
+		Event Player.TeamLeader.dumbDPS != Event Player;
+	}
+
+	actions
+	{
+		Wait(0.100, Ignore Condition);
+		Loop If(Is Dead(Event Player));
+		Modify Player Variable(Event Player.TeamLeader, Subjects, Remove From Array By Value, Event Player);
+	}
+}
+
+rule("Destroy Dummy Bot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Event Player.isSetup == True;
+		Array Contains(Event Player.TeamLeader.Subjects, Event Player) == False;
+	}
+
+	actions
+	{
+		Destroy Dummy Bot(Team Of(Event Player), Slot Of(Event Player));
+	}
+}
+
+rule("Remove Extra Dummy Bots")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Count Of(Event Player.Subjects) > Event Player.NumBots;
+		Is Assembling Heroes == False;
+		Is Between Rounds == False;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Subjects, Remove From Array By Value, Random Value In Array(Event Player.Subjects));
+		Wait(0.500, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Remove Destroyed Bots from Subjects Array")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For All(Event Player.Subjects, Array Contains(All Players(All Teams), Current Array Element)) == False;
+	}
+
+	actions
+	{
+		Modify Player Variable(Event Player, Subjects, Remove From Array By Value, Filtered Array(Event Player.Subjects, !Array Contains(
+			All Players(All Teams), Current Array Element)));
+		Wait(0.500, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("*** HERO QOL BUFFS & NERFS ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Lúcio Crossfade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Random Integer(0, 1) == 0);
+		Press Button(Event Player, Ability 1);
+	}
+}
+
+rule("Troll Wall Position (Spawn Door)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Spawn Room(Event Player) == False;
+	}
+
+	actions
+	{
+		Wait(0.300, Abort When False);
+		All Players(Team Of(Event Player)).MeiWallTargetPosition = Position Of(Event Player);
+	}
+}
+
+rule("Troll Wall Position (Objective)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Objective(Event Player) == True;
+	}
+
+	actions
+	{
+		All Players(Team Of(Event Player)).MeiWallTargetPosition = Position Of(Event Player);
+	}
+}
+
+rule("Place Troll Wall")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is True For Any(All Living Players(Team Of(Event Player)), Distance Between(Position Of(Current Array Element) + Velocity Of(
+			Current Array Element) / 2, Event Player.MeiWallTargetPosition) < 1.500) == True;
+		Is In Line of Sight(Eye Position(Event Player), Event Player.MeiWallTargetPosition, Barriers Do Not Block LOS) == True;
+		Is Dummy Bot(Event Player) == True;
+		Event Player.MeiWallTargetPosition != Null;
+	}
+
+	actions
+	{
+		Abort If(Random Real(0, 1) > 0.300);
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Event Player.MeiWallTargetPosition), To World);
+		Press Button(Event Player, Ability 2);
+		Press Button(Event Player, Primary Fire);
+	}
+}
+
+rule("Dumb Reinhardt Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is True For Any(All Living Players(Opposite Team Of(Team Of(Event Player))), Distance Between(Event Player, Current Array Element)
+			>= 10 && Y Component Of(Vector Towards(Event Player, Current Array Element)) < 1.500 && Is In Line of Sight(Eye Position(
+			Event Player), Current Array Element, Barriers Do Not Block LOS) && !Is In Spawn Room(Current Array Element)) == True;
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Random Integer(0, 2) > 0);
+		Set Facing(Event Player, Direction Towards(World Vector Of(Random Real(-0.250, 0.250) * Left, Event Player,
+			Rotation And Translation), Random Value In Array(Filtered Array(All Living Players(Opposite Team Of(Team Of(Event Player))),
+			Distance Between(Event Player, Current Array Element) >= 10 && Y Component Of(Vector Towards(Event Player,
+			Current Array Element)) < 1.500 && Is In Line of Sight(Eye Position(Event Player), Current Array Element,
+			Barriers Do Not Block LOS) && !Is In Spawn Room(Current Array Element)))), To World);
+		Press Button(Event Player, Ability 1);
+	}
+}
+
+rule("Dumb Moira Ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Count Of(Filtered Array(All Living Players(Opposite Team Of(Team Of(Event Player))), !Is In Spawn Room(Current Array Element)))
+			- Count Of(Filtered Array(All Living Players(Team Of(Event Player)), !Is In Spawn Room(Current Array Element))) >= 3;
+		Ultimate Charge Percent(Event Player) == 100;
+		Is In Spawn Room(Event Player) == False;
+		Is True For Any(All Living Players(Opposite Team Of(Team Of(Event Player))), Is In Line of Sight(Eye Position(Event Player),
+			Eye Position(Current Array Element), Barriers Do Not Block LOS)) == True;
+	}
+
+	actions
+	{
+		Set Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Random Value In Array(Filtered Array(
+			All Living Players(Opposite Team Of(Team Of(Event Player))), Is In Line of Sight(Eye Position(Event Player), Eye Position(
+			Current Array Element), Barriers Do Not Block LOS))))), To World);
+		Press Button(Event Player, Ultimate);
+	}
+}
+
+rule("Mei Stall")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Mei;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is On Objective(Event Player) == True;
+		Count Of(Filtered Array(Players On Hero(Hero(Mei), Team Of(Event Player)), Is Using Ability 1(Current Array Element)
+			&& Is On Objective(Current Array Element))) == 0;
+		(Is Team On Defense(Team Of(Event Player)) || Match Time == 0) == True;
+		Number of Players On Objective(Opposite Team Of(Team Of(Event Player))) > 0;
+	}
+
+	actions
+	{
+		Press Button(Event Player, Ability 1);
+	}
+}
+
+rule("Set Dumb DPS")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		(Event Player.dumbDPS == Null || !Array Contains(Event Player.Subjects, Event Player.dumbDPS)) == True;
+		Is True For Any(Event Player.Subjects, Array Contains(Append To Array(Hero(Widowmaker), Hero(Hanzo)), Hero Of(
+			Current Array Element))) == True;
+	}
+
+	actions
+	{
+		Event Player.dumbDPS = Random Value In Array(Filtered Array(Event Player.Subjects, Array Contains(Append To Array(Hero(Widowmaker),
+			Hero(Hanzo)), Hero Of(Current Array Element))));
+	}
+}
+
+rule("Symmetra Sentry Turret Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Symmetra;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.turret_pos = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * 1000, Null, Null, False);
+	}
+}
+
+rule("Auto remech")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Max Health(Event Player) < 500;
+		Ultimate Charge Percent(Event Player) == 100;
+	}
+
+	actions
+	{
+		Abort If(Random Real(0, 1) <= 0.300);
+		Press Button(Event Player, Ultimate);
+	}
+}
+
+rule("Recall")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Altitude Of(Event Player) > 15;
+	}
+
+	actions
+	{
+		Abort If(Random Integer(0, 1) == 0);
+		Wait(3, Ignore Condition);
+		Press Button(Event Player, Ability 2);
+	}
+}
+
+rule("Doomfist ability spam")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is True For Any(Players in View Angle(Event Player, Opposite Team Of(Team Of(Event Player)), 10), Distance Between(Event Player,
+			Current Array Element) < 14 && Is In Line of Sight(Eye Position(Event Player), Eye Position(Current Array Element),
+			Barriers Do Not Block LOS)) == True;
+		Health(Event Player) > 240;
+	}
+
+	actions
+	{
+		Abort If(Random Real(0, 1) < 0.900);
+		Start Holding Button(Event Player, Ability 2);
+		Wait(0.750, Ignore Condition);
+		Stop Holding Button(Event Player, Ability 2);
+		Set Facing(Event Player, Direction Towards(Event Player, Closest Player To(Event Player, Opposite Team Of(Team Of(Event Player)))),
+			To World);
+		Start Holding Button(Event Player, Ability 1);
+		Wait(0.750, Ignore Condition);
+		Stop Holding Button(Event Player, Ability 1);
+		Set Facing(Event Player, Direction Towards(Event Player, Closest Player To(Event Player, Opposite Team Of(Team Of(Event Player)))),
+			To World);
+		Start Holding Button(Event Player, Secondary Fire);
+		Wait(0.150, Ignore Condition);
+		Stop Holding Button(Event Player, Secondary Fire);
+	}
+}
+
+rule("Wakey Wakey")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Asleep) == True;
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Random Real(0, 1) < 0.350);
+		Wait(0.400, Ignore Condition);
+		Event Player.anti_zzzer = Random Value In Array(Filtered Array(All Living Players(Opposite Team Of(Team Of(Event Player))),
+			Is Dummy Bot(Current Array Element) && Is In Line of Sight(Eye Position(Current Array Element), World Vector Of(0.500 * Up,
+			Event Player, Rotation And Translation), All Barriers Block LOS)));
+		Event Player.anti_zzzer.Overridden = True;
+		Set Facing(Event Player.anti_zzzer, Direction Towards(Eye Position(Event Player.anti_zzzer), World Vector Of(0.500 * Up,
+			Event Player, Rotation And Translation)), To World);
+		Wait(0.200, Ignore Condition);
+		Start Holding Button(Event Player.anti_zzzer, Primary Fire);
+		Wait(0.700, Ignore Condition);
+		Skip If(Event Player.anti_zzzer.TeamLeader.CanControl && Is Button Held(Event Player.anti_zzzer.TeamLeader, Primary Fire), 1);
+		Stop Holding Button(Event Player.anti_zzzer, Primary Fire);
+		Event Player.anti_zzzer.Overridden = False;
+	}
+}
+
+rule("Grav Dragons")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Zarya;
+	}
+
+	conditions
+	{
+		Event Damage == 1.920;
+		Event Player.comboingHanzo == Null;
+	}
+
+	actions
+	{
+		Event Player.comboingHanzo = Random Value In Array(Filtered Array(Players On Hero(Hero(Hanzo), Team Of(Event Player)), Is Alive(
+			Current Array Element) && Ultimate Charge Percent(Current Array Element) == 100 && Is Dummy Bot(Current Array Element)));
+		Press Button(Event Player.comboingHanzo, Ultimate);
+		Wait(0.800, Ignore Condition);
+		Set Facing(Event Player.comboingHanzo, Direction Towards(Event Player.comboingHanzo, Victim), To World);
+	}
+}
+
+rule("Zarya Ult End")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Zarya;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.comboingHanzo = Null;
+	}
+}
+
+disabled rule("I Need Healing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Genji;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Normalized Health(Event Player) <= 0.997;
+	}
+
+	actions
+	{
+		Wait(Random Real(2, 3), Ignore Condition);
+		Communicate(Event Player, Need Healing);
+		Loop If Condition Is True;
+	}
+}
+
+disabled rule("Barrier peek")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is In Line of Sight(World Vector Of(Vector(0, 1.500, 1.350), Event Player, Rotation And Translation), World Vector Of(Vector(0,
+			1.500, 3.500), Event Player, Rotation And Translation), Barriers Do Not Block LOS) == True;
+		Is In Line of Sight(World Vector Of(Vector(0, 1.500, 1.350), Event Player, Rotation And Translation), World Vector Of(Vector(0,
+			1.500, 3.500), Event Player, Rotation And Translation), All Barriers Block LOS) == False;
+	}
+
+	actions
+	{
+		Abort If(Random Real(0, 1) < 0.500);
+		Abort If(Hero Of(Event Player) == Hero(Sigma) && Is Firing Secondary(Event Player));
+		Start Forcing Throttle(Event Player, 1, 1, 0, 1, 0, 1);
+		Wait(0.630, Ignore Condition);
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+disabled rule("*** FEATURES ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Group Up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Group Up) == True;
+		Ultimate Charge Percent(Event Player) >= 10;
+		Event Player.CanControl == True;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) - 10);
+		Wait(1.750, Ignore Condition);
+		Communicate(Filtered Array(Event Player.Subjects, Current Array Element.CanMove && Random Real(0, 1) > 0.500), Acknowledge);
+		Teleport(Filtered Array(Event Player.Subjects, Current Array Element.CanMove), Event Player);
+	}
+}
+
+rule("Hello")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Hello) == True;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.HelloList = Filtered Array(Players Within Radius(Eye Position(Event Player), 41, All Teams, Surfaces), Is Dummy Bot(
+			Current Array Element) && Angle Between Vectors(Facing Direction Of(Event Player), Vector Towards(Event Player,
+			Current Array Element)) <= 28.500 / Distance Between(Event Player, Current Array Element)
+			+ 7.500 && Current Array Element.HelloTime <= 18);
+		First Of(Sorted Array(Event Player.HelloList, Angle Between Vectors(Facing Direction Of(Event Player), Vector Towards(Event Player,
+			Current Array Element)) / (28.500 / Distance Between(Event Player, Current Array Element) + 7.500))).HelloTime = 20;
+	}
+}
+
+rule("Bot Hello")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.HelloTime > 18;
+	}
+
+	actions
+	{
+		Wait(1.750, Ignore Condition);
+		Communicate(Event Player, Hello);
+		Event Player.HelloList = Filtered Array(Players Within Radius(Eye Position(Event Player), 41, All Teams, Surfaces), Is Dummy Bot(
+			Current Array Element) && Angle Between Vectors(Facing Direction Of(Event Player), Vector Towards(Event Player,
+			Current Array Element)) <= 28.500 / Distance Between(Event Player, Current Array Element)
+			+ 7.500 && Current Array Element.HelloTime == 0);
+		First Of(Sorted Array(Event Player.HelloList, Angle Between Vectors(Facing Direction Of(Event Player), Vector Towards(Event Player,
+			Current Array Element)) / (28.500 / Distance Between(Event Player, Current Array Element) + 7.500))).HelloTime = 20;
+	}
+}
+
+rule("Thanks for the heals")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+		Is Dummy Bot(Healee) == True;
+	}
+
+	actions
+	{
+		Skip If(Event Player.HealingTime > 0, 1);
+		Communicate(Healee, Thanks);
+		Event Player.HealingTime = 2;
+	}
+}
+
+rule("Ultimate almost ready")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Ultimate Charge Percent(Event Player) >= 90;
+		Ultimate Charge Percent(Event Player) < 100;
+		Is Alive(Event Player.TeamLeader) == True;
+	}
+
+	actions
+	{
+		Wait(Random Real(0, 25), Abort When False);
+		Communicate(Event Player, Ultimate Status);
+	}
+}
+
+rule("Ultimate ready")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Ultimate Charge Percent(Event Player) == 100;
+		Is Alive(Event Player.TeamLeader) == True;
+	}
+
+	actions
+	{
+		Communicate(Event Player, Ultimate Status);
+	}
+}
+
+disabled rule("*** MADE BY CUDDLES#21550 ***")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}

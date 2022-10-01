@@ -1,0 +1,231 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Primary Fire: Off
+		}
+	}
+}
+
+variables
+{
+	player:
+		2: Calculated
+		3: DeltaTime
+		8: Index
+		15: HitPos
+		17: RayCastPos
+		20: ProjectileSpeed
+		21: VelocityVector
+		23: Position
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Global Variable(G, 9.810);
+		Set Global Variable(D, 0.100);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, ProjectileSpeed, 20);
+		Set Player Variable(Event Player, DeltaTime, 0.200);
+		Create Effect(Event Player, Sphere, Red, Player Variable(Event Player, HitPos), 0.200, Visible To Position and Radius);
+	}
+}
+
+rule("Get Pos")
+{
+	event
+	{
+		Subroutine;
+		Sub1;
+	}
+
+	actions
+	{
+		Wait(0.016, Ignore Condition);
+		Set Player Variable(Event Player, K, Multiply(Multiply(Global Variable(G), Player Variable(Event Player, DeltaTime)), Add(
+			Player Variable(Event Player, Index), 0.500)));
+		Set Player Variable(Event Player, Position, Player Variable(Event Player, Calculated));
+		Modify Player Variable(Event Player, Calculated, Add, Subtract(Player Variable(Event Player, VelocityVector), Multiply(Multiply(
+			Player Variable(Event Player, K), Player Variable(Event Player, DeltaTime)), Up)));
+		Set Player Variable(Event Player, RayCastPos, Ray Cast Hit Position(Player Variable(Event Player, Position), Player Variable(
+			Event Player, Calculated), All Players(All Teams), Event Player, True));
+		Modify Player Variable(Event Player, Index, Add, 1);
+		Loop If(Compare(Distance Between(Player Variable(Event Player, Calculated), Player Variable(Event Player, RayCastPos)), ==, 0));
+		Set Player Variable(Event Player, HitPos, Player Variable(Event Player, RayCastPos));
+	}
+}
+
+rule("Grenade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Player Variable(Event Player, G) == 1;
+	}
+
+	actions
+	{
+		Call Subroutine(Sub0);
+		Wait(Player Variable(Event Player, DeltaTime), Ignore Condition);
+		Loop If Condition Is True;
+		Set Player Variable(Event Player, A, Multiply(-1.000, Vertical Facing Angle Of(Event Player)));
+		Set Player Variable(Event Player, HitPos, Eye Position(Event Player));
+		Chase Player Variable At Rate(Event Player, HitPos, Player Variable(Event Player, Calculated), Divide(Distance Between(
+			Player Variable(Event Player, Position), Player Variable(Event Player, Calculated)), Player Variable(Event Player, DeltaTime)),
+			Destination and Rate);
+		Set Player Variable(Event Player, VelocityVector, Multiply(Player Variable(Event Player, ProjectileSpeed), Multiply(
+			Facing Direction Of(Event Player), Player Variable(Event Player, DeltaTime))));
+		Set Player Variable(Event Player, Calculated, Eye Position(Event Player));
+		Set Player Variable(Event Player, Index, 0);
+		Call Subroutine(Sub2);
+		Wait(Divide(Distance Between(Player Variable(Event Player, Position), Player Variable(Event Player, RayCastPos)), Divide(
+			Distance Between(Player Variable(Event Player, Position), Player Variable(Event Player, Calculated)), Player Variable(
+			Event Player, DeltaTime))), Ignore Condition);
+		Stop Chasing Player Variable(Event Player, HitPos);
+		Play Effect(All Players(All Teams), Bad Explosion, Red, Player Variable(Event Player, HitPos), 2);
+		Play Effect(All Players(All Teams), Explosion Sound, White, Player Variable(Event Player, HitPos), 100);
+		Set Player Variable(Event Player, G, 0);
+	}
+}
+
+rule("Button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(Compare(Player Variable(Event Player, G), >, 0));
+		Set Player Variable(Event Player, G, 1);
+	}
+}
+
+rule("Aim Grenade")
+{
+	event
+	{
+		Subroutine;
+		Sub0;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, VelocityVector, Multiply(Player Variable(Event Player, ProjectileSpeed), Multiply(
+			Facing Direction Of(Event Player), Player Variable(Event Player, DeltaTime))));
+		Set Player Variable(Event Player, Calculated, Eye Position(Event Player));
+		disabled Modify Player Variable(Event Player, Calculated, Add, Subtract(Player Variable(Event Player, VelocityVector), Multiply(
+			Global Variable(G), Multiply(Raise To Power(Player Variable(Event Player, DeltaTime), 2), Add(Player Variable(Event Player,
+			Index), 0.500)))));
+		Set Player Variable(Event Player, Index, 0);
+		Call Subroutine(Sub1);
+	}
+}
+
+rule("Throw Grenade")
+{
+	event
+	{
+		Subroutine;
+		Sub2;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, K, Multiply(Multiply(Global Variable(G), Player Variable(Event Player, DeltaTime)), Add(
+			Player Variable(Event Player, Index), 0.500)));
+		Set Player Variable(Event Player, Position, Player Variable(Event Player, Calculated));
+		Modify Player Variable(Event Player, Calculated, Add, Subtract(Player Variable(Event Player, VelocityVector), Multiply(Multiply(
+			Player Variable(Event Player, K), Player Variable(Event Player, DeltaTime)), Up)));
+		Wait(Player Variable(Event Player, DeltaTime), Ignore Condition);
+		Set Player Variable(Event Player, RayCastPos, Ray Cast Hit Position(Player Variable(Event Player, Position), Player Variable(
+			Event Player, Calculated), All Players(All Teams), Event Player, True));
+		Modify Player Variable(Event Player, Index, Add, 1);
+		Loop If(Compare(Distance Between(Player Variable(Event Player, Calculated), Player Variable(Event Player, RayCastPos)), ==, 0));
+	}
+}
+
+rule("Button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == False;
+	}
+
+	actions
+	{
+		Abort If(Compare(Player Variable(Event Player, G), !=, 1));
+		Set Player Variable(Event Player, G, 2);
+	}
+}

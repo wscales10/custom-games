@@ -1,0 +1,198 @@
+settings
+{
+	main
+	{
+		Description: "Team Deathmatch. Spawning is slightly slower. Hero switching is disabled and you lose your ult charge when you die. Ultimate charge is awarded for an elimination, not for damage or healing dealt. Slight movement speed increase."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Team Deathmatch
+		{
+			Self Initiated Respawn: Off
+
+			disabled maps
+			{
+				Black Forest Winter
+				Blizzard World Winter
+				Château Guillard Halloween
+				Ecopoint: Antarctica Winter
+				Eichenwalde Halloween
+				Hanamura Winter
+				Hollywood Halloween
+				King's Row Winter
+				Lijiang Control Center Lunar New Year
+				Lijiang Garden Lunar New Year
+				Lijiang Night Market Lunar New Year
+				Workshop Expanse
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Movement Speed: 125%
+			Ultimate Generation - Combat: 0%
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Global Variable(M, Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Map(
+			Black Forest), Map(Blizzard World)), Map(Castillo)), Map(Château Guillard)), Map(Dorado)), Map(Ecopoint: Antarctica)), Map(
+			Eichenwalde)), Map(Hanamura)), Map(Hollywood)), Map(Horizon Lunar Colony)), Map(Ilios Lighthouse)), Map(Ilios Ruins)), Map(
+			Ilios Well)), Map(King's Row)), Map(Lijiang Control Center)), Map(Lijiang Garden)), Map(Lijiang Night Market)), Map(
+			Necropolis)), Map(Nepal Sanctum)), Map(Nepal Shrine)), Map(Nepal Village Winter)), Map(Oasis City Center)), Map(
+			Oasis Gardens)), Map(Oasis University)), Map(Paris)), Map(Petra)), Map(Temple of Anubis)), Map(Volskaya Industries)));
+		Set Global Variable(A, Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(Append To Array(
+			Append To Array(Empty Array, 37.740), 12.410), 66.500), 27.840), 32.940), 30.820), 30), 19), 21.160), 36.710), 8.610), 77.690),
+			22), 18), 305), 148.880), 46.880), 40.230), 172.470), 37), -44.120), 19.290), 31.780), 46.160), 30.290), 9.240), 15.440),
+			17.180));
+		Set Global Variable(Y, Value In Array(Global Variable(A), Index Of Array Value(Global Variable(M), Current Map)));
+	}
+}
+
+rule("Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 0);
+		Start Facing(Event Player, Add(Forward, Down), 720, To Player, Direction and Turn Rate);
+		Skip If(Or(Compare(Hero Of(Event Player), !=, Hero(Wrecking Ball)), Is Using Ability 1(Event Player)), 1);
+		Press Button(Event Player, Ability 1);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Disallow Button(Event Player, Interact);
+		Set Gravity(Event Player, 500);
+		Teleport(Event Player, Add(Ray Cast Hit Position(Eye Position(Event Player), Vector(X Component Of(Position Of(Event Player)), Add(
+			Global Variable(Y), 3.100), Z Component Of(Position Of(Event Player))), Null, Event Player, True), Multiply(3.100, Down)));
+		Start Holding Button(Event Player, Crouch);
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Wait(0.300, Ignore Condition);
+		Set Player Variable(Event Player, A, True);
+	}
+}
+
+rule("Activate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Player Variable(Event Player, A) == True;
+	}
+
+	actions
+	{
+		Wait(0.500, Ignore Condition);
+		Stop Holding Button(Event Player, Crouch);
+		Skip If(Not(And(Compare(Hero Of(Event Player), ==, Hero(Wrecking Ball)), Is Using Ability 1(Event Player))), 1);
+		Press Button(Event Player, Ability 1);
+		Stop Facing(Event Player);
+		Start Facing(Event Player, Forward, 45, To Player, Direction and Turn Rate);
+		Wait(1, Ignore Condition);
+		Stop Facing(Event Player);
+		Wait(0.750, Ignore Condition);
+		Set Gravity(Event Player, 100);
+		Stop Forcing Throttle(Event Player);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Allow Button(Event Player, Interact);
+		Play Effect(All Players(All Teams), Explosion Sound, White, Event Player, 100);
+		Play Effect(All Players(Opposite Team Of(Team Of(Event Player))), Bad Explosion, Team 2, Event Player, 3.100);
+		Play Effect(Remove From Array(All Players(Team Of(Event Player)), Event Player), Bad Explosion, Team 1, Event Player, 3.100);
+		Set Player Variable(Event Player, A, False);
+	}
+}
+
+rule("Jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Speed Of(Event Player) >= 0.650;
+	}
+
+	actions
+	{
+		Abort If(Compare(Throttle Of(Event Player), ==, Vector(0, 0, 0)));
+		Press Button(Event Player, Jump);
+	}
+}
+
+rule("Ult Charge")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, Add(Ultimate Charge Percent(Event Player), Divide(Max Health(Victim), 20)));
+	}
+}

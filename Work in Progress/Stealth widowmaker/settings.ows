@@ -1,0 +1,173 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 8
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Island
+			}
+		}
+
+		General
+		{
+			Game Length In Minutes: 15
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Widowmaker
+			{
+				Grappling Hook: Off
+				No Automatic Fire: On
+				Ultimate Generation - Combat Infra-Sight: 130%
+				Ultimate Generation - Passive Infra-Sight: 130%
+				Ultimate Generation Infra-Sight: 500%
+				Venom Mine: Off
+			}
+
+			enabled heroes
+			{
+				Widowmaker
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Speed Of(Event Player) > 0;
+		Throttle Of(Event Player) != Vector(0, 0, 0);
+	}
+
+	actions
+	{
+		Set Invisible(Event Player, All);
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Speed Of(Event Player) * Throttle Of(Event Player) == Vector(0, 0, 0);
+	}
+
+	actions
+	{
+		Set Invisible(Event Player, None);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.150, Abort When False);
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+	}
+}
+
+rule("Rule 5")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
+
+rule("Rule 6")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create HUD Text(All Players(All Teams), Custom String("-----------------------------------------------"), Null, Null, Left, 0,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("-----------------------------------------------"), Null, Null, Left, 0,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Invisible while moving"), Null, Null, Left, 1, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Rooted while scoping"), Null, Null, Left, 2, White, White, White,
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("Scoped shots, melee and ultimate only"), Null, Null, Left, 3, White, White,
+			White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("-----------------------------------------------"), Null, Null, Left, 4,
+			White, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Custom String("-----------------------------------------------"), Null, Null, Left, 4,
+			White, White, White, Visible To and String, Default Visibility);
+	}
+}

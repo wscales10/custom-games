@@ -1,0 +1,97 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 10%
+			Quick Melee: Off
+
+			Junkrat
+			{
+				Concussion Mine: Off
+				Damage Dealt: 16%
+				Steel Trap: Off
+				Ultimate Ability RIP-Tire: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Damage Dealt: 17%
+				Ultimate Ability Barrage: Off
+			}
+
+			enabled heroes
+			{
+				Junkrat
+				Pharah
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, 0.500);
+		Wait(0.016, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Inspector Recording;
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(10);
+	}
+}

@@ -1,0 +1,112 @@
+settings
+{
+	modes
+	{
+		Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Health(Event Player) < 1.500;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Knocked Down, 9999);
+		Set Healing Received(Event Player, 6);
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Health(Event Player) >= 1.500;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Knocked Down);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.A = Filtered Array(Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player),
+			Distance Between(Event Player, Current Array Element) < 3 && Has Status(Current Array Element, Knocked Down));
+		Wait(0.100, Ignore Condition);
+		Clear Status(Event Player.A, Unkillable);
+		Wait(0.100, Ignore Condition);
+		Kill(Event Player.A, Event Player);
+	}
+}
+
+rule("Rule 4")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Unkillable, 9999);
+	}
+}

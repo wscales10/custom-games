@@ -1,0 +1,742 @@
+settings
+{
+	modes
+	{
+		Elimination
+		{
+			Capture Objective Tiebreaker: Off
+			Draw After Match Time Elapsed With No Tiebreaker: 300
+
+			enabled maps
+			{
+				Ayutthaya
+			}
+		}
+
+		Lúcioball
+		{
+			Initial Ball Count: 0
+			Max Ball Count: 0
+			Max Bonus Ball Count: 0
+
+			enabled maps
+			{
+			}
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			enabled heroes
+			{
+				Ana
+				Brigitte
+				Echo
+				Mei
+				Mercy
+				Reinhardt
+				Torbjörn
+				Tracer
+				Winston
+			}
+		}
+
+		Team 2
+		{
+			enabled heroes
+			{
+				Doomfist
+				Moira
+				Reaper
+				Sombra
+				Widowmaker
+			}
+		}
+
+		General
+		{
+			Movement Speed: 300%
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: OutpostPositions
+		1: CurrentOutpostTeams
+		2: CurrentTower
+		3: Targets
+		4: CurrentTarget
+		5: OutpostResources
+		6: OriginalOutpostTeams
+		7: FirstCaptureAmounts
+		12: DefaultOutpostRadius
+		13: FutureTeams
+		14: DeltaTime
+		15: BeamEffects
+		16: OrbEffects
+		17: CaptureTime
+		18: RecaptureTime
+		19: OutpostRadii
+		20: RingEffects
+		21: Ranges
+		22: Broadcasting
+		23: WantBroadcasting
+		24: TowerHeights
+		25: MaxResources
+
+	player:
+		0: Active
+		1: TestOutpost
+		2: CurrentOutpost
+		3: GiftResources
+		4: CarriedResources
+		5: MaxResources
+		6: Menu
+		7: HealTime
+		10: MenuIndex
+		12: TextPosition
+		17: Hero
+		18: InEnemySpawn
+}
+
+subroutines
+{
+	0: IdentifyCurrentOutpost
+	1: CreateTowerEffects
+	2: HandleCapturing
+	3: HandleTower
+	4: Restock
+	5: HandleBroadcasting
+	6: ArraySetup
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		disabled Start Forcing Player To Be Hero(Event Player, Hero(Orisa));
+		disabled Create HUD Text(Event Player, Event Player.InEnemySpawn, Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Event Player, Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + Facing Direction Of(
+			Event Player) * 10, All Players(All Teams), Event Player, True), Null, Null, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+		Disable Game Mode HUD(Event Player);
+		Create HUD Text(Filtered Array(Event Player, Global.CurrentOutpostTeams[Event Player.CurrentOutpost] == Index Of Array Value(Array(
+			Team 1, Team 2), Team Of(Event Player)) + 1), Custom String("Outpost Resources: {0}",
+			Global.OutpostResources[Event Player.CurrentOutpost]), Null, Null, Left, 0, White, White, White, Visible To and String,
+			Default Visibility);
+		Create HUD Text(Filtered Array(Event Player, Global.FirstCaptureAmounts[Event Player.CurrentOutpost]), Custom String(
+			"Capture Progress: {0}%", Round To Integer(Global.FirstCaptureAmounts[Event Player.CurrentOutpost] * 100, Down)), Null, Null,
+			Top, 0, White, White, White, Visible To and String, Default Visibility);
+		Chase Player Variable At Rate(Event Player, HealTime, 0, 1, Destination and Rate);
+		Create Effect(Filtered Array(Event Player, Event Player.HealTime > 5 - 3), Good Aura Sound, White, Event Player, 100,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Event Player.HealTime > 5 - 3), Good Aura Sound, White, Event Player, 100,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Event Player.HealTime > 5 - 3), Good Aura Sound, White, Event Player, 100,
+			Visible To Position and Radius);
+		Create HUD Text(Event Player, Event Player.CarriedResources, Custom String("Carried Resources"), Null, Right, 0, White, White,
+			White, Visible To and String, Default Visibility);
+		Chase Player Variable At Rate(Event Player, TextPosition, First Of(Sorted Array(Array(Horizontal Facing Angle Of(Event Player)
+			- 360, Horizontal Facing Angle Of(Event Player), Horizontal Facing Angle Of(Event Player) + 360), Absolute Value(
+			Event Player.TextPosition - Current Array Element))), 600, Destination and Rate);
+		Create HUD Text(Event Player, Vertical Facing Angle Of(Event Player), Null, Null, Left, 0, White, White, White,
+			Visible To and String, Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Event Player.Menu), Mapped Array(String("Heal"), Absolute Value(
+			Vertical Facing Angle Of(Event Player) / 18 - 1) < 0.500 ? Custom String("[{0}]", Current Array Element)
+			: Current Array Element), Eye Position(Event Player) + Direction From Angles(Event Player.TextPosition, 18), 2, Do Not Clip,
+			Visible To Position and String, White, Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Event Player.Menu), Mapped Array(Custom String("Take Resources"), Absolute Value(
+			Vertical Facing Angle Of(Event Player) / 18) < 0.500 ? Custom String("[{0}]", Current Array Element) : Current Array Element),
+			Eye Position(Event Player) + Direction From Angles(Event Player.TextPosition, 0), 2, Do Not Clip,
+			Visible To Position and String, White, Default Visibility);
+		Create In-World Text(Filtered Array(Event Player, Event Player.Menu), Mapped Array(Custom String("Give Resources"), Absolute Value(
+			Vertical Facing Angle Of(Event Player) / 18 + 1) < 0.500 ? Custom String("[{0}]", Current Array Element)
+			: Current Array Element), Eye Position(Event Player) + Direction From Angles(Event Player.TextPosition, -18), 2, Do Not Clip,
+			Visible To Position and String, White, Default Visibility);
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Hero(Ana), Team 2, -1, Vector(0, 0, 0), Vector(0, 0, 0));
+		Global.CaptureTime = Workshop Setting Integer(Custom String("Settings"), Custom String("Default Capture Time"), 15, 1, 60);
+		Global.RecaptureTime = Workshop Setting Integer(Custom String("Settings"), Custom String("Default Recapture Time"), 9, 1, 60);
+		Global.DefaultOutpostRadius = 3.500;
+		If(Current Map == Map(Ayutthaya));
+			Global.OutpostPositions = Array(Vector(18, 1, -112), Vector(18, 0, -26), Vector(16, 1, 98), Vector(16, 0, 12));
+			Global.OriginalOutpostTeams = Array(1, 1, 2, 2);
+			Global.OutpostRadii = Array(11, 3.500, 11, 3.500);
+			Global.TowerHeights = Array(8, 2, 8, 2);
+		End;
+		Global.CurrentOutpostTeams = Global.OriginalOutpostTeams;
+		Global.FutureTeams = Mapped Array(Global.CurrentOutpostTeams, 0);
+		Global.OrbEffects = Empty Array;
+		Global.BeamEffects = Empty Array;
+		Global.RingEffects = Empty Array;
+		For Global Variable(I, 0, Count Of(Global.OutpostPositions), 1);
+			Call Subroutine(CreateTowerEffects);
+			Global.MaxResources[Global.I] = Round To Integer(0.700 * Global.TowerHeights[Global.I] * Global.OutpostRadii[Global.I] ^ 2, Up)
+				* 100;
+			Call Subroutine(Restock);
+			Global.Ranges[Global.I] = Square Root((Global.OutpostRadii[Global.I] + Workshop Setting Integer(Custom String("Settings"),
+				Custom String("Tower Range Modifier"), 10, 0, 20)) ^ 2 + Global.TowerHeights[Global.I] ^ 2);
+		End;
+	}
+}
+
+rule("Create Tower Effects")
+{
+	event
+	{
+		Subroutine;
+		CreateTowerEffects;
+	}
+
+	actions
+	{
+		If(Global.CurrentOutpostTeams[Global.I] == 1);
+			Create Effect(All Players(All Teams), Orb, Team 1, Global.OutpostPositions[Global.I] + Global.TowerHeights[Global.I] * Up, 1,
+				Visible To);
+			Global.OrbEffects[Global.I] = Last Created Entity;
+			Create Beam Effect(All Players(All Teams), Good Beam, Global.OutpostPositions[Global.I], Global.OutpostPositions[Global.I] + (
+				Global.TowerHeights[Global.I] - 0.500) * Up, Team 1, Visible To);
+			Global.BeamEffects[Global.I] = Last Created Entity;
+			Create Effect(All Players(All Teams), Ring, Team 1, Global.OutpostPositions[Global.I], Global.OutpostRadii[Global.I], Visible To);
+			Global.RingEffects[Global.I] = Last Created Entity;
+		Else;
+			Create Effect(All Players(All Teams), Orb, Team 2, Global.OutpostPositions[Global.I] + Global.TowerHeights[Global.I] * Up, 1,
+				Visible To);
+			Global.OrbEffects[Global.I] = Last Created Entity;
+			Create Beam Effect(All Players(All Teams), Good Beam, Global.OutpostPositions[Global.I], Global.OutpostPositions[Global.I] + (
+				Global.TowerHeights[Global.I] - 0.500) * Up, Team 2, Visible To);
+			Global.BeamEffects[Global.I] = Last Created Entity;
+			Create Effect(All Players(All Teams), Ring, Team 2, Global.OutpostPositions[Global.I], Global.OutpostRadii[Global.I], Visible To);
+			Global.RingEffects[Global.I] = Last Created Entity;
+		End;
+	}
+}
+
+rule("In Enemy Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array(Array(Z Component Of(Position Of(Event Player)) + 7 > 92, Z Component Of(Position Of(Event Player)) + 7 < -92)
+			[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))])[Index Of Array Value(Array(Map(Ayutthaya)), Current Map)
+			] == True;
+	}
+
+	actions
+	{
+		Event Player.InEnemySpawn = True;
+	}
+}
+
+rule("Not In Enemy Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array(Array(Z Component Of(Position Of(Event Player)) + 7 > 92, Z Component Of(Position Of(Event Player)) + 7 < -92)
+			[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))])[Index Of Array Value(Array(Map(Ayutthaya)), Current Map)
+			] == False;
+	}
+
+	actions
+	{
+		Event Player.InEnemySpawn = False;
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(10);
+	}
+}
+
+rule("Outpost Loop")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Global.DeltaTime = 0.200;
+		For Global Variable(I, 0, Count Of(Global.OutpostPositions), 1);
+			Call Subroutine(HandleCapturing);
+			Call Subroutine(HandleTower);
+			"must be after tower handling"
+			Call Subroutine(HandleBroadcasting);
+			Modify Global Variable At Index(OutpostResources, Global.I, Max, 0);
+		End;
+		Wait(Global.DeltaTime, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Capturing")
+{
+	event
+	{
+		Subroutine;
+		HandleCapturing;
+	}
+
+	actions
+	{
+		Global.FutureTeams[Global.I] = Is True For Any(All Players(Array(Team 2, Team 1)[Global.CurrentOutpostTeams[Global.I] - 1]),
+			Current Array Element.CurrentOutpost == Global.I && Current Array Element.Active) && !Is True For Any(All Players(Array(Team 1,
+			Team 2)[Global.CurrentOutpostTeams[Global.I] - 1]),
+			Current Array Element.CurrentOutpost == Global.I && Current Array Element.Active) ? 1 : 0;
+		If(Global.FutureTeams[Global.I]);
+			Global.FirstCaptureAmounts[Global.I] = Min(1, Global.FirstCaptureAmounts[Global.I] + Global.DeltaTime / (
+				Global.CurrentOutpostTeams[Global.I] == Global.OriginalOutpostTeams[Global.I] ? Global.CaptureTime : Global.RecaptureTime) * (
+				Global.DefaultOutpostRadius / Global.OutpostRadii[Global.I]) ^ 2);
+			If(Global.FirstCaptureAmounts[Global.I] == 1);
+				Global.CurrentOutpostTeams[Global.I] = 3 - Global.CurrentOutpostTeams[Global.I];
+				Global.FirstCaptureAmounts[Global.I] = 0;
+				Global.FutureTeams[Global.I] = 0;
+				Destroy Effect(Global.OrbEffects[Global.I]);
+				Destroy Effect(Global.BeamEffects[Global.I]);
+				Destroy Effect(Global.RingEffects[Global.I]);
+				Call Subroutine(CreateTowerEffects);
+			End;
+		Else;
+			Global.FirstCaptureAmounts[Global.I] = Max(0, Global.FirstCaptureAmounts[Global.I] - Global.DeltaTime / (
+				Global.CurrentOutpostTeams[Global.I] == Global.OriginalOutpostTeams[Global.I] ? Global.CaptureTime : Global.RecaptureTime) * (
+				Global.DefaultOutpostRadius / Global.OutpostRadii[Global.I]) ^ 2);
+		End;
+	}
+}
+
+rule("Tower")
+{
+	event
+	{
+		Subroutine;
+		HandleTower;
+	}
+
+	actions
+	{
+		Abort If(Global.OutpostResources[Global.I] < 1);
+		Global.OutpostResources[Global.I] -= 1;
+		Global.CurrentTower = Global.OutpostPositions[Global.I] + Global.TowerHeights[Global.I] * Up;
+		Global.Targets = Filtered Array(All Living Players(Array(Team 2, Team 1)[Global.CurrentOutpostTeams[Global.I] - 1]),
+			Distance Between(Eye Position(Current Array Element), Global.CurrentTower) < Global.Ranges[Global.I] && Is In Line of Sight(
+			Eye Position(Current Array Element), Global.CurrentTower, All Barriers Block LOS) && !Has Status(Current Array Element,
+			Phased Out));
+		For Global Variable(J, 0, Count Of(Global.Targets), 1);
+			If(Global.OutpostResources[Global.I] >= 1);
+				Global.OutpostResources[Global.I] -= 1;
+				Global.CurrentTarget = Global.Targets[Global.J];
+				Play Effect(All Players(All Teams), Debuff Impact Sound, White, Global.CurrentTower, 25);
+				For Global Variable(K, 0, Distance Between(Global.CurrentTower, (Position Of(Global.CurrentTarget) + Eye Position(
+					Global.CurrentTarget)) / 2), 1.500);
+					Play Effect(All Players(All Teams), Good Explosion, White, Global.CurrentTower + Global.K * Direction Towards(Global.CurrentTower,
+						(Position Of(Global.CurrentTarget) + Eye Position(Global.CurrentTarget)) / 2), 0);
+				End;
+				Damage(Global.CurrentTarget, Null, 10.500);
+			End;
+		End;
+	}
+}
+
+rule("Set Current Outpost")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		If(Is Alive(Event Player) && Has Spawned(Event Player));
+			Call Subroutine(IdentifyCurrentOutpost);
+		Else;
+			Event Player.CurrentOutpost = -1;
+		End;
+		Wait(0.100, Ignore Condition);
+		Loop;
+	}
+}
+
+rule("Identify Current Outpost")
+{
+	event
+	{
+		Subroutine;
+		IdentifyCurrentOutpost;
+	}
+
+	actions
+	{
+		For Player Variable(Event Player, I, 0, Count Of(Global.OutpostPositions), 1);
+			Event Player.TestOutpost = Global.OutpostPositions[Event Player.I];
+			If(Absolute Value(Y Component Of(Vector Towards(Event Player,
+				Event Player.TestOutpost + Global.TowerHeights[Event Player.I] / 2 * Up)))
+				<= Global.TowerHeights[Event Player.I] / 2 + 1 && Distance Between(Position Of(Event Player) + Y Component Of(Position Of(
+				Event Player)) * Down, Event Player.TestOutpost + Y Component Of(Event Player.TestOutpost) * Down)
+				<= Global.OutpostRadii[Event Player.I]);
+				Event Player.CurrentOutpost = Event Player.I;
+				Abort;
+			End;
+		End;
+		Event Player.CurrentOutpost = -1;
+	}
+}
+
+rule("Active")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Has Status(Event Player, Asleep) == False;
+		Has Status(Event Player, Frozen) == False;
+		Has Status(Event Player, Phased Out) == False;
+		Has Status(Event Player, Stunned) == False;
+	}
+
+	actions
+	{
+		Event Player.Active = True;
+	}
+}
+
+rule("Inactive")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Dead(Event Player) || !Has Spawned(Event Player) || Has Status(Event Player, Asleep) || Has Status(Event Player, Frozen)
+			|| Has Status(Event Player, Phased Out) || Has Status(Event Player, Stunned)) == True;
+	}
+
+	actions
+	{
+		Event Player.Active = False;
+	}
+}
+
+rule("Restock")
+{
+	event
+	{
+		Subroutine;
+		Restock;
+	}
+
+	actions
+	{
+		If(Event Player == Null);
+			Global.OutpostResources[Global.I] = Round To Integer(0.008 * Global.MaxResources[Global.I], Up) * 100;
+		Else;
+		End;
+	}
+}
+
+rule("Receiving")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global.Broadcasting, Current Array Element && Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))
+			== Global.CurrentOutpostTeams[Current Array Index] - 1) == True;
+	}
+
+	actions
+	{
+		Play Effect(Event Player, Ring Explosion Sound, White, Event Player, 100);
+		For Player Variable(Event Player, J, 0, Count Of(Global.Broadcasting), 1);
+			If(Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player)) == Global.CurrentOutpostTeams[Event Player.J] - 1 && !(
+				Is In Line of Sight(Eye Position(Event Player), Global.OutpostPositions[Event Player.J] + Up, Barriers Do Not Block LOS)
+				&& Is In View Angle(Event Player, Global.OutpostPositions[Event Player.J] + Up, 40)));
+				Play Effect(Event Player, Good Explosion, Red, Eye Position(Event Player) + Direction From Angles(Horizontal Facing Angle Of(
+					Event Player) + Min(Max(Horizontal Angle Towards(Event Player, Global.OutpostPositions[Event Player.J]), -40), 40), 0), 0.500);
+			End;
+		End;
+		Wait(2, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Handle Broadcasting")
+{
+	event
+	{
+		Subroutine;
+		HandleBroadcasting;
+	}
+
+	actions
+	{
+		disabled If(Global.Broadcasting[Global.I] != Global.WantBroadcasting[Global.I]);
+		disabled If(Global.WantBroadcasting[Global.I]);
+		disabled Else;
+		disabled End;
+		disabled Global.Broadcasting[Global.I] = Global.WantBroadcasting[Global.I];
+		disabled End;
+		If(Global.FutureTeams[Global.I] && Global.OutpostResources[Global.I] >= Max(2, (1 - Global.FirstCaptureAmounts[Global.I]) * (
+			Global.CurrentOutpostTeams[Global.I] == Global.OriginalOutpostTeams[Global.I] ? Global.CaptureTime : Global.RecaptureTime) * (
+			2 / 0.200 + 5 + 5 * Count Of(Global.Targets))));
+			Global.OutpostResources[Global.I] -= 2;
+			Global.Broadcasting[Global.I] = True;
+		Else;
+			Global.Broadcasting[Global.I] = False;
+		End;
+	}
+}
+
+rule("Heal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+		Normalized Health(Event Player) < 1;
+		Global.OutpostResources[Event Player.CurrentOutpost] >= 15;
+		Event Player.HealTime == 0;
+	}
+
+	actions
+	{
+		Event Player.HealTime = 5;
+		Global.OutpostResources[Event Player.CurrentOutpost] -= 15;
+		Start Heal Over Time(Event Player, Event Player, 3, Min(75, Max Health(Event Player) - Health(Event Player)) / 3);
+	}
+}
+
+rule("Stop Heal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) >= 1;
+	}
+
+	actions
+	{
+		Stop All Heal Over Time(Event Player);
+		Modify Player Variable(Event Player, HealTime, Min, 5 - 3);
+	}
+}
+
+rule("Array Setup")
+{
+	event
+	{
+		Subroutine;
+		ArraySetup;
+	}
+}
+
+rule("In Menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.CurrentOutpost != -1;
+		Is Button Held(Event Player, Interact) == True;
+		Event Player.Active == True;
+	}
+
+	actions
+	{
+		Event Player.Menu = True;
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Not In Menu")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.CurrentOutpost != -1 && Event Player.Active && Is Button Held(Event Player, Interact)) == False;
+	}
+
+	actions
+	{
+		Event Player.Menu = False;
+		Set Primary Fire Enabled(Event Player, True);
+	}
+}
+
+rule("Menu Action")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Primary Fire) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.Menu);
+		Event Player.MenuIndex = Round To Integer(Vertical Facing Angle Of(Event Player) / -18, To Nearest);
+		disabled Small Message(Event Player, Event Player.MenuIndex);
+		If(Event Player.MenuIndex == -1);
+			If(Normalized Health(Event Player)
+				< 1 && Global.OutpostResources[Event Player.CurrentOutpost] >= 15 && Event Player.HealTime == 0);
+				Event Player.HealTime = 5;
+				Global.OutpostResources[Event Player.CurrentOutpost] -= 15;
+				Start Heal Over Time(Event Player, Event Player, 3, Min(75, Max Health(Event Player) - Health(Event Player)) / 3);
+			End;
+		Else If(Event Player.MenuIndex == 0);
+			Event Player.GiftResources = Min(100, Min(Event Player.MaxResources - Event Player.CarriedResources,
+				Global.OutpostResources[Event Player.CurrentOutpost]));
+			Global.OutpostResources[Event Player.CurrentOutpost] -= Event Player.GiftResources;
+			Event Player.CarriedResources += Event Player.GiftResources;
+		Else If(Event Player.MenuIndex == 1);
+			Event Player.GiftResources = Min(100, Min(Event Player.CarriedResources,
+				Global.MaxResources[Event Player.CurrentOutpost] - Global.OutpostResources[Event Player.CurrentOutpost]));
+			Event Player.CarriedResources -= Event Player.GiftResources;
+			Global.OutpostResources[Event Player.CurrentOutpost] += Event Player.GiftResources;
+		End;
+		Wait(0.150, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Hero Switch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Event Player.Hero, Null), Hero Of(Event Player)) == False;
+	}
+
+	actions
+	{
+		Event Player.Hero = Hero Of(Event Player);
+		Event Player.MaxResources = 2 * Max Health(Event Player);
+	}
+}
+
+rule("Fix Text Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.TextPosition < -180 || Event Player.TextPosition >= 180) == True;
+	}
+
+	actions
+	{
+		Event Player.TextPosition = (Event Player.TextPosition % 360 + 360) % 360 - 180;
+	}
+}

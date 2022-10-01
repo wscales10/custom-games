@@ -1,0 +1,477 @@
+settings
+{
+	modes
+	{
+		Deathmatch
+
+		General
+		{
+			Spawn Health Packs: Disabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 150%
+
+			Baptiste
+			{
+				Jump Vertical Speed: 75%
+			}
+
+			Reinhardt
+			{
+				Charge Cooldown Time: 50%
+				Healing Received: 25%
+				Health: 200%
+				Jump Vertical Speed: 110%
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		12: SpeedScalar
+		17: PlayerRadius
+
+	player:
+		0: Players
+		1: Lambdas
+		2: BaptisteCharge
+		3: Discriminant
+		4: CurrentElement
+		6: IsTargeting
+		8: Index
+		9: Jump
+		11: Lambda
+		15: Position
+		18: ScalarProduct
+		19: Target
+		21: Vector
+		22: Walkable
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Global Variable(SpeedScalar, 1.250);
+		Set Global Variable(PlayerRadius, 1.500);
+	}
+}
+
+rule("Quick Hero Select")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
+
+rule("Baptiste Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Baptiste;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, BaptisteCharge, 1, 1, Destination and Rate);
+	}
+}
+
+rule("Baptiste Crouch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Baptiste;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, BaptisteCharge, 0);
+		Set Player Variable(Event Player, Jump, True);
+	}
+}
+
+rule("Baptiste Charge Reset")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Baptiste;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+		Player Variable(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Set Player Variable(Event Player, Jump, False);
+	}
+}
+
+rule("Baptiste Launch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Baptiste;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Jump) == True;
+		Player Variable(Event Player, Jump) == True;
+		Altitude Of(Event Player) < 1.900;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Facing Direction Of(Event Player), Multiply(50, Player Variable(Event Player, BaptisteCharge)),
+			To World, Cancel Contrary Motion);
+		Set Player Variable(Event Player, Jump, False);
+	}
+}
+
+rule("Reinhardt Launch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.600, Ignore Condition);
+		Skip If(Compare(Player Variable(Event Player, Target), ==, Null), 1);
+		Set Player Variable(Event Player, Position, Add(Position Of(Player Variable(Event Player, Target)), Multiply(1.500,
+			Direction From Angles(Horizontal Angle From Direction(Direction Towards(Player Variable(Event Player, Target), Event Player)),
+			0))));
+		Apply Impulse(Event Player, Up, Add(Multiply(Divide(0.530, Global Variable(SpeedScalar)), Multiply(Distance Between(Event Player,
+			Player Variable(Event Player, Position)), Cosine From Degrees(Multiply(-1, Vertical Angle Towards(Event Player,
+			Player Variable(Event Player, Position)))))), Multiply(Multiply(16.500, Global Variable(SpeedScalar)), Tangent From Degrees(
+			Multiply(-1, Vertical Angle Towards(Event Player, Player Variable(Event Player, Position)))))), To World,
+			Cancel Contrary Motion);
+		Big Message(Player Variable(Event Player, Target), String("Incoming", Null, Null, Null));
+	}
+}
+
+rule("Reinhardt Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Interact) == True;
+	}
+
+	actions
+	{
+		Abort If(Player Variable(Event Player, IsTargeting));
+		Set Player Variable(Event Player, IsTargeting, True);
+		Set Player Variable(Event Player, Target, Ray Cast Hit Player(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(
+			1000, Facing Direction Of(Event Player))), All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, False));
+		If(Compare(Player Variable(Event Player, Target), ==, Null));
+			Set Player Variable(Event Player, Players, Remove From Array(All Living Players(Opposite Team Of(Team Of(Event Player))),
+				Event Player));
+			Set Player Variable(Event Player, Lambdas, Empty Array);
+			For Player Variable(Event Player, Index, 0, Count Of(Player Variable(Event Player, Players)), 1);
+				Call Subroutine(Sub1);
+			End;
+			Set Player Variable(Event Player, Target, First Of(Sorted Array(Player Variable(Event Player, Players), Value In Array(
+				Player Variable(Event Player, Lambdas), Index Of Array Value(Player Variable(Event Player, Players),
+				Current Array Element)))));
+			If(Compare(Player Variable(Event Player, Target), ==, Null));
+				Set Player Variable(Event Player, Position, Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player),
+					Multiply(1000, Facing Direction Of(Event Player))), Null, Null, False));
+				Set Player Variable(Event Player, Walkable, Nearest Walkable Position(Player Variable(Event Player, Position)));
+				"Empty Array check for bug workaround"
+				If(And(Compare(Player Variable(Event Player, Walkable), !=, Empty Array), Compare(Distance Between(Player Variable(Event Player,
+					Position), Player Variable(Event Player, Walkable)), <=, 1)));
+					Set Player Variable(Event Player, Position, Nearest Walkable Position(Player Variable(Event Player, Position)));
+				End;
+			End;
+		End;
+		Set Player Variable(Event Player, IsTargeting, False);
+		Wait(3, Abort When False);
+		Set Player Variable(Event Player, Position, Null);
+		Set Player Variable(Event Player, Target, Null);
+	}
+}
+
+rule("Loop Inner")
+{
+	event
+	{
+		Subroutine;
+		Sub1;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, CurrentElement, Value In Array(Player Variable(Event Player, Players), Player Variable(
+			Event Player, Index)));
+		Set Player Variable(Event Player, Vector, Vector Towards(Eye Position(Event Player), Divide(Add(Eye Position(Player Variable(
+			Event Player, CurrentElement)), Position Of(Player Variable(Event Player, CurrentElement))), 2)));
+		Set Player Variable(Event Player, ScalarProduct, Dot Product(Facing Direction Of(Event Player), Player Variable(Event Player,
+			Vector)));
+		Set Player Variable(Event Player, Discriminant, Add(Raise To Power(Player Variable(Event Player, ScalarProduct), 2), Subtract(
+			Raise To Power(Global Variable(PlayerRadius), 2), Dot Product(Player Variable(Event Player, Vector), Player Variable(
+			Event Player, Vector)))));
+		If(Compare(Player Variable(Event Player, Discriminant), >=, 0));
+			Modify Player Variable(Event Player, Discriminant, Raise To Power, 0.500);
+			If(Compare(Add(Player Variable(Event Player, ScalarProduct), Player Variable(Event Player, Discriminant)), >=, 0));
+				Set Player Variable(Event Player, Lambda, Add(Player Variable(Event Player, ScalarProduct), Multiply(Divide(Absolute Value(
+					Subtract(Player Variable(Event Player, Discriminant), Player Variable(Event Player, ScalarProduct))), Subtract(Player Variable(
+					Event Player, Discriminant), Player Variable(Event Player, ScalarProduct))), Player Variable(Event Player, Discriminant))));
+				If(Compare(Distance Between(Add(Eye Position(Event Player), Multiply(Player Variable(Event Player, Lambda), Facing Direction Of(
+					Event Player))), Ray Cast Hit Position(Eye Position(Event Player), Add(Eye Position(Event Player), Multiply(Player Variable(
+					Event Player, Lambda), Facing Direction Of(Event Player))), All Players(Opposite Team Of(Team Of(Event Player))), Event Player,
+					False)), <=, 0.100));
+					Modify Player Variable(Event Player, Lambdas, Append To Array, Player Variable(Event Player, Lambda));
+					Abort;
+				End;
+			End;
+		End;
+		Set Player Variable At Index(Event Player, Players, Player Variable(Event Player, Index), Null);
+		Modify Player Variable(Event Player, Lambdas, Append To Array, 100000);
+	}
+}
+
+rule("Reinhardt Speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, Multiply(Global Variable(SpeedScalar), 100));
+	}
+}
+
+rule("Not Reinhardt Speed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Hero Of(Event Player) != Hero(Reinhardt);
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Set Player Variable(Event Player, Target, Null);
+		Set Player Variable(Event Player, Position, Null);
+	}
+}
+
+rule("Root Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), And(Compare(Player Variable(Current Array Element, Target), ==,
+			Event Player), Is Using Ability 1(Current Array Element))) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("Unroot Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Players On Hero(Hero(Reinhardt), All Teams), And(Compare(Player Variable(Current Array Element, Target), ==,
+			Event Player), Is Using Ability 1(Current Array Element))) == False;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+	}
+}
+
+rule("Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Crouch) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Down, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Up")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+		Is Button Held(Event Player, Jump) == True;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+		Start Accelerating(Event Player, Up, 17.500, 20, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Stop Accel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		And(Is Using Ability 1(Event Player), Or(Is Button Held(Event Player, Crouch), Is Button Held(Event Player, Jump))) == False;
+	}
+
+	actions
+	{
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Icons")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Icon(Filtered Array(Event Player, Compare(Player Variable(Event Player, Target), !=, Null)), Player Variable(Event Player,
+			Target), Skull, Visible To and Position, Red, True);
+		Create Icon(Filtered Array(Event Player, And(Compare(Player Variable(Event Player, Target), ==, Null), Compare(Player Variable(
+			Event Player, Position), !=, Null))), Player Variable(Event Player, Position), X, Visible To and Position, Red, True);
+		Create Icon(Filtered Array(Event Player, And(And(Is Using Ability 1(Event Player), Compare(Player Variable(Event Player, Position),
+			!=, Null)), Compare(Absolute Value(Subtract(46, Horizontal Angle Towards(Event Player, Player Variable(Event Player,
+			Position)))), <, 44))), World Vector Of(Left, Event Player, Rotation And Translation), Arrow: Left, Visible To and Position,
+			White, True);
+		Create Icon(Filtered Array(Event Player, And(And(Is Using Ability 1(Event Player), Compare(Player Variable(Event Player, Position),
+			!=, Null)), Compare(Absolute Value(Add(46, Horizontal Angle Towards(Event Player, Player Variable(Event Player, Position)))),
+			<, 44))), World Vector Of(Right, Event Player, Rotation And Translation), Arrow: Right, Visible To and Position, White, True);
+	}
+}
+
+rule("Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dead(Player Variable(Event Player, Target)) == True;
+	}
+
+	actions
+	{
+		Set Player Variable(Event Player, Position, Null);
+		Set Player Variable(Event Player, Target, Null);
+	}
+}

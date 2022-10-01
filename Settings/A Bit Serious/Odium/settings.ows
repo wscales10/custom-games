@@ -1,0 +1,117 @@
+settings
+{
+	main
+	{
+		Description: "You spawn with your ultimate, but you die when it finishes."
+	}
+
+	lobby
+	{
+		Map Rotation: After A Game
+		Match Voice Chat: Enabled
+		Return To Lobby: Never
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Black Forest
+				Castillo
+				Ecopoint: Antarctica
+				King's Row
+				Necropolis
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Spawn With Ultimate Ready: On
+
+			disabled heroes
+			{
+				Ashe
+				Baptiste
+				D.Va
+				Hanzo
+				Junkrat
+				Orisa
+				Sombra
+				Torbjörn
+				Tracer
+				Widowmaker
+				Wrecking Ball
+				Zenyatta
+			}
+		}
+	}
+}
+
+rule("start ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.U = True;
+	}
+}
+
+rule("end ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.U);
+		Start Damage Over Time(Event Player, Null, 9999, 125);
+		Set Move Speed(Event Player, 70);
+	}
+}
+
+rule("Reset var")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.U = False;
+		Set Move Speed(Event Player, 100);
+		Stop All Damage Over Time(Event Player);
+	}
+}
