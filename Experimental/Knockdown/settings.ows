@@ -43,7 +43,7 @@ rule("Setup")
 	actions
 	{
 		Set Status(Event Player, Null, Unkillable, 9999);
-		Set Player Variable(Event Player, G, Empty Array);
+		Event Player.G = Empty Array;
 		Chase Player Variable At Rate(Event Player, T, 0, 1, None);
 	}
 }
@@ -65,12 +65,12 @@ rule("Knock Down")
 	actions
 	{
 		Abort If(Has Status(Event Player, Knocked Down));
-		Set Player Variable(Event Player, T, 10);
+		Event Player.T = 10;
 		Set Status(Event Player, Null, Hacked, 0.001);
 		Set Status(Event Player, Null, Knocked Down, 9999);
-		Create In-World Text(All Players(All Teams), Player Variable(Event Player, T), Add(Position Of(Event Player), Up), 2,
-			Clip Against Surfaces, Visible To Position and String, Red, Default Visibility);
-		Set Player Variable(Event Player, W, Last Text ID);
+		Create In-World Text(All Players(All Teams), Event Player.T, Position Of(Event Player) + Up, 2, Clip Against Surfaces,
+			Visible To Position and String, Color(Red), Default Visibility);
+		Event Player.W = Last Text ID;
 	}
 }
 
@@ -107,15 +107,15 @@ rule("Tea")
 	conditions
 	{
 		Is Crouching(Event Player) == True;
-		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(And(Has Status(Current Array Element, Knocked Down),
-			Is Alive(Current Array Element)), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))) == True;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), Has Status(Current Array Element, Knocked Down) && Is Alive(
+			Current Array Element) && Distance Between(Event Player, Current Array Element) <= 1.500) == True;
 	}
 
 	actions
 	{
-		Set Player Variable(Event Player, N, Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), And(Has Status(
-			Current Array Element, Knocked Down), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))));
-		Modify Player Variable(Player Variable(Event Player, N), G, Append To Array, Event Player);
+		Event Player.N = Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), Has Status(Current Array Element,
+			Knocked Down) && Distance Between(Event Player, Current Array Element) <= 1.500);
+		Modify Player Variable(Event Player.N, G, Append To Array, Event Player);
 	}
 }
 
@@ -130,23 +130,19 @@ rule("Oh No")
 
 	conditions
 	{
-		Count Of(Player Variable(Event Player, G)) > 0;
+		Count Of(Event Player.G) > 0;
 	}
 
 	actions
 	{
-		Set Player Variable(Event Player, O, First Of(Player Variable(Event Player, G)));
-		Set Player Variable(Event Player, U, Min(Ultimate Charge Percent(Event Player), Min(Subtract(100, Ultimate Charge Percent(
-			Player Variable(Event Player, O))), 2.750)));
-		Set Ultimate Charge(Event Player, Subtract(Ultimate Charge Percent(Event Player), Player Variable(Event Player, U)));
-		Set Ultimate Charge(Player Variable(Event Player, O), Add(Ultimate Charge Percent(Player Variable(Event Player, O)),
-			Player Variable(Event Player, U)));
-		Set Player Variable(Event Player, H, Min(Subtract(Max Health(Event Player), Multiply(0.200, Player Variable(Event Player, M))),
-			Min(Subtract(Multiply(100, Player Variable(Player Variable(Event Player, O), M)), Max Health(Player Variable(Event Player,
-			O))), 3)));
-		Set Player Variable(Event Player, X, Subtract(Max Health(Event Player), Player Variable(Event Player, H)));
-		Set Player Variable(Player Variable(Event Player, O), X, Add(Max Health(Player Variable(Event Player, O)), Player Variable(
-			Event Player, H)));
+		Event Player.O = First Of(Event Player.G);
+		Event Player.U = Min(Ultimate Charge Percent(Event Player), Min(100 - Ultimate Charge Percent(Event Player.O), 2.750));
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) - Event Player.U);
+		Set Ultimate Charge(Event Player.O, Ultimate Charge Percent(Event Player.O) + Event Player.U);
+		Event Player.H = Min(Max Health(Event Player) - 0.200 * Event Player.M, Min(100 * Event Player.O.M - Max Health(Event Player.O),
+			3));
+		Event Player.X = Max Health(Event Player) - Event Player.H;
+		Event Player.O.X = Max Health(Event Player.O) + Event Player.H;
 		Modify Player Variable(Event Player, G, Remove From Array By Index, 0);
 		Wait(0.016, Ignore Condition);
 		Loop If Condition Is True;
@@ -165,16 +161,16 @@ rule("Update Raw Max Health")
 	conditions
 	{
 		Has Spawned(Event Player) == True;
-		Hero Of(Event Player) != Player Variable(Event Player, E);
+		Hero Of(Event Player) != Event Player.E;
 	}
 
 	actions
 	{
 		Set Max Health(Event Player, 100);
 		Wait(0.016, Ignore Condition);
-		Set Player Variable(Event Player, X, 0);
-		Set Player Variable(Event Player, M, Max Health(Event Player));
-		Set Player Variable(Event Player, E, Hero Of(Event Player));
+		Event Player.X = 0;
+		Event Player.M = Max Health(Event Player);
+		Event Player.E = Hero Of(Event Player);
 	}
 }
 
@@ -189,14 +185,14 @@ rule("Remove Unkillable Status")
 
 	conditions
 	{
-		Player Variable(Event Player, T) == 0;
+		Event Player.T == 0;
 	}
 
 	actions
 	{
-		Abort If(Not(Has Status(Event Player, Knocked Down)));
+		Abort If(!Has Status(Event Player, Knocked Down));
 		Clear Status(Event Player, Unkillable);
-		Set Player Variable(Event Player, D, True);
+		Event Player.D = True;
 	}
 }
 
@@ -212,8 +208,8 @@ rule("Emote = Heal")
 	conditions
 	{
 		Is Communicating Any Emote(Event Player) == True;
-		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), And(And(Has Status(Current Array Element, Knocked Down),
-			Is Alive(Current Array Element)), Compare(Distance Between(Event Player, Current Array Element), <=, 1.500))) == True;
+		Is True For Any(All Players(Opposite Team Of(Team Of(Event Player))), Has Status(Current Array Element, Knocked Down) && Is Alive(
+			Current Array Element) && Distance Between(Event Player, Current Array Element) <= 1.500) == True;
 	}
 
 	actions
@@ -235,13 +231,13 @@ rule("Kill")
 
 	conditions
 	{
-		Player Variable(Event Player, D) == True;
+		Event Player.D == True;
 		Is Alive(Event Player) == True;
 	}
 
 	actions
 	{
-		Kill(Event Player, Player Variable(Event Player, K));
+		Kill(Event Player, Event Player.K);
 		Wait(0.016, Abort When False);
 		Loop If Condition Is True;
 		Set Status(Event Player, Null, Unkillable, 9999);
@@ -259,20 +255,20 @@ rule("Set Max Health")
 
 	conditions
 	{
-		Round To Integer(Max Health(Event Player), To Nearest) != Player Variable(Event Player, X);
+		Round To Integer(Max Health(Event Player), To Nearest) != Event Player.X;
 		Has Spawned(Event Player) == True;
-		Player Variable(Event Player, X) != 0;
-		Hero Of(Event Player) == Player Variable(Event Player, E);
+		Event Player.X != 0;
+		Hero Of(Event Player) == Event Player.E;
 	}
 
 	actions
 	{
-		Set Player Variable(Event Player, X, Round To Integer(Player Variable(Event Player, X), To Nearest));
-		Set Player Variable(Event Player, A, Health(Event Player));
-		Set Max Health(Event Player, Multiply(100, Divide(Player Variable(Event Player, X), Player Variable(Event Player, M))));
+		Event Player.X = Round To Integer(Event Player.X, To Nearest);
+		Event Player.A = Health(Event Player);
+		Set Max Health(Event Player, 100 * (Event Player.X / Event Player.M));
 		Wait(0.016, Ignore Condition);
-		Heal(Event Player, Null, Subtract(Player Variable(Event Player, A), Health(Event Player)));
-		Damage(Event Player, Null, Subtract(Health(Event Player), Player Variable(Event Player, A)));
+		Heal(Event Player, Null, Event Player.A - Health(Event Player));
+		Damage(Event Player, Null, Health(Event Player) - Event Player.A);
 		Loop If Condition Is True;
 	}
 }
@@ -288,13 +284,13 @@ rule("Destroy Text")
 
 	conditions
 	{
-		Or(Is Dead(Event Player), Not(Has Status(Event Player, Knocked Down))) == True;
-		Player Variable(Event Player, W) != Null;
+		(Is Dead(Event Player) || !Has Status(Event Player, Knocked Down)) == True;
+		Event Player.W != Null;
 	}
 
 	actions
 	{
-		Destroy In-World Text(Player Variable(Event Player, W));
+		Destroy In-World Text(Event Player.W);
 	}
 }
 
@@ -314,8 +310,8 @@ rule("Is Dead")
 
 	actions
 	{
-		Set Player Variable(Event Player, D, False);
-		Set Player Variable(Event Player, K, Null);
+		Event Player.D = False;
+		Event Player.K = Null;
 	}
 }
 
@@ -330,6 +326,6 @@ rule("Last Attacker")
 
 	actions
 	{
-		Set Player Variable(Victim, K, Attacker);
+		Victim.K = Attacker;
 	}
 }
