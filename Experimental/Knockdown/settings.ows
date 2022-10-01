@@ -31,6 +31,31 @@ settings
 	}
 }
 
+variables
+{
+	player:
+		0: CachedHealth
+		1: MaxHealthModifier
+		3: ShouldDieNow
+		4: Hero
+		6: Teabaggers
+		7: HealthToGiveAway
+		10: LastAttacker
+		12: BaseMaxHealth
+		13: TeabagVictims
+		14: CurrentTeabagger
+		19: TimeUntilDeath
+		20: UltChargeToGiveAway
+		22: InWorldTexts
+		23: DesiredMaxHealth
+		24: HUDTexts
+}
+
+subroutines
+{
+	0: SetMaxHealth
+}
+
 rule("Setup")
 {
 	event
@@ -43,12 +68,15 @@ rule("Setup")
 	actions
 	{
 		Set Status(Event Player, Null, Unkillable, 9999);
-		Event Player.G = Empty Array;
-		Chase Player Variable At Rate(Event Player, T, 0, 1, None);
+		Event Player.Teabaggers = Empty Array;
+		Chase Player Variable At Rate(Event Player, TimeUntilDeath, 0, 1, None);
+		Event Player.InWorldTexts = Empty Array;
+		Event Player.HUDTexts = Empty Array;
+		Event Player.MaxHealthModifier = 1;
 	}
 }
 
-rule("Knock Down")
+rule("Knock Down when health reaches 1")
 {
 	event
 	{
@@ -65,12 +93,7 @@ rule("Knock Down")
 	actions
 	{
 		Abort If(Has Status(Event Player, Knocked Down));
-		Event Player.T = 10;
-		Set Status(Event Player, Null, Hacked, 0.001);
 		Set Status(Event Player, Null, Knocked Down, 9999);
-		Create In-World Text(All Players(All Teams), Event Player.T, Position Of(Event Player) + Up, 2, Clip Against Surfaces,
-			Visible To Position and String, Color(Red), Default Visibility);
-		Event Player.W = Last Text ID;
 	}
 }
 
@@ -85,13 +108,14 @@ rule("Revive")
 
 	conditions
 	{
-		Normalized Health(Event Player) >= 0.300;
+		Health(Event Player) >= 0.300 * Event Player.BaseMaxHealth;
 		Has Status(Event Player, Knocked Down) == True;
 	}
 
 	actions
 	{
 		Clear Status(Event Player, Knocked Down);
+		Clear Status(Event Player, Hacked);
 	}
 }
 
@@ -113,9 +137,29 @@ rule("Tea")
 
 	actions
 	{
-		Event Player.N = Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), Has Status(Current Array Element,
+		Event Player.TeabagVictims = Filtered Array(All Players(Opposite Team Of(Team Of(Event Player))), Has Status(Current Array Element,
 			Knocked Down) && Distance Between(Event Player, Current Array Element) <= 1.500);
-		Modify Player Variable(Event Player.N, G, Append To Array, Event Player);
+		Modify Player Variable(Event Player.TeabagVictims, Teabaggers, Append To Array, Event Player);
+	}
+}
+
+rule("Limit Health to 200%")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Health(Event Player) > 2 * Event Player.BaseMaxHealth;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, Health(Event Player) - 2 * Event Player.BaseMaxHealth);
 	}
 }
 
@@ -130,20 +174,22 @@ rule("Oh No")
 
 	conditions
 	{
-		Count Of(Event Player.G) > 0;
+		Count Of(Event Player.Teabaggers) > 0;
 	}
 
 	actions
 	{
-		Event Player.O = First Of(Event Player.G);
-		Event Player.U = Min(Ultimate Charge Percent(Event Player), Min(100 - Ultimate Charge Percent(Event Player.O), 2.750));
-		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) - Event Player.U);
-		Set Ultimate Charge(Event Player.O, Ultimate Charge Percent(Event Player.O) + Event Player.U);
-		Event Player.H = Min(Max Health(Event Player) - 0.200 * Event Player.M, Min(100 * Event Player.O.M - Max Health(Event Player.O),
-			3));
-		Event Player.X = Max Health(Event Player) - Event Player.H;
-		Event Player.O.X = Max Health(Event Player.O) + Event Player.H;
-		Modify Player Variable(Event Player, G, Remove From Array By Index, 0);
+		Event Player.CurrentTeabagger = First Of(Event Player.Teabaggers);
+		Event Player.UltChargeToGiveAway = Min(Ultimate Charge Percent(Event Player), Min(100 - Ultimate Charge Percent(
+			Event Player.CurrentTeabagger), 2.750));
+		Set Ultimate Charge(Event Player, Ultimate Charge Percent(Event Player) - Event Player.UltChargeToGiveAway);
+		Set Ultimate Charge(Event Player.CurrentTeabagger, Ultimate Charge Percent(Event Player.CurrentTeabagger)
+			+ Event Player.UltChargeToGiveAway);
+		Event Player.HealthToGiveAway = Max(0, Min((Event Player.MaxHealthModifier - 0.350) * Event Player.BaseMaxHealth, Min(
+			2 * Event Player.CurrentTeabagger.BaseMaxHealth - Max Health(Event Player.CurrentTeabagger), 3)));
+		Event Player.DesiredMaxHealth = Max Health(Event Player) - Event Player.HealthToGiveAway;
+		Event Player.CurrentTeabagger.DesiredMaxHealth = Max Health(Event Player.CurrentTeabagger) + Event Player.HealthToGiveAway;
+		Modify Player Variable(Event Player, Teabaggers, Remove From Array By Index, 0);
 		Wait(0.016, Ignore Condition);
 		Loop If Condition Is True;
 	}
@@ -161,16 +207,17 @@ rule("Update Raw Max Health")
 	conditions
 	{
 		Has Spawned(Event Player) == True;
-		Hero Of(Event Player) != Event Player.E;
+		Hero Of(Event Player) != Event Player.Hero;
 	}
 
 	actions
 	{
-		Set Max Health(Event Player, 100);
+		Event Player.MaxHealthModifier = 1;
+		Call Subroutine(SetMaxHealth);
 		Wait(0.016, Ignore Condition);
-		Event Player.X = 0;
-		Event Player.M = Max Health(Event Player);
-		Event Player.E = Hero Of(Event Player);
+		Event Player.DesiredMaxHealth = 0;
+		Event Player.BaseMaxHealth = Max Health(Event Player);
+		Event Player.Hero = Hero Of(Event Player);
 	}
 }
 
@@ -185,14 +232,14 @@ rule("Remove Unkillable Status")
 
 	conditions
 	{
-		Event Player.T == 0;
+		Event Player.TimeUntilDeath == 0;
 	}
 
 	actions
 	{
 		Abort If(!Has Status(Event Player, Knocked Down));
 		Clear Status(Event Player, Unkillable);
-		Event Player.D = True;
+		Event Player.ShouldDieNow = True;
 	}
 }
 
@@ -231,13 +278,13 @@ rule("Kill")
 
 	conditions
 	{
-		Event Player.D == True;
+		Event Player.ShouldDieNow == True;
 		Is Alive(Event Player) == True;
 	}
 
 	actions
 	{
-		Kill(Event Player, Event Player.K);
+		Kill(Event Player, Event Player.LastAttacker);
 		Wait(0.016, Abort When False);
 		Loop If Condition Is True;
 		Set Status(Event Player, Null, Unkillable, 9999);
@@ -255,25 +302,25 @@ rule("Set Max Health")
 
 	conditions
 	{
-		Round To Integer(Max Health(Event Player), To Nearest) != Event Player.X;
+		Max Health(Event Player) != Event Player.DesiredMaxHealth;
 		Has Spawned(Event Player) == True;
-		Event Player.X != 0;
-		Hero Of(Event Player) == Event Player.E;
+		Event Player.DesiredMaxHealth != 0;
+		Hero Of(Event Player) == Event Player.Hero;
 	}
 
 	actions
 	{
-		Event Player.X = Round To Integer(Event Player.X, To Nearest);
-		Event Player.A = Health(Event Player);
-		Set Max Health(Event Player, 100 * (Event Player.X / Event Player.M));
+		Event Player.CachedHealth = Health(Event Player);
+		Event Player.MaxHealthModifier = Event Player.DesiredMaxHealth / Event Player.BaseMaxHealth;
+		Call Subroutine(SetMaxHealth);
 		Wait(0.016, Ignore Condition);
-		Heal(Event Player, Null, Event Player.A - Health(Event Player));
-		Damage(Event Player, Null, Health(Event Player) - Event Player.A);
-		Loop If Condition Is True;
+		Heal(Event Player, Null, Event Player.CachedHealth - Health(Event Player));
+		Damage(Event Player, Null, Health(Event Player) - Event Player.CachedHealth);
+		Event Player.DesiredMaxHealth = 0;
 	}
 }
 
-rule("Destroy Text")
+rule("Destroy In-World Text")
 {
 	event
 	{
@@ -285,12 +332,41 @@ rule("Destroy Text")
 	conditions
 	{
 		(Is Dead(Event Player) || !Has Status(Event Player, Knocked Down)) == True;
-		Event Player.W != Null;
+		Count Of(Event Player.InWorldTexts) > 0;
 	}
 
 	actions
 	{
-		Destroy In-World Text(Event Player.W);
+		Destroy In-World Text(First Of(Event Player.InWorldTexts));
+		Wait(0.016, Ignore Condition);
+		Modify Player Variable(Event Player, InWorldTexts, Remove From Array By Index, 0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Destroy HUD Text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is Dead(Event Player) || !Has Status(Event Player, Knocked Down)) == True;
+		Count Of(Event Player.HUDTexts) > 0;
+	}
+
+	actions
+	{
+		Destroy HUD Text(First Of(Event Player.HUDTexts));
+		Wait(0.016, Ignore Condition);
+		Modify Player Variable(Event Player, HUDTexts, Remove From Array By Index, 0);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
 	}
 }
 
@@ -310,8 +386,8 @@ rule("Is Dead")
 
 	actions
 	{
-		Event Player.D = False;
-		Event Player.K = Null;
+		Event Player.ShouldDieNow = False;
+		Event Player.LastAttacker = Null;
 	}
 }
 
@@ -319,13 +395,45 @@ rule("Last Attacker")
 {
 	event
 	{
-		Player Dealt Damage;
+		Player Took Damage;
 		All;
 		All;
 	}
 
+	conditions
+	{
+		Health(Victim) == 1;
+	}
+
 	actions
 	{
-		Victim.K = Attacker;
+		Victim.LastAttacker = Attacker;
+	}
+}
+
+rule("When Knocked Down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Knocked Down) == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Hacked, 10);
+		Event Player.TimeUntilDeath = 10;
+		Create In-World Text(Remove From Array(All Players(All Teams), Event Player), Event Player.TimeUntilDeath, Position Of(
+			Event Player) + Up, 2, Clip Against Surfaces, Visible To Position and String, Color(Red), Default Visibility);
+		Modify Player Variable(Event Player, InWorldTexts, Append To Array, Last Text ID);
+		Create HUD Text(Event Player, Event Player.TimeUntilDeath, Null, Null, Top, 0, Color(Red), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Modify Player Variable(Event Player, HUDTexts, Append To Array, Last Text ID);
 	}
 }
