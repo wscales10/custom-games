@@ -1,0 +1,1539 @@
+settings
+{
+	lobby
+	{
+		Map Rotation: After A Game
+		Return To Lobby: Never
+		Swap Teams After Match: No
+	}
+
+	modes
+	{
+		Assault
+		{
+			Capture Speed Modifier: 65%
+
+			disabled maps
+			{
+				Hanamura Winter
+			}
+		}
+
+		General
+		{
+			Game Mode Start: Immediately
+			Health Pack Respawn Time Scalar: 200%
+			Limit Roles: 2 Of Each Role Per Team
+			Respawn Time Scalar: 15%
+		}
+	}
+
+	heroes
+	{
+		Team 1
+		{
+			Ammunition Clip Size Scalar: 50%
+			Healing Dealt: 200%
+			Healing Received: 50%
+			Health: 200%
+			Jump Vertical Speed: 50%
+			Movement Speed: 184%
+			Ultimate Generation: 35%
+
+			Ashe
+			{
+				Coach Gun Knockback Scalar Self: 0%
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 0%
+			}
+
+			Brigitte
+			{
+				Shield Bash: Off
+			}
+
+			Cassidy
+			{
+				Combat Roll: Off
+			}
+
+			Doomfist
+			{
+				Seismic Slam: Off
+			}
+
+			Genji
+			{
+				Swift Strike: Off
+			}
+
+			Hanzo
+			{
+				Lunge: Off
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 0%
+				Frag Launcher Knockback Scalar: 0%
+			}
+
+			Mei
+			{
+				Weapon Freeze Duration Scalar: 20%
+			}
+
+			Mercy
+			{
+				Guardian Angel: Off
+			}
+
+			Pharah
+			{
+				Concussive Blast: Off
+				Hover Jets Vertical Speed Scalar: 88%
+				Jump Jet: Off
+				Rocket Launcher Knockback Scalar: 0%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 0%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 0%
+				Sprint: Off
+			}
+
+			Sombra
+			{
+				Projectile Speed: 0%
+			}
+
+			Symmetra
+			{
+				Teleporter: Off
+			}
+
+			Widowmaker
+			{
+				Grappling Hook: Off
+			}
+
+			Winston
+			{
+				Jump Pack: Off
+			}
+
+			Zarya
+			{
+				Particle Cannon Secondary Knockback Scalar: 0%
+			}
+		}
+
+		Team 2
+		{
+			Ultimate Generation: 200%
+
+			Mei
+			{
+				Blizzard Freeze Minimum: 0%
+				Blizzard Freeze Rate Scalar: 200%
+				Weapon Freeze Duration Scalar: 20%
+				Weapon Freeze Minimum: 0%
+				Weapon Freeze Rate Scalar: 143%
+			}
+		}
+
+		General
+		{
+			Projectile Gravity: 45%
+			Projectile Speed: 65%
+
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Reset Attacker's Ultimate Charge on Death")
+{
+	event
+	{
+		Player Died;
+		Team 2;
+		All;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 0);
+	}
+}
+
+rule("Crouching")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.996, 0, 0, 0, 0);
+	}
+}
+
+rule("Crouching")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+		Hero Of(Event Player) != Hero(Genji);
+		Hero Of(Event Player) != Hero(Tracer);
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.543, 0, 0, 0, 0);
+	}
+}
+
+rule("Crouching")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+		Array Contains(Append To Array(Hero(Genji), Hero(Tracer)), Hero Of(Event Player)) == True;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.498, 0, 0, 0, 0);
+	}
+}
+
+rule("D.Va Boosters")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 24.900);
+	}
+}
+
+rule("D.Va Boosters")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("D.Va Fusion Cannons")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		D.Va;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+		Is Using Ability 1(Event Player) == False;
+		Health(Event Player) / Normalized Health(Event Player) > 1199;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("D.Va Fusion Cannons")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		D.Va;
+	}
+
+	conditions
+	{
+		(Is Firing Primary(Event Player) && !Is Using Ability 1(Event Player) && Health(Event Player) / Normalized Health(Event Player)
+			> 1199) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Doomfist Rocket Punch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.T = 0;
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("Doomfist Rocket Punch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Knocked Down, 0.001);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Doomfist setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, T, 1.400, 1, Destination and Rate);
+	}
+}
+
+rule("Doomfist Meteor Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 33.300);
+	}
+}
+
+rule("Doomfist Meteor Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Genji Dragonblade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Genji;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Set Move Speed(Event Player, 76.900);
+		Wait(6, Abort When False);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Genji Dragonblade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Genji;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Genji Cyber-agility")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Genji;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == False;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Genji Cyber-agility")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Genji;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Allow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Hanzo wall climb, lunge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Hanzo;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == False;
+	}
+
+	actions
+	{
+		Disallow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Hanzo wall climb, lunge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Hanzo;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Allow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("McCree Deadeye")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Cassidy;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 333.300);
+	}
+}
+
+rule("McCree Deadeye")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Cassidy;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Mercy Valk")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 61.100);
+	}
+}
+
+rule("Mercy Valk")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Mercy;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Moira Fade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 28.600);
+	}
+}
+
+rule("Moira Fade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Moira Coalescence")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 66.700);
+	}
+}
+
+rule("Moira Coalescence")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Moira;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Orisa Gun")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 125);
+	}
+}
+
+rule("Orisa Gun")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Orisa;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Lúcio crossfade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ability 1 Enabled(Event Player, True);
+		Start Holding Button(Event Player, Button(Ability 1));
+	}
+}
+
+rule("Lúcio crossfade")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Button(Ability 1));
+		Set Ability 1 Enabled(Event Player, False);
+	}
+}
+
+rule("Lúcio wall ride")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is On Wall(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 41.800);
+	}
+}
+
+rule("Lúcio wall ride")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Lúcio;
+	}
+
+	conditions
+	{
+		Is On Wall(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+		Disallow Button(Event Player, Button(Jump));
+		Wait(0.250, Ignore Condition);
+		Allow Button(Event Player, Button(Jump));
+	}
+}
+
+rule("Reaper wraith")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 66.700);
+	}
+}
+
+rule("Reaper wraith")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Reaper shadow step")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Down, 10000, To World, None);
+	}
+}
+
+rule("Reaper shadow step")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Hero switch")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Event Player.H;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+		Set Move Speed(Event Player, 100);
+		Allow Button(Event Player, Button(Jump));
+		Event Player.H = Hero Of(Event Player);
+	}
+}
+
+rule("Reaper Death Blossom")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("Reaper Death Blossom")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reaper;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Rein charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 18.100);
+	}
+}
+
+rule("Rein charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Rein barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 133.300);
+	}
+}
+
+rule("Rein barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Roadhog ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 133.300);
+	}
+}
+
+rule("Roadhog ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Roadhog hook")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 200);
+	}
+}
+
+rule("Roadhog hook")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Roadhog;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Sigma rock")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 400);
+		Wait(0.600, Abort When False);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Sigma rock")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Sigma flux")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sigma;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 28.300);
+	}
+}
+
+rule("Sigma flux")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sigma;
+	}
+
+	conditions
+	{
+		(Is Using Ultimate(Event Player) && Is Button Held(Event Player, Button(Jump))) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Sombra stealth")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sombra;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(0.800, Abort When False);
+		Set Move Speed(Event Player, 66.700);
+	}
+}
+
+rule("Sombra stealth")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Sombra;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Torb overload")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 76.900);
+	}
+}
+
+rule("Torb overload")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Torbjörn;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Tracer blink")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.P = Position Of(Event Player);
+		Event Player.F = Facing Direction Of(Event Player);
+	}
+}
+
+rule("Tracer blink")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Tracer;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+		Event Player.P != Null;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Event Player.P);
+		Set Facing(Event Player, Event Player.F, To World);
+		Event Player.P = Null;
+	}
+}
+
+rule("Hammond ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 55);
+	}
+}
+
+rule("Hammond ball")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Zen ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Zenyatta;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 50);
+	}
+}
+
+rule("Zen ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Zenyatta;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 100);
+	}
+}
+
+rule("Hammond grapple")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.272, 0, 0, 0, 0);
+	}
+}
+
+rule("Hammond grapple")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0.543, 0, 0, 0, 0);
+	}
+}
+
+rule("Ana sleep")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Asleep) == True;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Asleep);
+	}
+}
+
+rule("Crit damage")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Was Critical Hit == True;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage - (23.800 - 0.980 * Distance Between(Event Player, Attacker)));
+	}
+}
+
+rule("Non-crit damage")
+{
+	event
+	{
+		Player Took Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Was Critical Hit == False;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, Event Damage - (370 / (3 * Distance Between(Event Player, Attacker) + 5) - 3.600));
+	}
+}
+
+rule("Rule 68")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(0);
+	}
+}
