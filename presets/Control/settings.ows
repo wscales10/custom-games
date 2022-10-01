@@ -1,0 +1,123 @@
+settings
+{
+	modes
+	{
+		Skirmish
+		{
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Limit Roles: 2 Of Each Role Per Team
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Chase Global Variable At Rate(C, 0, 1, Destination and Rate);
+		Create Effect(Filtered Array(All Players(All Teams), Global.T == Team 1), Ring, Color(Team 1), Global.P, 5,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(All Players(All Teams), Global.T == Team 2), Ring, Color(Team 2), Global.P, 5,
+			Visible To Position and Radius);
+		Create Effect(Filtered Array(All Players(All Teams), Global.T == Null), Ring, Color(White), Global.P, 5,
+			Visible To Position and Radius);
+		Global.C = 60;
+		Create HUD Text(All Players(All Teams), Custom String("Prepare to attack  0:{0}", Round To Integer(Global.C, Down)), Null, Null,
+			Top, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Global.D = Last Text ID;
+		Wait(50, Ignore Condition);
+		Destroy HUD Text(Global.D);
+		Create HUD Text(All Players(All Teams), Custom String("Prepare to attack  {0}.{1}", Round To Integer(Global.C, Down),
+			Round To Integer(10 * (Global.C - Round To Integer(Global.C, Down)), Up)), Null, Null, Top, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Global.D = Last Text ID;
+		Wait(10, Ignore Condition);
+		Clear Status(All Players(All Teams), Rooted);
+		Destroy HUD Text(Global.D);
+		Global.C = 30;
+		Big Message(All Players(All Teams), Custom String("Activating Objective..."));
+		Create HUD Text(All Players(All Teams), Custom String("Control point unlocks in: {0}", Round To Integer(Global.C, Up)), Null, Null,
+			Top, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Global.D = Last Text ID;
+		Wait(27, Ignore Condition);
+		Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Host Player, 100);
+		Wait(1, Ignore Condition);
+		Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Host Player, 100);
+		Wait(1, Ignore Condition);
+		Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Host Player, 100);
+		Destroy HUD Text(Global.D);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Total Time Elapsed < 60;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("Place Control Point")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Global.P = Nearest Walkable Position(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ 1000 * Facing Direction Of(Event Player), Null, Event Player, False));
+	}
+}
