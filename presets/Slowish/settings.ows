@@ -1,0 +1,213 @@
+settings
+{
+	modes
+	{
+		Skirmish
+		{
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Health Pack Respawn Time Scalar: 45%
+			Limit Roles: 2 Of Each Role Per Team
+			Respawn Time Scalar: 45%
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 45%
+			Jump Vertical Speed: 224%
+			Movement Speed: 224%
+			Projectile Gravity: 500%
+			Projectile Speed: 224%
+			Ultimate Duration: 45%
+
+			Ashe
+			{
+				Coach Gun Knockback Scalar Enemy: 224%
+				Coach Gun Knockback Scalar Self: 224%
+				Dynamite Fuse Time Scalar: 45%
+			}
+
+			Bastion
+			{
+				Configuration: Tank Weapon Knockback Scalar: 224%
+				Self-Repair Maximum Time: 45%
+				Self-Repair Recharge Rate: 224%
+			}
+
+			Brigitte
+			{
+				Barrier Shield Recharge Rate: 224%
+				Shield Bash Knockback Scalar: 224%
+				Whip Shot Knockback Scalar: 224%
+			}
+
+			D.Va
+			{
+				Boosters Knockback Scalar: 224%
+				Call Mech Knockback Scalar: 224%
+				Defense Matrix Maximum Time: 45%
+				Defense Matrix Recharge Rate: 224%
+				Self Destruct Knockback Scalar: 200%
+			}
+
+			Doomfist
+			{
+				Ammunition Regeneration Time Scalar: 45%
+				Meteor Strike Knockback Scalar: 224%
+				Rising Uppercut Knockback Scalar: 224%
+				Rocket Punch Knockback Scalar: 224%
+			}
+
+			Junkrat
+			{
+				Concussion Mine Knockback Scalar: 200%
+				Frag Launcher Knockback Scalar: 224%
+			}
+
+			Lúcio
+			{
+				Healing Dealt: 224%
+				Soundwave Knockback Scalar: 224%
+			}
+
+			Mei
+			{
+				Blizzard Freeze Rate Scalar: 224%
+				Weapon Freeze Rate Scalar: 224%
+			}
+
+			Moira
+			{
+				Biotic Energy Maximum: 45%
+				Biotic Energy Recharge Rate: 224%
+			}
+
+			Pharah
+			{
+				Concussive Blast Knockback Scalar: 224%
+				Hover Jets Maximum Time: 45%
+				Hover Jets Recharge Rate: 224%
+				Hover Jets Vertical Speed Scalar: 254%
+				Jump Jet Acceleration Scalar: 222%
+				Rocket Launcher Knockback Scalar: 224%
+			}
+
+			Reinhardt
+			{
+				Barrier Field Recharge Rate: 224%
+				Charge Knockback Scalar: 224%
+				Rocket Hammer Knockback Scalar: 224%
+			}
+
+			Roadhog
+			{
+				Whole Hog Knockback Scalar: 224%
+			}
+
+			Sigma
+			{
+				Accretion Knockback Scalar: 224%
+				Experimental Barrier Recharge Rate: 224%
+			}
+
+			Soldier: 76
+			{
+				Helix Rockets Knockback Scalar: 224%
+			}
+
+			Torbjörn
+			{
+				Overload Duration Scalar: 45%
+			}
+
+			Winston
+			{
+				Jump Pack Acceleration Scalar: 212%
+				Jump Pack Knockback Scalar: 224%
+			}
+
+			Wrecking Ball
+			{
+				Grappling Claw Knockback Scalar: 224%
+				Minefield Knockback Scalar: 224%
+			}
+
+			Zarya
+			{
+				Particle Cannon Secondary Knockback Scalar: 224%
+			}
+
+			Zenyatta
+			{
+				Healing Dealt: 224%
+			}
+
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Set Slow Motion(44.721);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 500);
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Declare Match Draw;
+	}
+}
