@@ -1,0 +1,175 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Match Voice Chat: Enabled
+		Max Spectators: 6
+		Return To Lobby: Never
+		Team Balancing: After A Mirror Match
+		Use Experimental Update If Available: Yes
+	}
+
+	modes
+	{
+		Assault
+		{
+			Capture Speed Modifier: 10%
+		}
+
+		Capture the Flag
+		{
+			Flag Carrier Abilities: All
+			Flag Dropped Lock Time: 0.0
+			Flag Pickup Time: 5.0
+			Flag Return Time: 5.0
+			Flag Score Respawn Time: 20.0
+			Game Length Minutes: 15
+			Score To Win: 9
+			Team Needs Flag At Base To Score: On
+		}
+
+		Control
+		{
+			Capture Speed Modifier: 10%
+			Score To Win: 3
+			Scoring Speed Modifier: 10%
+		}
+
+		Deathmatch
+		{
+			Game Length In Minutes: 15
+			Score To Win: 50
+
+			disabled maps
+			{
+				Kanezaka
+				Malevento
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		Elimination
+		{
+			Score To Win: 9
+			Tiebreaker After Match Time Elapsed: 300
+			Time To Capture: 7
+
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		Escort
+		{
+			Payload Speed Modifier: 10%
+		}
+
+		Hybrid
+		{
+			Capture Speed Modifier: 10%
+			Payload Speed Modifier: 10%
+		}
+
+		Skirmish
+		{
+			disabled maps
+			{
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		Team Deathmatch
+		{
+			Game Length In Minutes: 15
+			Imbalanced Team Score To Win: On
+			Score To Win: 200
+
+			disabled maps
+			{
+				Kanezaka
+				Malevento
+				Workshop Chamber
+				Workshop Expanse
+				Workshop Expanse Night
+				Workshop Green Screen
+				Workshop Island
+				Workshop Island Night
+			}
+		}
+
+		General
+		{
+			Enemy Health Bars: Off
+			Game Mode Start: Immediately
+			Health Pack Respawn Time Scalar: 10%
+			Hero Limit: Off
+			Kill Cam: Off
+			Kill Feed: Off
+			Respawn Time Scalar: 50%
+			Spawn Health Packs: Enabled
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Ability Cooldown Time: 0%
+
+			disabled heroes
+			{
+				Echo
+			}
+		}
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Damage Dealt(Event Player, 0);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Set Match Time(15);
+	}
+}
