@@ -1,0 +1,283 @@
+settings
+{
+	main
+	{
+		Description: "In each round, a random player starts as Reaper. Everyone else is Soldier: 76 and can only sprint. When a Reaper eliminates a Soldier: 76, the Reaper earns 1 point, and his victim becomes a Reaper. A Soldier: 76 that survives to the end earns 5 points."
+	}
+
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Control
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		Deathmatch
+		{
+			Hero Limit: Off
+			Respawn As Random Hero: On
+			Score To Win: 50
+
+			enabled maps
+			{
+				Château Guillard Halloween
+			}
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 2 Of Each Role Per Team
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Reaper
+			{
+				Jump Vertical Speed: 150%
+				Movement Speed: 110%
+				Shadow Step Cooldown Time: 80%
+				Wraith Form Cooldown Time: 60%
+			}
+
+			Soldier: 76
+			{
+				Biotic Field: Off
+				Helix Rockets: Off
+				Jump Vertical Speed: 125%
+				Movement Gravity: 105%
+				Movement Speed: 105%
+				Primary Fire: Off
+				Quick Melee: Off
+				Ultimate Ability Tactical Visor: Off
+			}
+
+			enabled heroes
+			{
+				Soldier: 76
+			}
+		}
+	}
+}
+
+rule("Disable built-in game mode scoring/completion")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("If the round is not initialized (N), initialize it (N), advance to next round (R), and display messages")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Global.N == False;
+	}
+
+	actions
+	{
+		Set Match Time(120);
+		Start Forcing Player To Be Hero(All Players(All Teams), Hero(Soldier: 76));
+		Global.N = True;
+		Global.R += 1;
+		Skip If(Global.R == 4, 2);
+		Big Message(All Players(All Teams), String("Round {0}", Global.R));
+		Skip(1);
+		Big Message(All Players(All Teams), String("Final Round"));
+		Wait(4, Ignore Condition);
+		Big Message(Players On Hero(Hero(Reaper), All Teams), String("{0}: {1}", String("Hunt"), Hero(Soldier: 76)));
+		Big Message(Players On Hero(Hero(Soldier: 76), All Teams), String("{0} {1}", String("{0}!", String("Run")), String("{0}!", String(
+			"Hide"))));
+	}
+}
+
+rule("If the round is initialized (N) but there are no Reapers, change a random player into a Reaper")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.N == True;
+		Number Of Heroes(Hero(Reaper), All Teams) == 0;
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Random Value In Array(All Players(All Teams)), Hero(Reaper));
+		Wait(0.250, Ignore Condition);
+	}
+}
+
+rule("Make Reapers invincible so they can't hurt each other")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Reaper;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Invincible, 10000);
+	}
+}
+
+rule("Make 76'S not invincible")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Soldier: 76;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Invincible);
+	}
+}
+
+rule("When a player is killed, award the Attacker and turn the Victim into Reaper")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Attacker != Victim;
+	}
+
+	actions
+	{
+		Modify Player Score(Attacker, 1);
+		Small Message(Attacker, String("{0}: {1}", String("Points Earned"), 1));
+		Wait(0.800, Ignore Condition);
+		Start Forcing Player To Be Hero(Victim, Hero(Reaper));
+		Wait(0.250, Ignore Condition);
+		Abort If(Number Of Heroes(Hero(Soldier: 76), All Teams) == 0);
+		Big Message(Victim, String("{0}: {1}", String("Hunt"), Hero(Soldier: 76)));
+	}
+}
+
+rule("Punish self eliminations")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Attacker == Victim;
+	}
+
+	actions
+	{
+		Modify Player Score(Attacker, -5);
+	}
+}
+
+rule("If the round is initialized (N) but there are no 76'S, uninit the round (N), and respawn all")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.N == True;
+		Number Of Heroes(Hero(Soldier: 76), All Teams) == 0;
+	}
+
+	actions
+	{
+		Wait(1, Ignore Condition);
+		Global.N = False;
+		Respawn(All Players(All Teams));
+	}
+}
+
+rule("If game is initialized (N) but time runs out, uninit the round (N), award living 76'S (W), and respawn all")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.N == True;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Global.W = Filtered Array(Players On Hero(Hero(Soldier: 76), All Teams), Is Alive(Current Array Element));
+		Big Message(Global.W, String("{0}!", String("Success")));
+		Big Message(Remove From Array(All Players(All Teams), Global.W), String("Failure"));
+		Modify Player Score(Global.W, 3);
+		Small Message(Global.W, String("{0}: {1}", String("Points Earned"), 3));
+		Wait(4, Abort When False);
+		Global.N = False;
+		Respawn(All Players(All Teams));
+	}
+}
+
+rule("End the match after 4 rounds")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.R > 10;
+	}
+
+	actions
+	{
+		Declare Player Victory(Last Of(Sorted Array(All Players(All Teams), Score Of(Current Array Element))));
+	}
+}
