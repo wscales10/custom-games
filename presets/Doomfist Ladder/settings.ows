@@ -1,0 +1,684 @@
+settings
+{
+	lobby
+	{
+		Allow Players Who Are In Queue: Yes
+		Max FFA Players: 8
+	}
+
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Expanse
+				Workshop Expanse Night
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Hero Limit: Off
+			Respawn As Random Hero: On
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 500%
+			Movement Gravity: 99%
+
+			Doomfist
+			{
+				Damage Dealt: 250%
+				Damage Received: 10%
+				Primary Fire: Off
+				Rising Uppercut Cooldown Time: 83%
+				Rising Uppercut Knockback Scalar: 105%
+				Rocket Punch Cooldown Time: 18%
+				Rocket Punch Knockback Scalar: 25%
+				Ultimate Generation - Combat Meteor Strike: 500%
+				Ultimate Generation - Passive Meteor Strike: 500%
+				Ultimate Generation Meteor Strike: 500%
+			}
+
+			Wrecking Ball
+			{
+				Adaptive Shield: Off
+				Damage Dealt: 500%
+				Grappling Claw: Off
+				Roll Always Active: On
+				Ultimate Ability Minefield: Off
+			}
+
+			enabled heroes
+			{
+				Doomfist
+			}
+		}
+	}
+
+	workshop
+	{
+		Fastest Ball Maximum: 16.000
+		Fastest Ball Minimum: 6.000
+		Slowest Ball Maximum: 0.300
+		Slowest Ball Minimum: 0.100
+	}
+
+	extensions
+	{
+		Buff and Debuff Sounds
+		Explosion Sounds
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: NumberOfBalls
+		1: Setup
+		2: LowMinRotationSpeed
+		3: LowMaxRotationSpeed
+		4: HighMinRotationSpeed
+		5: HighMaxRotationSpeed
+		6: Step
+		7: SlowMotion
+		9: TestMode
+
+	player:
+		0: Position
+		1: Accel
+		2: State
+		3: w
+		4: z
+		5: RotationSpeed
+		6: StartingAngle
+		7: VRange
+		8: HRadius
+		9: Origin
+		10: BotIndex
+		12: Targets
+		13: Role
+		14: i
+		15: Target
+		16: EffectTimer
+		17: NowTime
+		18: PreviousTime
+		19: DeltaTime
+		20: YTarget
+		21: ReleaseTime
+		22: Ball
+}
+
+rule("Reset Uppercut Cooldown")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		If(Event Ability == Button(Secondary Fire));
+			Set Ability Cooldown(Event Player, Button(Ability 1), 0);
+		End;
+	}
+}
+
+rule("Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.State != 0);
+		Event Player.State = Custom String("DoomToBall");
+		Start Accelerating(Event Player, Up, 19.500, 60, To World, None);
+		Disable Hero HUD(Event Player);
+		Set Jump Enabled(Event Player, False);
+		Start Forcing Player To Be Hero(Event Player, Hero(Wrecking Ball));
+		Start Holding Button(Event Player, Button(Crouch));
+		Teleport(Event Player, Mapped Array(Event Player.Position ? Event Player.Position : Position Of(Event Player), Vector(
+			X Component Of(Current Array Element), Max(2, Y Component Of(Current Array Element)), Z Component Of(Current Array Element))));
+		Wait Until(Is In Air(Event Player), 1);
+		Play Effect(All Players(All Teams), Sombra Translocator Disappear Sound, Color(White), Position Of(Event Player), 100);
+		Play Effect(All Players(All Teams), Sombra Translocator Disappear Sound, Color(White), Position Of(Event Player), 100);
+		Play Effect(All Players(All Teams), Sombra Translocator Disappear Sound, Color(White), Position Of(Event Player), 100);
+		Event Player.State = Custom String("Ball");
+	}
+}
+
+rule("Doomfist")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Event Player.State == Custom String("Release");
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("BallToDoom");
+		Wait(0.400, Ignore Condition);
+		Stop Holding Button(Event Player, Button(Crouch));
+		Start Forcing Player To Be Hero(Event Player, Hero(Doomfist));
+		Set Jump Enabled(Event Player, True);
+		Enable Hero HUD(Event Player);
+		Event Player.State = 0;
+	}
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.TestMode = Workshop Setting Toggle(Custom String("General"), Custom String("Test Mode"), False, 0);
+		Global.Step = 9;
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(0, 0, 0), Vector(0, 1000, 0), Color(Lime Green),
+			Visible To Position and Radius);
+		Global.NumberOfBalls = 12;
+		If(Global.TestMode);
+			Create Dummy Bot(Hero(Doomfist), All Teams, 1, Vector(0, 0, 0), Vector(0, 0, 0));
+			Create HUD Text(All Players(All Teams), Global.SlowMotion, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+				Visible To and String, Default Visibility);
+			Create HUD Text(Host Player, Custom String("Is on ground: {0} \\nAltitude: {1}", Is On Ground(Host Player), Altitude Of(
+				Host Player)), Null, Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+			Global.SlowMotion = 100;
+		End;
+		For Global Variable(I, 0, Global.NumberOfBalls, 1);
+			Create Dummy Bot(Hero(Wrecking Ball), All Teams, Number Of Slots(All Teams) + Global.I, Vector(0, 0, 0), Vector(0, 0, 0));
+		End;
+		Global.LowMinRotationSpeed = Workshop Setting Real(Custom String("Rotation speeds"), Custom String("Slowest Ball Minimum"), 0.500,
+			0, 100, 0);
+		Global.LowMaxRotationSpeed = Workshop Setting Real(Custom String("Rotation speeds"), Custom String("Slowest Ball Maximum"), 10, 0,
+			100, 0);
+		Global.HighMinRotationSpeed = Workshop Setting Real(Custom String("Rotation speeds"), Custom String("Fastest Ball Minimum"), 20, 0,
+			100, 0);
+		Global.HighMaxRotationSpeed = Workshop Setting Real(Custom String("Rotation speeds"), Custom String("Fastest Ball Maximum"), 50, 0,
+			100, 0);
+		Global.Setup = True;
+	}
+}
+
+rule("Store Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Hero Of(Event Player) == Hero(Doomfist);
+	}
+
+	actions
+	{
+		Event Player.Position = Position Of(Event Player);
+		Wait(0.100, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Ball Role")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.Role = Custom String("Ball");
+	}
+}
+
+rule("Stop Climbing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) == Hero(Wrecking Ball);
+	}
+
+	actions
+	{
+		Wait(1, Restart When True);
+		Stop Accelerating(Event Player);
+	}
+}
+
+rule("Set Position To Null")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.Position = Null;
+	}
+}
+
+rule("Player Role")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	actions
+	{
+		Event Player.Role = Custom String("Player");
+		Create HUD Text(Filtered Array(All Players(All Teams), Is Button Held(Current Array Element, Button(Interact))), Event Player.L,
+			Event Player, Null, Left, -1 * Event Player.L, Color(White), Color(White), Color(White), Visible To Sort Order and String,
+			Default Visibility);
+		If(Global.TestMode);
+			Create In-World Text(Remove From Array(Host Player, Event Player), Distance Between(Event Player, Host Player), Event Player, 1,
+				Do Not Clip, Visible To Position and String, Color(White), Default Visibility);
+			Create HUD Text(Event Player, Vertical Speed Of(Event Player), Null, Null, Left, 0, Color(White), Color(White), Color(White),
+				Visible To and String, Default Visibility);
+		End;
+		Chase Player Variable At Rate(Event Player, EffectTimer, 0, 1, None);
+		Event Player.w = 16;
+		Event Player.z = 1;
+		Disable Nameplates(Filtered Array(All Players(All Teams), Current Array Element.Role == Custom String("Ball")), Event Player);
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > Event Player.L;
+	}
+
+	actions
+	{
+		Event Player.L = Altitude Of(Event Player);
+	}
+}
+
+rule("Slower")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Primary Fire)) == True;
+		Global.TestMode == True;
+	}
+
+	actions
+	{
+		Global.SlowMotion -= 10;
+		Set Slow Motion(Global.SlowMotion);
+	}
+}
+
+rule("Faster")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.TestMode == True;
+		Is Button Held(Host Player, Button(Ability 2)) == True;
+	}
+
+	actions
+	{
+		Global.SlowMotion += 10;
+		Set Slow Motion(Global.SlowMotion);
+	}
+}
+
+rule("Fix pos")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+		Is Dummy Bot(Event Player) == True;
+		Global.TestMode == True;
+	}
+
+	actions
+	{
+		Start Accelerating(Event Player, Event Player.Accel, Magnitude Of(Event Player.Accel), 60, To World, Direction Rate and Max Speed);
+	}
+}
+
+rule("Down 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Ball");
+		Vertical Speed Of(Event Player) < 0;
+	}
+
+	actions
+	{
+		Event Player.Targets = Filtered Array(All Living Players(All Teams), Current Array Element.Role == Custom String("Player")
+			&& Current Array Element.State == 0 && Y Component Of(Position Of(Current Array Element)) > Y Component Of(Position Of(
+			Event Player)) && Distance Between(Event Player, Current Array Element) < 10);
+		If(Y Component Of(Position Of(Event Player)) < 30);
+			Event Player.State = Custom String("Release");
+			Event Player.ReleaseTime = Total Time Elapsed;
+			Abort;
+		End;
+		Event Player.Targets.EffectTimer = 0.100;
+		Event Player.PreviousTime = Event Player.NowTime;
+		Event Player.NowTime = Total Time Elapsed;
+		Event Player.DeltaTime = Event Player.NowTime - Event Player.PreviousTime;
+		Event Player.YTarget = Y Component Of(Position Of(Event Player)) + -1.500;
+		For Player Variable(Event Player, i, 0, Count Of(Event Player.Targets), 1);
+			Event Player.Target = Event Player.Targets[Event Player.i];
+			If(Global.TestMode);
+				Play Effect(All Players(All Teams), Good Pickup Effect, Color(Blue), Event Player.Target, 1);
+			End;
+			Apply Impulse(Event Player.Target, Down, (Y Component Of(Position Of(Event Player.Target))
+				> Event Player.YTarget ? Event Player.DeltaTime : 0) * (2 * Event Player.z * Event Player.w * (Vertical Speed Of(
+				Event Player.Target) - Vertical Speed Of(Event Player)) + Event Player.w ^ 2 * (Y Component Of(Position Of(
+				Event Player.Target)) - Event Player.YTarget)), To World, Incorporate Contrary Motion);
+			Modify Global Variable(Z, Append To Array, Vertical Speed Of(Event Player.Target));
+		End;
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Down 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Release");
+	}
+
+	actions
+	{
+		Event Player.Targets.EffectTimer = 0.100;
+		Event Player.PreviousTime = Event Player.NowTime;
+		Event Player.NowTime = Total Time Elapsed;
+		Event Player.DeltaTime = Event Player.NowTime - Event Player.PreviousTime;
+		Event Player.YTarget = Y Component Of(Position Of(Event Player)) + -1.500 - Max(0, 98 * (
+			Total Time Elapsed - Event Player.ReleaseTime));
+		For Player Variable(Event Player, i, 0, Count Of(Event Player.Targets), 1);
+			Event Player.Target = Event Player.Targets[Event Player.i];
+			Apply Impulse(Event Player.Target, Down, (Y Component Of(Position Of(Event Player.Target))
+				> Event Player.YTarget ? Event Player.DeltaTime : 0) * (2 * Event Player.z * Event Player.w * (Vertical Speed Of(
+				Event Player.Target) - Vertical Speed Of(Event Player)) + Event Player.w ^ 2 * (Y Component Of(Position Of(
+				Event Player.Target)) - Event Player.YTarget)), To World, Incorporate Contrary Motion);
+			Modify Global Variable(Z, Append To Array, Vertical Speed Of(Event Player.Target));
+		End;
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Ball setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Role == Custom String("Ball");
+		Global.Setup == True;
+	}
+
+	actions
+	{
+		Wait Until(Is Game In Progress, 99999);
+		Create Beam Effect(All Players(All Teams), Good Beam, Event Player.Origin - Global.Step / 2 * Up, Position Of(Event Player) + Up,
+			Color(Blue), Visible To Position and Radius);
+		If(Global.TestMode);
+			Create In-World Text(All Players(All Teams), Custom String("{0}: {1} / {2}", Event Player.BotIndex, Speed Of(Event Player),
+				Event Player.Accel), Event Player, 1, Do Not Clip, Visible To Position and String, Color(Red), Default Visibility);
+		End;
+		Event Player.BotIndex = Slot Of(Event Player) - Number Of Slots(All Teams);
+		Set Damage Received(Event Player, 1);
+		Event Player.w = 8;
+		Event Player.z = 1;
+		Event Player.Origin = Vector(0, Global.Step * (Event Player.BotIndex + 1), 0);
+		Event Player.RotationSpeed = (Event Player.BotIndex % 2 ? 1 : -1) * Random Real((
+			Global.HighMinRotationSpeed - Global.LowMinRotationSpeed) * (Event Player.BotIndex / Global.NumberOfBalls)
+			+ Global.LowMinRotationSpeed, (Global.HighMaxRotationSpeed - Global.LowMaxRotationSpeed) * (
+			Event Player.BotIndex / Global.NumberOfBalls) + Global.LowMaxRotationSpeed);
+		Start Accelerating(Event Player, Event Player.Accel, Magnitude Of(Event Player.Accel), 60, To World, Direction Rate and Max Speed);
+		Event Player.StartingAngle = Random Integer(-179, 180);
+		Event Player.HRadius = Random Real(15 * (Event Player.BotIndex / Global.NumberOfBalls) + 5, 15 * ((Event Player.BotIndex + 1)
+			/ Global.NumberOfBalls) + 5);
+		Event Player.VRange = Random Real(0, 7);
+		Disable Nameplates(Event Player, All Players(All Teams));
+		Set Gravity(Event Player, 0);
+		While(True);
+			Event Player.Position = Event Player.Origin + Event Player.HRadius * Direction From Angles(
+				Event Player.RotationSpeed * Total Time Elapsed + Event Player.StartingAngle, 0 * Total Time Elapsed + Event Player.VRange);
+			Event Player.Accel = -2 * Event Player.z * Event Player.w * Velocity Of(Event Player) - Absolute Value(Event Player.w)
+				^ 2 * Vector Towards(Event Player.Position, Position Of(Event Player));
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+rule("TP")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.TestMode == True;
+		Is Button Held(Host Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Teleport(Players On Hero(Hero(Doomfist), All Teams), Vector(0, 250, 0));
+	}
+}
+
+rule("Display Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.TestMode == True;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Small Message(Event Player, Position Of(Event Player));
+	}
+}
+
+rule("Clear Down Effect")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.EffectTimer == 0;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		Set Gravity(Event Player, 100);
+	}
+}
+
+rule("Set Down Effect")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.EffectTimer > 0;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 500);
+		Set Status(Event Player, Null, Rooted, 9999);
+	}
+}
+
+rule("Rule 21")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+		Y Component Of(Position Of(Event Player)) > 1;
+	}
+
+	actions
+	{
+		Event Player.Ball = First Of(Sorted Array(Filtered Array(All Players(All Teams), Current Array Element.Role == Custom String(
+			"Ball")), Distance Between(Event Player, Current Array Element)));
+		Start Throttle In Direction(Event Player, Velocity Of(Event Player.Ball), Speed Of(Event Player.Ball) / 5.500, To World,
+			Add to existing throttle, Direction and Magnitude);
+	}
+}
+
+rule("Rule 21")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Is In Air(Event Player) || Y Component Of(Position Of(Event Player)) < 1) == True;
+	}
+
+	actions
+	{
+		Event Player.Ball = Null;
+		Stop Throttle In Direction(Event Player);
+	}
+}
