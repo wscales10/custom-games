@@ -1,0 +1,194 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 3
+		Max Team 2 Players: 3
+	}
+
+	modes
+	{
+		disabled Assault
+		{
+			Capture Speed Modifier: 175%
+			Competitive Rules: On
+		}
+
+		Control
+		{
+			Capture Speed Modifier: 175%
+			Competitive Rules: On
+			Scoring Speed Modifier: 500%
+
+			disabled maps
+			{
+				Lijiang Tower Lunar New Year
+			}
+		}
+
+		disabled Elimination
+		{
+			Restrict Previously Used Heroes: After Round Won
+		}
+
+		disabled Escort
+		{
+			Competitive Rules: On
+			Payload Speed Modifier: 175%
+		}
+
+		Hybrid
+		{
+			Capture Speed Modifier: 175%
+			Competitive Rules: On
+			Payload Speed Modifier: 500%
+
+			disabled maps
+			{
+				Blizzard World Winter
+				Eichenwalde Halloween
+				Hollywood Halloween
+				King's Row Winter
+			}
+		}
+
+		General
+		{
+			Allow Hero Switching: Off
+			Game Mode Start: Immediately
+			Spawn Health Packs: Disabled
+		}
+	}
+}
+
+variables
+{
+	global:
+		7: sendToHeroSelect
+}
+
+rule("Hero Selection")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Assembling Heroes == True;
+	}
+
+	actions
+	{
+		Global.sendToHeroSelect = False;
+		Set Match Time(20);
+		Wait(20, Ignore Condition);
+		Disable Built-In Game Mode Music;
+		Wait(25, Ignore Condition);
+		Enable Built-In Game Mode Music;
+	}
+}
+
+rule("Round start")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+	}
+
+	actions
+	{
+		Skip If(Global.sendToHeroSelect, 2);
+		Set Match Time(Min(Match Time, 105));
+		Abort;
+		Go To Assemble Heroes;
+	}
+}
+
+rule("Setup Phase")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		Skip If(Global.sendToHeroSelect, 2);
+		Set Match Time(5);
+		Skip(1);
+		Set Match Time(0);
+	}
+}
+
+rule("Lockout heroes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.S != Team Score(Team Of(Event Player));
+	}
+
+	actions
+	{
+		Wait(6, Ignore Condition);
+		Event Player.S = Team Score(Team Of(Event Player));
+		Set Player Allowed Heroes(Event Player, Remove From Array(Allowed Heroes(Event Player), Event Player.H));
+	}
+}
+
+rule("Between rounds")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Between Rounds == True;
+	}
+
+	actions
+	{
+		Global.sendToHeroSelect = True;
+	}
+}
+
+rule("Store hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.H != Hero Of(Event Player);
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.H = Hero Of(Event Player);
+	}
+}
