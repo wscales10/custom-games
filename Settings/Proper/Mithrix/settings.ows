@@ -1,0 +1,1203 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+	}
+
+	modes
+	{
+		Elimination
+		{
+			Hero Selection: Limited
+			Score To Win: 5
+
+			enabled maps
+			{
+			}
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Expanse 0
+			}
+		}
+
+		General
+		{
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		Team 2
+		{
+			Reinhardt
+			{
+				Barrier Field: Off
+				Charge: Off
+				Fire Strike: Off
+				Movement Gravity: 50%
+				Ultimate Generation - Combat Earthshatter: 0%
+				Ultimate Generation - Passive Earthshatter: 0%
+			}
+
+			enabled heroes
+			{
+				Reinhardt
+			}
+		}
+
+		General
+		{
+			Health: 500%
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: State
+		1: Phase
+		2: BossSpawnEffect
+		3: Heroes
+		4: Bosses
+		5: Stealees
+		6: StealerIndex
+		7: Stealer
+		8: CurrentStealee
+		9: StealeeIndex
+		10: AbilityBeingStolen
+
+	player:
+		0: State
+		1: PizzaIndex
+		2: SwingCooldown
+		3: SlamCooldown
+		4: TakeoffCooldown
+		5: ShockwaveRadius
+		6: ShockwaveEffect
+		7: PizzaAngle
+		8: PizzaAngularVelocity
+		9: PizzaRadius
+		10: ArmorBoost
+		11: StealVictims
+		12: StolenAbilities
+		13: CurrentlyAvailableAbilities
+		14: AllStealableAbilities
+		15: Stealers
+		16: CachedHealth
+		17: MaxHealth
+}
+
+subroutines
+{
+	0: TakeOff
+}
+
+rule("Global setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.State = Custom String("Waiting");
+		Create HUD Text(All Players(All Teams), Global.State, Custom String("Global State"), Global.Phase, Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create Effect(All Players(All Teams), Bad Aura, Color(Black), Vector(0, 0, 0), 3, Visible To Position and Radius);
+		Global.BossSpawnEffect = Last Created Entity;
+	}
+}
+
+rule("Boss Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	actions
+	{
+		Event Player.PizzaRadius = 100;
+		Chase Player Variable At Rate(Event Player, SwingCooldown, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, SlamCooldown, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, TakeoffCooldown, 0, 1, None);
+		Create HUD Text(Event Player, Event Player.State, Custom String("Boss State"), Null, Left, 0, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Event Player.SwingCooldown, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Event Player.SlamCooldown, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Set Jump Enabled(Event Player, False);
+		Disable Built-In Game Mode Respawning(Event Player);
+		Event Player.ShockwaveRadius = -1;
+		Event Player.PizzaIndex = -1;
+		Create Effect(Event Player.ShockwaveRadius >= 0 ? All Players(All Teams) : Empty Array, Ring, Color(Sky Blue), Vector(0, 0, 0),
+			Event Player.ShockwaveRadius, Visible To Position and Radius);
+		Event Player.ShockwaveEffect = Last Created Entity;
+		Create Icon(Filtered Array(Global.Heroes, Has Spawned(Event Player) && !Has Status(Event Player, Phased Out) && !Is In View Angle(
+			Current Array Element, Eye Position(Event Player), 45)), Event Player, Arrow: Down, Visible To and Position, Color(Red), True);
+		Create HUD Text(Event Player, Event Player.TakeoffCooldown, Custom String("takeoff cd"), Null, Left, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
+		Create Beam Effect(Event Player.State == Custom String("Pizza") ? All Players(All Teams) : Null, Bad Beam, Update Every Frame(
+			Position Of(Event Player) + 0.500 * Up + Event Player.PizzaRadius * Direction From Angles(Event Player.PizzaAngle, 0)),
+			Update Every Frame(Position Of(Event Player) + 0.500 * Up - Event Player.PizzaRadius * Direction From Angles(
+			Event Player.PizzaAngle, 0)), Color(Sky Blue), Visible To Position and Radius);
+		Create Beam Effect(Event Player.State == Custom String("Pizza") ? All Players(All Teams) : Null, Bad Beam, Update Every Frame(
+			Position Of(Event Player) + 0.500 * Up + Event Player.PizzaRadius * Direction From Angles(Event Player.PizzaAngle + 120, 0)),
+			Update Every Frame(Position Of(Event Player) + 0.500 * Up - Event Player.PizzaRadius * Direction From Angles(
+			Event Player.PizzaAngle + 120, 0)), Color(Sky Blue), Visible To Position and Radius);
+		Create Beam Effect(Event Player.State == Custom String("Pizza") ? All Players(All Teams) : Null, Bad Beam, Update Every Frame(
+			Position Of(Event Player) + 0.500 * Up + Event Player.PizzaRadius * Direction From Angles(Event Player.PizzaAngle + 240, 0)),
+			Update Every Frame(Position Of(Event Player) + 0.500 * Up - Event Player.PizzaRadius * Direction From Angles(
+			Event Player.PizzaAngle + 240, 0)), Color(Sky Blue), Visible To Position and Radius);
+		Create Icon(Event Player.ArmorBoost && Has Spawned(Event Player) && !Has Status(Event Player, Phased Out) ? All Players(All Teams)
+			: Null, Event Player, Heart, Visible To and Position, Color(Yellow), False);
+		Event Player.State = Custom String("Waiting");
+	}
+}
+
+rule("Team 1 Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		disabled Teleport(Event Player, Vector(Random Real(17, 20), 1.580, Random Real(-19, 19)));
+		Teleport(Event Player, 60 * Direction From Angles(Random Integer(-179, 180), 0));
+		Disable Built-In Game Mode Respawning(Event Player);
+	}
+}
+
+rule("On Enter State: Waiting")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Waiting");
+	}
+
+	actions
+	{
+		Set Invisible(Event Player, All);
+		Start Forcing Player Position(Event Player, Vector(1, 2.500, 0), False);
+		Set Status(Event Player, Null, Phased Out, 9999);
+		Set Status(Event Player, Null, Unkillable, 9999);
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Enter State: OnTheWay")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.State == Custom String("Waiting");
+		disabled Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && Absolute Value(X Component Of(Position Of(
+			Current Array Element))) < 16 && Absolute Value(Z Component Of(Position Of(Current Array Element))) < 16) == True;
+		Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && Distance Between(Current Array Element, Vector(0,
+			0, 0)) < 50) == True;
+	}
+
+	actions
+	{
+		Wait(0.250, Abort When False);
+		Global.State = Custom String("OnTheWay");
+	}
+}
+
+rule("On Enter State: OnTheWay")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.State == Custom String("OnTheWay");
+	}
+
+	actions
+	{
+		Wait(2, Ignore Condition);
+		Global.State = Custom String("Cutscene");
+	}
+}
+
+rule("On Enter State: Cutscene (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.State == Custom String("Cutscene");
+	}
+
+	actions
+	{
+		Global.Heroes = All Players(Team 1);
+		Global.Bosses = All Living Players(Team 2);
+		Wait(2, Ignore Condition);
+		Global.Bosses.State = Custom String("Cutscene");
+		Destroy Effect(Global.BossSpawnEffect);
+		Wait Until(Is True For All(Global.Bosses, Current Array Element.State == Custom String("Ready")), 99999);
+		Global.State = Custom String("BossFight");
+		Global.Phase = 1;
+	}
+}
+
+rule("On Enter State: Cutscene (Boss)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Cutscene");
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Stop Forcing Player Position(Event Player);
+		Clear Status(Event Player, Phased Out);
+		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
+		Set Invisible(Event Player, None);
+		Create Icon(Has Spawned(Event Player) && Event Player.State != Custom String("Waiting") && Event Player.State != Custom String(
+			"Absent") ? Filtered Array(Global.Heroes, Has Status(Event Player, Phased Out) || !Is In View Angle(Current Array Element,
+			Eye Position(Event Player), 45)) : Null, Event Player, Arrow: Down, Visible To and Position, Color(Red), True);
+		Start Holding Button(Event Player, Button(Crouch));
+		Wait Until(Is On Ground(Event Player), 99999);
+		Wait(1, Ignore Condition);
+		Stop Holding Button(Event Player, Button(Crouch));
+		Wait(1, Ignore Condition);
+		Event Player.State = Custom String("Ready");
+	}
+}
+
+rule("On Enter State: Cutscene (Team 1)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global.State == Custom String("Cutscene");
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Disallow Button(Event Player, Button(Interact));
+		Set Melee Enabled(Event Player, False);
+		Set Reload Enabled(Event Player, False);
+	}
+}
+
+rule("On Exit State: Cutscene (Team 1)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global.State != Custom String("Cutscene");
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Rooted);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Secondary Fire Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Allow Button(Event Player, Button(Interact));
+		Set Melee Enabled(Event Player, True);
+		Set Reload Enabled(Event Player, True);
+	}
+}
+
+disabled rule("PHASE 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Enter State: Closing In")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Global.Phase == 1;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("ClosingIn");
+	}
+}
+
+rule("On Enter State: Closing In")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("ClosingIn");
+	}
+
+	actions
+	{
+		Set Move Speed(Event Player, 270);
+		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 0);
+		Set Primary Fire Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Abort If(Event Player.PizzaIndex != 0);
+		Wait(Random Integer(1, 10), Abort When False);
+		Event Player.State = Custom String("Pizza");
+	}
+}
+
+rule("Exit State: Closing In")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("ClosingIn");
+		Is True For Any(All Living Players(Team 1), Distance Between(Event Player, Current Array Element) < 10) == True;
+		Event Player.PizzaIndex == -1;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("BecomingIdle");
+	}
+}
+
+rule("On Enter State: Becoming Idle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("BecomingIdle");
+	}
+
+	actions
+	{
+		Enable Movement Collision With Players(Event Player);
+		If(Event Player.PizzaIndex == 0);
+			Event Player.State = Custom String("Pizza");
+		Else If(Array Contains(Array(1, 3), Global.Phase) && Is On Ground(Event Player) && Normalized Health(Event Player)
+				< 0.750 && Event Player.TakeoffCooldown == 0);
+			Event Player.State = Custom String("Takeoff");
+		Else;
+			Set Move Speed(Event Player, 90);
+			Stop Forcing Throttle(Event Player);
+			Event Player.State = Custom String("Idle");
+		End;
+	}
+}
+
+rule("Enter State: Closing In")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Idle");
+		Is True For Any(All Living Players(Team 1), Distance Between(Position Of(Current Array Element) - Y Component Of(Position Of(
+			Current Array Element)) * Up, Event Player) < 20) == False;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("ClosingIn");
+	}
+}
+
+rule("Disable Swing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.SwingCooldown > 0;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Disable Slam")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.SlamCooldown > 0;
+	}
+
+	actions
+	{
+		Set Ultimate Ability Enabled(Event Player, False);
+	}
+}
+
+rule("Remove knockdown from slam")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Knocked Down) == True;
+	}
+
+	actions
+	{
+		Clear Status(Event Player, Knocked Down);
+	}
+}
+
+rule("Enable slam")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Array Contains(Array(1, 3), Global.Phase) == True;
+		Array Contains(Array(Custom String("Idle"), Custom String("ClosingIn")), Event Player.State) == True;
+		Event Player.SlamCooldown == 0;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 100);
+		Set Ultimate Ability Enabled(Event Player, True);
+	}
+}
+
+rule("Enable swing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Array Contains(Array(1, 3), Global.Phase) == True;
+		Array Contains(Array(Custom String("Idle"), Custom String("ClosingIn")), Event Player.State) == True;
+		Event Player.SwingCooldown == 0;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, True);
+	}
+}
+
+rule("Enter State: Swinging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Firing Primary(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("Swinging");
+	}
+}
+
+rule("On Enter State: Swinging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Swinging");
+	}
+
+	actions
+	{
+		Disable Movement Collision With Players(Event Player);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Event Player.SwingCooldown = 5;
+		Wait(0.200, Ignore Condition);
+		Apply Impulse(Event Player, Direction From Angles(Horizontal Facing Angle Of(Event Player), Is On Ground(Event Player)
+			? -4.500 : Max(-4.500, Vertical Facing Angle Of(Event Player))), 33.750, To World, Incorporate Contrary Motion);
+	}
+}
+
+rule("Exit State: Swinging")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Swinging");
+		Is Firing Primary(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("BecomingIdle");
+	}
+}
+
+rule("Enter State: Slamming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("Slamming");
+	}
+}
+
+rule("On Enter State: Slamming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Slamming");
+	}
+
+	actions
+	{
+		Event Player.SlamCooldown = 4;
+		Set Status(Event Player, Null, Rooted, 2.750);
+	}
+}
+
+rule("Exit State: Slamming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Slamming");
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("BecomingIdle");
+	}
+}
+
+rule("Enter State: Takeoff")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Array Contains(Array(1, 3), Global.Phase) == True;
+		Event Player.State == Custom String("Idle");
+		Normalized Health(Event Player) < 0.750;
+		Event Player.TakeoffCooldown == 0;
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("Takeoff");
+	}
+}
+
+rule("On Enter State: Takeoff")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Takeoff");
+	}
+
+	actions
+	{
+		Event Player.TakeoffCooldown = 30;
+		Call Subroutine(TakeOff);
+		If(Global.Phase == 3);
+			Event Player.PizzaIndex = 0;
+		End;
+		Wait(3, Abort When False);
+		Event Player.State = Custom String("Landing");
+	}
+}
+
+rule("On Enter State: Landing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Landing");
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Stop Forcing Player Position(Event Player);
+		Clear Status(Event Player, Phased Out);
+		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
+		Set Invisible(Event Player, None);
+		Start Holding Button(Event Player, Button(Crouch));
+		Wait Until(Is On Ground(Event Player), 99999);
+		If(Global.Phase == 1 || Event Player.PizzaIndex == 0);
+			Event Player.ShockwaveRadius = 0;
+			Chase Player Variable At Rate(Event Player, ShockwaveRadius, 9999, 16.500, None);
+		End;
+		Wait(1, Ignore Condition);
+		Stop Holding Button(Event Player, Button(Crouch));
+		Wait(1, Ignore Condition);
+		Event Player.ArmorBoost = False;
+		Clear Status(Event Player, Rooted);
+		Event Player.State = Custom String("ClosingIn");
+	}
+}
+
+rule("Reset Shockwave")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.ShockwaveRadius > 100;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, ShockwaveRadius);
+		Event Player.ShockwaveRadius = -1;
+	}
+}
+
+rule("Shockwave Damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is True For Any(Global.Bosses, Current Array Element.ShockwaveRadius > 0 && Distance Between(Event Player,
+			Current Array Element.ShockwaveRadius * Direction From Angles(Horizontal Angle From Direction(Position Of(Event Player)), 0))
+			< 0.500) == True;
+	}
+
+	actions
+	{
+		"also need to cripple here"
+		Damage(Event Player, Null, 170);
+	}
+}
+
+rule("Low health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Health(Event Player) < 2;
+	}
+
+	actions
+	{
+		"probably need a bunch more caveats"
+		If(Global.Phase == 1);
+			Event Player.State = Custom String("Takeoff2");
+		Else If(Global.Phase == 3);
+			Set Primary Fire Enabled(Event Player, False);
+			Set Ultimate Ability Enabled(Event Player, False);
+			Set Status(Event Player, Null, Phased Out, 9999);
+			Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+			Set Invisible(Event Player, All);
+			Event Player.State = Custom String("Absent");
+		End;
+	}
+}
+
+rule("On Enter State: Takeoff2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Takeoff2");
+	}
+
+	actions
+	{
+		Call Subroutine(TakeOff);
+		Set Player Health(Event Player, 100000);
+		Event Player.TakeoffCooldown = 0;
+		Event Player.State = Custom String("Absent");
+	}
+}
+
+rule("TakeOff")
+{
+	event
+	{
+		Subroutine;
+		TakeOff;
+	}
+
+	actions
+	{
+		Event Player.ArmorBoost = True;
+		Set Primary Fire Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Start Holding Button(Event Player, Button(Crouch));
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Wait(1, Abort When False);
+		Apply Impulse(Event Player, Up, 70, To World, Cancel Contrary Motion);
+		Wait(0.250, Abort When False);
+		Set Invisible(Event Player, All);
+		Start Forcing Player Position(Event Player, Vector(1, 50, 0), False);
+		Set Status(Event Player, Null, Phased Out, 9999);
+	}
+}
+
+rule("Enter Phase: 2/4")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For All(Global.Bosses, Current Array Element.State == Custom String("Absent")) == True;
+	}
+
+	actions
+	{
+		If(Global.Phase == 1);
+			Global.Phase = 2;
+		Else If(Global.Phase == 3);
+			Global.Phase = 4;
+		End;
+	}
+}
+
+rule("Enter Phase: 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Phase == 2;
+	}
+
+	actions
+	{
+		Wait(3, Abort When False);
+		Global.Phase = 3;
+	}
+}
+
+disabled rule("PHASE 3")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Enter State: Landing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Global.Phase == 3;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("Landing");
+	}
+}
+
+rule("On Enter State: Pizza")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Custom String("Pizza"), Custom String("PizzaDamage")), Event Player.State) == True;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Start Holding Button(Event Player, Button(Crouch));
+		Chase Player Variable At Rate(Event Player, PizzaAngle, Event Player.PizzaAngle + 10 * Event Player.PizzaAngularVelocity,
+			Absolute Value(Event Player.PizzaAngularVelocity), Destination and Rate);
+		For Player Variable(Event Player, PizzaIndex, 0, 5, 1);
+			Event Player.State = Custom String("Pizza");
+			Event Player.PizzaAngularVelocity = Random Value In Array(Array(1, -1)) * 50;
+			Event Player.PizzaAngle = Random Integer(0, 180);
+			Wait(0.600, Abort When False);
+			Damage(Filtered Array(All Players(Team 1), Absolute Value(Cosine From Degrees(Event Player.PizzaAngle) * Z Component Of(
+				Vector Towards(Current Array Element, Event Player)) - Sine From Degrees(Event Player.PizzaAngle) * X Component Of(
+				Vector Towards(Current Array Element, Event Player))) < 1), Event Player, 382.500);
+			Damage(Filtered Array(All Players(Team 1), Absolute Value(Cosine From Degrees(Event Player.PizzaAngle + 120) * Z Component Of(
+				Vector Towards(Current Array Element, Event Player)) - Sine From Degrees(Event Player.PizzaAngle + 120) * X Component Of(
+				Vector Towards(Current Array Element, Event Player))) < 1), Event Player, 382.500);
+			Damage(Filtered Array(All Players(Team 1), Absolute Value(Cosine From Degrees(Event Player.PizzaAngle + 240) * Z Component Of(
+				Vector Towards(Current Array Element, Event Player)) - Sine From Degrees(Event Player.PizzaAngle + 240) * X Component Of(
+				Vector Towards(Current Array Element, Event Player))) < 1), Event Player, 382.500);
+			Event Player.State = Custom String("PizzaDamage");
+			Wait(1.400, Abort When False);
+		End;
+		Event Player.PizzaIndex = -1;
+		Stop Chasing Player Variable(Event Player, PizzaAngle);
+		Stop Holding Button(Event Player, Button(Crouch));
+		Event Player.State = Custom String("ClosingIn");
+	}
+}
+
+rule("Armor Boost On")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ArmorBoost == True;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 33.333);
+	}
+}
+
+rule("Armor Boost Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ArmorBoost == False;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 100);
+	}
+}
+
+disabled rule("PHASE 4")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Enter State: Stealing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Global.Phase == 4;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Vector(0, 0, 0));
+		Clear Status(Event Player, Phased Out);
+		Set Status(Event Player, Null, Invincible, 9999);
+		Set Invisible(Event Player, None);
+		Wait(6, Abort When False);
+		Event Player.State = Custom String("Stealing");
+	}
+}
+
+rule("On Enter State: Stealing (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is True For All(Global.Bosses, Current Array Element.State == Custom String("Stealing")) == True;
+	}
+
+	actions
+	{
+		Global.Stealees = Filtered Array(Global.Heroes, Is Alive(Current Array Element));
+		While(Count Of(Global.Stealees) > 0);
+			Global.Stealer = Global.Bosses[Global.StealerIndex];
+			Global.CurrentStealee = Global.Stealees[Global.StealeeIndex];
+			If(Count Of(Global.CurrentStealee.CurrentlyAvailableAbilities) == 0);
+				Modify Global Variable(Stealees, Remove From Array By Index, Global.StealeeIndex);
+			Else;
+				Modify Player Variable(Global.Stealer, StealVictims, Append To Array, Global.CurrentStealee);
+				Global.AbilityBeingStolen = Global.CurrentStealee.CurrentlyAvailableAbilities[0];
+				Modify Player Variable(Global.Stealer, StolenAbilities, Append To Array, Global.AbilityBeingStolen);
+				Modify Player Variable(Global.CurrentStealee, CurrentlyAvailableAbilities, Remove From Array By Index, 0);
+				Global.CurrentStealee.Stealers[Index Of Array Value(Global.CurrentStealee.AllStealableAbilities, Global.AbilityBeingStolen)
+					] = Global.Stealer;
+				If(Global.AbilityBeingStolen == Button(Primary Fire));
+					Set Primary Fire Enabled(Global.CurrentStealee, False);
+				Else If(Global.AbilityBeingStolen == Button(Secondary Fire));
+					Set Secondary Fire Enabled(Global.CurrentStealee, False);
+				Else If(Global.AbilityBeingStolen == Button(Ability 1));
+					Set Ability 1 Enabled(Global.CurrentStealee, False);
+				Else If(Global.AbilityBeingStolen == Button(Ability 2));
+					Set Ability 2 Enabled(Global.CurrentStealee, False);
+				Else If(Global.AbilityBeingStolen == Button(Ultimate));
+					Set Ultimate Ability Enabled(Global.CurrentStealee, False);
+				End;
+				Global.StealerIndex = (Global.StealerIndex + 1) % Count Of(Global.Bosses);
+				Global.StealeeIndex += 1;
+			End;
+			Global.StealeeIndex %= Count Of(Global.Stealees);
+			Wait(0.250, Abort When False);
+		End;
+		Global.Bosses.State = Custom String("StealingFinished");
+	}
+}
+
+rule("On Enter State: StealingFinished")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("StealingFinished");
+	}
+
+	actions
+	{
+		Event Player.MaxHealth = Max Health(Event Player);
+		Start Holding Button(Event Player, Button(Crouch));
+		Clear Status(Event Player, Invincible);
+		Wait(5, Ignore Condition);
+		Event Player.CachedHealth = Normalized Health(Event Player);
+		Start Forcing Player To Be Hero(Event Player, Hero Of(Event Player.StealVictims[0]));
+		Set Max Health(Event Player, 100 * (Event Player.MaxHealth / Max Health(Event Player)));
+		Set Player Health(Event Player, Event Player.CachedHealth * Event Player.MaxHealth);
+		Stop Holding Button(Event Player, Button(Crouch));
+	}
+}
