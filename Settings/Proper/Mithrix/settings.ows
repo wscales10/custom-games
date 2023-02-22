@@ -177,6 +177,7 @@ variables
 		52: StackBeingDepletedIndex
 		53: RemainingMatchingStacks
 		54: ShouldUpdateMoveSpeed
+		55: SlowTime
 }
 
 subroutines
@@ -218,9 +219,9 @@ rule("Global setup")
 			White), Color(White), Visible To and String, Default Visibility);
 		Create Effect(All Players(All Teams), Bad Aura, Color(Black), Vector(0, 0, 0), 3.500, Visible To Position and Radius);
 		Global.BossSpawnEffect = Last Created Entity;
-		Global.Items = Array(Custom String("MaxHP"), Custom String("Speed"));
-		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"));
-		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255));
+		Global.Items = Array(Custom String("MaxHP"), Custom String("Speed"), Custom String("Slow"));
+		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"));
+		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255));
 		Global.ItemDistributionQueue = Empty Array;
 		Global.ItemStackOriginalOwners = Empty Array;
 		Global.FlamePillarPositions = Empty Array;
@@ -354,6 +355,7 @@ rule("Player Setup")
 	{
 		Event Player.ItemStacks = Empty Array;
 		Event Player.BaseMoveSpeedModifier = 100;
+		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
 	}
 }
 
@@ -517,6 +519,49 @@ rule("Not Crippled")
 	}
 }
 
+rule("Slowed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SlowTime > 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[2] = 60;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Big Message(Event Player, Custom String("SLOWED"));
+	}
+}
+
+rule("Not Slowed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SlowTime == 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[2] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+	}
+}
+
 rule("Update Move Speed (From Flag)")
 {
 	event
@@ -555,7 +600,7 @@ rule("Update Move Speed")
 			Event Player.MoveSpeedBuffs[0] += Event Player.MoveSpeedBuffs[Event Player.MoveSpeedIndex] / 100;
 		End;
 		For Player Variable(Event Player, MoveSpeedIndex, 1, Count Of(Event Player.MoveSpeedDebuffs), 1);
-			"1: Cripple, 2: Boss Slow Movement"
+			"1: Cripple, 2: Slow"
 			Event Player.MoveSpeedDebuffs[0] += Event Player.MoveSpeedDebuffs[Event Player.MoveSpeedIndex] / 100;
 		End;
 		Set Move Speed(Event Player, Event Player.BaseMoveSpeedModifier * (
@@ -604,6 +649,23 @@ rule("Update boss health, armour and damage (after setting TotalHPUnits)")
 		Set Damage Dealt(Event Player.NeedleBot, 20.614 + 4.987 * Global.OverallBossLevel);
 		Wait(0.250, Ignore Condition);
 		Set Player Health(Event Player, 100000);
+	}
+}
+
+rule("On hit effects")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Modify Player Variable(Victim, SlowTime, Max, 2 * Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Slow")
+			&& Global.ItemStackOwners[Current Array Index] == Attacker)[0]);
 	}
 }
 
@@ -2659,8 +2721,8 @@ rule("Return Items")
 					[0]] += Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] - Event Player.ItemStackReturnInfo[1];
 				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] = Event Player.ItemStackReturnInfo[1];
 				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2));
-				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks, Event Player.StackBeingDepletedIndex)
-					[0], 1));
+				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks,
+					Event Player.StackBeingDepletedIndex)[0], 1));
 			Else;
 				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] -= Event Player.ItemStackReturnInfo[1];
 				Global.ItemStackSizes[Event Player.StackBeingReturnedIndex] += Event Player.ItemStackReturnInfo[1];
