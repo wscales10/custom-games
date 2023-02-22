@@ -675,6 +675,7 @@ rule("Acquire Item Subroutine")
 		Else;
 			Global.ItemStackSizes[Global.ItemIndex] -= Global.CurrentItemStackSize;
 			Global.ItemStackSizes[Global.ExistingMatchingItemStacks[0]] += Global.CurrentItemStackSize;
+			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.ExistingMatchingItemStacks[0], 0));
 		End;
 		Modify Player Variable(Global.ItemStackNewOwners[Global.ItemIndex], ItemStackReturnInfo, Append To Array, Array(Global.ItemIndex,
 			Global.CurrentItemStackSize));
@@ -696,10 +697,12 @@ rule("Distribute Item Subroutine")
 			Global.ItemStacks[Current Array Element] == Global.ItemToDistribute && Global.ItemStackOwners[Current Array Element] == Global.ItemDistributionInfo[0]);
 		If(Count Of(Global.NewItemStackIndex) > 0);
 			Global.NewItemStackIndex = Global.NewItemStackIndex[0];
+			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
+			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.NewItemStackIndex, 0));
 		Else;
 			Call Subroutine(CreateItemStack);
+			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
 		End;
-		Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
 	}
 }
 
@@ -2655,9 +2658,13 @@ rule("Return Items")
 				Global.ItemStackSizes[Remove From Array(Event Player.RemainingMatchingStacks, Event Player.StackBeingDepletedIndex)
 					[0]] += Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] - Event Player.ItemStackReturnInfo[1];
 				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] = Event Player.ItemStackReturnInfo[1];
+				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2));
+				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks, Event Player.StackBeingDepletedIndex)
+					[0], 1));
 			Else;
 				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] -= Event Player.ItemStackReturnInfo[1];
 				Global.ItemStackSizes[Event Player.StackBeingReturnedIndex] += Event Player.ItemStackReturnInfo[1];
+				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingDepletedIndex, 0));
 			End;
 		End;
 		Global.ItemStackNewOwners[Event Player.StackBeingReturnedIndex] = Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex];
