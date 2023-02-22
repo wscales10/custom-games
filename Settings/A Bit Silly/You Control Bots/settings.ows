@@ -51,7 +51,6 @@ settings
 				Blizzard World Winter
 				Eichenwalde Halloween
 				Hanamura Winter
-				Hollywood Halloween
 				King's Row Winter
 				Lijiang Tower Lunar New Year
 				Workshop Chamber
@@ -407,7 +406,7 @@ rule("Start Primary Fire")
 	{
 		Is Dummy Bot(Event Player) == False;
 		Event Player.CanControl == True;
-		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
 	}
 
 	actions
@@ -416,7 +415,7 @@ rule("Start Primary Fire")
 			Current Array Element.turret_pos, Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
 			+ Facing Direction Of(Event Player) * 1000, All Living Players(Opposite Team Of(Team Of(Event Player))), Event Player, True))
 			< 0.500));
-		Start Holding Button(Event Player.Subjects, Primary Fire);
+		Start Holding Button(Event Player.Subjects, Button(Primary Fire));
 	}
 }
 
@@ -432,7 +431,7 @@ rule("Stop Primary Fire")
 	conditions
 	{
 		Is Dummy Bot(Event Player) == False;
-		(!Event Player.CanControl || !Is Button Held(Event Player, Primary Fire)) == True;
+		(!Event Player.CanControl || !Is Button Held(Event Player, Button(Primary Fire))) == True;
 	}
 
 	actions

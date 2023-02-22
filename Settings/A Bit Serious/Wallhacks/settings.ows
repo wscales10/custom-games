@@ -86,7 +86,7 @@ rule("DamageSub")
 			Event Player.RayCast /= 2;
 			If(!Is In Line of Sight(Eye Position(Event Player), Event Player.RayCast, Enemy Barriers Block LOS));
 				Event Player.Pos += Event Player.F;
-				disabled Create Beam Effect(Event Player, Grapple Beam, Event Player.RayCast, Event Player.Pos, White, None);
+				disabled Create Beam Effect(Event Player, Grapple Beam, Event Player.RayCast, Event Player.Pos, Color(White), None);
 				Event Player.RayCast = Ray Cast Hit Player(Event Player.RayCast, Event Player.Pos, Event Player.CurrentElement, Null, False);
 				Wait(0.016, Ignore Condition);
 				Damage(Event Player.RayCast, Event Player, Event Player.Damage);

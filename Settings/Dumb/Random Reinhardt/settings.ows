@@ -3,6 +3,7 @@ settings
 	main
 	{
 		Description: "Max health and ultimate charge are randomised when you spawn. Every time you charge or leave the ground your gravity is randomised. The speed of charges and fire strikes is randomised."
+		Mode Name: "Random Reinhardt"
 	}
 
 	lobby

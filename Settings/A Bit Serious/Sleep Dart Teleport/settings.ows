@@ -14,17 +14,10 @@ settings
 		{
 			enabled maps
 			{
-				Black Forest
-				Castillo
-				Château Guillard
 				Ecopoint: Antarctica
-				Necropolis
-				Petra
+				Hollywood
+				Temple of Anubis
 				Workshop Chamber
-				Workshop Expanse
-				Workshop Expanse Night
-				Workshop Island
-				Workshop Island Night
 			}
 		}
 
@@ -60,6 +53,19 @@ variables
 		15: RayCastStart
 		16: RayCastEnd
 		17: RayCast
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Scoring;
+	}
 }
 
 rule("TP")
@@ -148,5 +154,47 @@ rule("Game in Progress")
 	actions
 	{
 		Set Match Time(0);
+	}
+}
+
+rule("Elim")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Victim != Event Player;
+		Event Was Environment == False;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, 1);
+	}
+}
+
+rule("Death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Null, Event Player), Attacker) == True;
+		Event Was Environment == False;
+	}
+
+	actions
+	{
+		Modify Player Score(Event Player, -1);
 	}
 }

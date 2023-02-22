@@ -1,5 +1,10 @@
 settings
 {
+	main
+	{
+		Mode Name: "Reinhardt Arena"
+	}
+
 	lobby
 	{
 		Allow Players Who Are In Queue: Yes
@@ -28,7 +33,8 @@ settings
 		{
 			Health: 50%
 			Movement Speed: 80%
-			Ultimate Generation: 250%
+			Ultimate Generation - Combat: 150%
+			Ultimate Generation - Passive: 200%
 
 			Reinhardt
 			{
@@ -42,17 +48,63 @@ settings
 			}
 		}
 	}
+
+	extensions
+	{
+		Spawn More Dummy Bots
+	}
 }
 
 variables
 {
 	global:
+		0: Slot
+		1: MaxPlayers
+		2: NumberOfBots
 		4: JumpPadEnabled
 		13: OnTime
 		14: OffTime
 
 	player:
 		0: Angle
+		1: DesiredMode
+		2: IsCharging
+		3: IsDummy
+		4: Target
+		5: ShatterTimer
+		6: Discriminant
+		7: FireStrikeSpeed
+		8: MinDistance
+		9: MaxDistance
+		10: Timer
+		11: UltMode
+		12: CR
+		13: TargetPos
+		19: t
+		20: GrantUltimate
+		21: ShatterVictims
+}
+
+subroutines
+{
+	0: ChooseMode
+	1: ChooseSlot
+}
+
+rule("Set New Player Score")
+{
+	event
+	{
+		Player Joined Match;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Player Score(Event Player, Round To Integer(Last Of(Sorted Array(Mapped Array(All Players(All Teams), Score Of(
+			Current Array Element)), Current Array Element)) / 2, Down));
+	}
 }
 
 rule("Jump Pad")
@@ -77,7 +129,7 @@ rule("Jump Pad")
 	actions
 	{
 		Apply Impulse(Event Player, Up, 15, To World, Cancel Contrary Motion);
-		Play Effect(All Players(All Teams), Debuff Impact Sound, White, Event Player, 100);
+		Play Effect(All Players(All Teams), Debuff Impact Sound, Color(White), Event Player, 100);
 	}
 }
 
@@ -94,21 +146,33 @@ rule("Global Setup")
 		Disable Built-In Game Mode Announcer;
 		Global.OnTime = 1;
 		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(-20, 0, -16), Vector(20, 0,
-			-16), Green, Visible To Position and Radius);
+			-16), Color(Green), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(16, 0, -20), Vector(16, 0, 20),
-			Green, Visible To Position and Radius);
+			Color(Green), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(20, 0, 16), Vector(-20, 0, 16),
-			Green, Visible To Position and Radius);
+			Color(Green), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), Global.JumpPadEnabled), Good Beam, Vector(-16, 0, 20), Vector(-16, 0,
-			-20), Green, Visible To Position and Radius);
+			-20), Color(Green), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(-20, 0, -16), Vector(20, 0,
-			-16), Red, Visible To Position and Radius);
+			-16), Color(Red), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(16, 0, -20), Vector(16, 0,
-			20), Red, Visible To Position and Radius);
+			20), Color(Red), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(20, 0, 16), Vector(-20, 0,
-			16), Red, Visible To Position and Radius);
+			16), Color(Red), Visible To Position and Radius);
 		Create Beam Effect(Filtered Array(All Players(All Teams), !Global.JumpPadEnabled), Good Beam, Vector(-16, 0, 20), Vector(-16, 0,
-			-20), Red, Visible To Position and Radius);
+			-20), Color(Red), Visible To Position and Radius);
+		Global.NumberOfBots = Workshop Setting Integer(Custom String("General"), Custom String("Starting Number of Bots"), 0, 0, 24, 0);
+		Global.MaxPlayers = Workshop Setting Integer(Custom String("General"), Custom String("Max Players"), 19, 12, 24, 0);
+		Create HUD Text(Host Player, Null, Null, Custom String(" "), Left, -2, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String(" "), Left, -2, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Null, Custom String(" "), Left, -2, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Null, Custom String("[{0}] Spawn Bot", Input Binding String(Button(Interact))), Null, Left, -1, Color(
+			White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String("Press [{0}] again to cancel charge", Input Binding String(
+			Button(Ability 1))), Left, -1.500, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
 	}
 }
 
@@ -132,6 +196,24 @@ rule("Player Spawn")
 		Event Player.Angle = Random Real(0, 360);
 		Teleport(Event Player, 18 / Sine From Degrees(Event Player.Angle % 90 + 45) * Direction From Angles(Event Player.Angle + 45, 0));
 		Set Facing(Event Player, Direction From Angles(Event Player.Angle - 135, 0), To World);
+		If(Event Player.IsDummy);
+			Start Rule(ChooseMode, Restart Rule);
+		End;
+	}
+}
+
+rule("Player Died")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Event Player.DesiredMode = Null;
 	}
 }
 
@@ -189,7 +271,7 @@ rule("Disable Jump Pad")
 	actions
 	{
 		Global.JumpPadEnabled = False;
-		Global.OnTime = Global.OffTime + 4;
+		Global.OnTime = Global.OffTime + Random Integer(4, 10);
 	}
 }
 
@@ -205,13 +287,14 @@ rule("Player Setup")
 	actions
 	{
 		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player)
-			&& Global.JumpPadEnabled && Global.OffTime - Total Time Elapsed > 4), Sphere, Green, World Vector Of(Vector(2, 0.500, 0),
-			Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
-		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player) && !Global.JumpPadEnabled), Sphere, Red,
+			&& Global.JumpPadEnabled && Global.OffTime - Total Time Elapsed > 4), Sphere, Color(Green), World Vector Of(Vector(2, 0.500,
+			0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player) && !Global.JumpPadEnabled), Sphere, Color(Red),
 			World Vector Of(Vector(2, 2.500, 0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
 		Create Effect(Filtered Array(Event Player, Is Firing Secondary(Event Player) && (
-			Global.JumpPadEnabled ? Global.OffTime - Total Time Elapsed < 4 : Global.OnTime - Total Time Elapsed < 1.500)), Sphere, Yellow,
-			World Vector Of(Vector(2, 1.500, 0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+			Global.JumpPadEnabled ? Global.OffTime - Total Time Elapsed < 4 : Global.OnTime - Total Time Elapsed < 1.500)), Sphere, Color(
+			Yellow), World Vector Of(Vector(2, 1.500, 0), Event Player, Rotation And Translation), 0.400, Visible To Position and Radius);
+		Chase Player Variable At Rate(Event Player, ShatterTimer, 0, 1, None);
 	}
 }
 
@@ -264,12 +347,12 @@ rule("Cancel Charge")
 
 	conditions
 	{
-		Is Button Held(Event Player, Ability 1) == True;
+		Is Button Held(Event Player, Button(Ability 1)) == True;
 	}
 
 	actions
 	{
-		Abort If(!Event Player.C);
+		Abort If(!Event Player.IsCharging);
 		Cancel Primary Action(Event Player);
 	}
 }
@@ -291,7 +374,7 @@ rule("Is Charging")
 	actions
 	{
 		Wait(1, Abort When False);
-		Event Player.C = True;
+		Event Player.IsCharging = True;
 	}
 }
 
@@ -311,11 +394,11 @@ rule("Is Not Charging")
 
 	actions
 	{
-		Event Player.C = False;
+		Event Player.IsCharging = False;
 	}
 }
 
-rule("Rule 13")
+rule("Shatter")
 {
 	event
 	{
@@ -331,15 +414,33 @@ rule("Rule 13")
 
 	actions
 	{
-		Victim.S = Event Player;
-		Wait(5, Ignore Condition);
-		If(Victim.S == Event Player);
-			Victim.V = Null;
-		End;
+		Modify Player Variable(Event Player, ShatterVictims, Append To Array, Victim);
+		Event Player.Timer = Total Time Elapsed;
+		Event Player.ShatterTimer = 5;
 	}
 }
 
-rule("Rule 14")
+rule("Clear Shatter Victims")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ShatterTimer == 0;
+	}
+
+	actions
+	{
+		Event Player.ShatterVictims = Empty Array;
+	}
+}
+
+rule("Grant Ultimate")
 {
 	event
 	{
@@ -350,16 +451,16 @@ rule("Rule 14")
 
 	conditions
 	{
-		Victim.S == Event Player;
+		Array Contains(Event Player.ShatterVictims, Victim) == True;
 	}
 
 	actions
 	{
-		Event Player.U = True;
+		Event Player.GrantUltimate = True;
 	}
 }
 
-rule("Rule 15")
+rule("Grant Ultimate")
 {
 	event
 	{
@@ -371,13 +472,983 @@ rule("Rule 15")
 	conditions
 	{
 		Is Using Ultimate(Event Player) == False;
-		Event Player.U == True;
+		Event Player.GrantUltimate == True;
 	}
 
 	actions
 	{
 		Wait(0.250, Ignore Condition);
 		Set Ultimate Charge(Event Player, 100);
-		Event Player.U = False;
+		Event Player.GrantUltimate = False;
+	}
+}
+
+rule("Ult Reset Cooldowns")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) < 50;
+	}
+
+	actions
+	{
+		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion XYZ);
+		Set Ability Cooldown(Event Player, Button(Secondary Fire), 0);
+		Set Ability Cooldown(Event Player, Button(Ability 1), 0);
+		Set Ability Cooldown(Event Player, Button(Ability 2), 0);
+	}
+}
+
+disabled rule("**AI**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Set Dummy Role")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.IsDummy = True;
+		Event Player.FireStrikeSpeed = 25;
+		disabled Create In-World Text(All Players(All Teams), String("{0} - {1} - {2}", Event Player.DesiredMode, Ability Cooldown(Event Player,
+			Button(Ability 1)), Array Contains(Event Player.ShatterVictims, Event Player.Target)), Event Player, 1, Clip Against Surfaces,
+			Visible To Position and String, Color(White), Default Visibility);
+		Set Respawn Max Time(Event Player, 4);
+		Start Forcing Dummy Bot Name(Event Player, String Slice(Custom String("QUEFATLAZARAMBARONEILEROS"), Random Integer(0, 22),
+			Random Integer(3, 7)));
+		Create HUD Text(Event Player, Event Player.DesiredMode, Custom String("Target: {0}", Event Player.Target), Event Player.UltMode,
+			Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Event Player.CR = 0.500;
+	}
+}
+
+rule("Choose Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDummy == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+		Event Player.Target == Null;
+	}
+
+	actions
+	{
+		Event Player.Target = Random Value In Array(Filtered Array(Remove From Array(All Living Players(Opposite Team Of(Team Of(
+			Event Player))), Event Player), Has Spawned(Current Array Element) && Absolute Value(Horizontal Angle Towards(Event Player,
+			Event Player.Target)) <= Event Player.CR * 180));
+		Wait(0.050, Ignore Condition);
+		Loop If(Event Player.Target == Null);
+	}
+}
+
+rule("Clear Target")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Array Contains(All Living Players(All Teams), Event Player.Target) == False;
+	}
+
+	actions
+	{
+		Event Player.Target = Null;
+	}
+}
+
+rule("T")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 2);
+		Event Player.Target != Null;
+	}
+
+	actions
+	{
+		Event Player.TargetPos = 0.500 * Position Of(Event Player.Target) + 0.500 * Eye Position(Event Player.Target);
+		Event Player.Discriminant = Absolute Value(Dot Product(Vector Towards(Eye Position(Event Player), Event Player.TargetPos),
+			Velocity Of(Event Player.Target))) ^ 2 + (Event Player.FireStrikeSpeed ^ 2 - Speed Of(Event Player.Target) ^ 2)
+			* Distance Between(Eye Position(Event Player), Event Player.TargetPos) ^ 2;
+		Event Player.t = (Dot Product(Vector Towards(Eye Position(Event Player), Event Player.TargetPos), Velocity Of(Event Player.Target))
+			+ Square Root(Event Player.Discriminant)) / (Event Player.FireStrikeSpeed ^ 2 - Speed Of(Event Player.Target) ^ 2);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Fire Strike")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 2);
+		Event Player.Target != Null;
+	}
+
+	actions
+	{
+		Wait(0.500, Abort When False);
+		Start Holding Button(Event Player, Button(Ability 2));
+	}
+}
+
+rule("Start Hammering")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Primary Fire);
+		Is True For Any(Remove From Array(All Living Players(All Teams), Event Player), Has Spawned(Current Array Element)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Button(Primary Fire));
+	}
+}
+
+rule("Stop Hammering")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.DesiredMode == Button(Primary Fire) && Is True For Any(Remove From Array(All Living Players(All Teams),
+			Event Player), Has Spawned(Current Array Element))) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Button(Primary Fire));
+	}
+}
+
+rule("Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 1);
+		Event Player.Target != Null;
+		Absolute Value(Horizontal Angle Towards(Event Player, Event Player.Target)) < Max(1, 1.100 * Distance Between(Event Player,
+			Event Player.Target) - 5.100);
+	}
+
+	actions
+	{
+		Abort If(Is Using Ability 1(Event Player));
+		Start Holding Button(Event Player, Button(Ability 1));
+	}
+}
+
+disabled rule("**CHOOSE MODE**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Subroutine;
+		ChooseMode;
+	}
+
+	actions
+	{
+		Event Player.Timer = Total Time Elapsed;
+		Stop Throttle In Direction(Event Player);
+		Stop Holding Button(Event Player, Button(Ability 1));
+		Stop Holding Button(Event Player, Button(Ability 2));
+		If(Event Player.UltMode == Custom String("UltNow"));
+			Event Player.DesiredMode = Button(Ultimate);
+		Else;
+			Stop Holding Button(Event Player, Button(Ultimate));
+			If(Ability Cooldown(Event Player, Button(Ability 2)) == 0 && Array Contains(Array(Custom String("UltCharging"), Custom String(
+				"UltCharged")), Event Player.UltMode));
+				Event Player.DesiredMode = Button(Ability 2);
+			Else If(Ability Cooldown(Event Player, Button(Ability 1)) == 0 && Array Contains(Array(Custom String("Ulting"), Custom String(
+					"UltCharging")), Event Player.UltMode));
+				Event Player.DesiredMode = Button(Ability 1);
+			Else;
+				Event Player.DesiredMode = Button(Primary Fire);
+			End;
+		End;
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Primary Fire);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Ability 2)) == 0;
+		Event Player.DesiredMode == Button(Primary Fire);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Ability 1)) == 0;
+		Event Player.DesiredMode == Button(Primary Fire);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) == 100;
+		Event Player.DesiredMode == Button(Primary Fire);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Ability 2)) > 0;
+		Event Player.DesiredMode == Button(Ability 2);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ability Cooldown(Event Player, Button(Ability 1)) > 0;
+		Event Player.DesiredMode == Button(Ability 1);
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Ultimate Charge Percent(Event Player) < 100;
+		Event Player.DesiredMode == Button(Ultimate);
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+rule("Choose Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDummy == True;
+		Has Status(Event Player, Stunned) == True;
+	}
+
+	actions
+	{
+		Start Rule(ChooseMode, Restart Rule);
+	}
+}
+
+disabled rule("**AIM**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Fire Strike Start Aiming")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 2);
+		Event Player.Discriminant >= 0;
+		Has Status(Event Player, Stunned) == False;
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Mapped Array(Array(Event Player.TargetPos + Event Player.t * Velocity Of(Event Player.Target)), Vector(
+			X Component Of(Current Array Element), Max(1, Y Component Of(Current Array Element)), Z Component Of(Current Array Element)))
+			[0] - Eye Position(Event Player), 720, To World, Direction and Turn Rate);
+	}
+}
+
+rule("Stop Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.DesiredMode == Button(Ability 2) && Event Player.Discriminant >= 0) == False;
+		(Event Player.DesiredMode != Button(Ability 2) && Event Player.Target) == False;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Stop Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Stunned) == True;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Normal Aim")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode != Button(Ability 2);
+		Event Player.Target != Null;
+		Has Status(Event Player, Stunned) == False;
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Mapped Array(Direction Towards(Eye Position(Event Player), Event Player.TargetPos),
+			Direction From Angles(Horizontal Angle From Direction(Current Array Element), Min(90 * Event Player.CR, Max(
+			-90 * Event Player.CR, Vertical Angle From Direction(Current Array Element))))), 720 * Event Player.CR, To World,
+			Direction and Turn Rate);
+	}
+}
+
+disabled rule("**THROTTLE**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Left")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 1);
+		Event Player.Target != Null;
+		Z Component Of(Local Vector Of(Vector Towards(Event Player, Event Player.Target), Event Player, Rotation)) > 0;
+		X Component Of(Local Vector Of(Vector Towards(Event Player, Event Player.Target), Event Player, Rotation)) > 0;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, Left, 1, To Player, Add to existing throttle, Direction and Magnitude);
+	}
+}
+
+rule("Right")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 1);
+		Event Player.Target != Null;
+		Z Component Of(Local Vector Of(Vector Towards(Event Player, Event Player.Target), Event Player, Rotation)) > 0;
+		X Component Of(Local Vector Of(Vector Towards(Event Player, Event Player.Target), Event Player, Rotation)) < 0;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, Right, 1, To Player, Add to existing throttle, Direction and Magnitude);
+	}
+}
+
+rule("Cancel Charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsCharging == Button(Ability 1);
+		Event Player.Target != Null;
+		Z Component Of(Local Vector Of(Vector Towards(Event Player, Event Player.Target), Event Player, Rotation)) < 0;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player, Button(Ability 1));
+	}
+}
+
+rule("Using Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == True;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player, Button(Ability 1));
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Close Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Button(Primary Fire), Button(Ability 2)), Event Player.DesiredMode) == True;
+		Health(Event Player) > 75;
+	}
+
+	actions
+	{
+		Event Player.MinDistance = 1;
+		Event Player.MaxDistance = 2;
+	}
+}
+
+rule("Get Close Enough for Shatter")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ultimate);
+	}
+
+	actions
+	{
+		Event Player.MaxDistance = 18;
+	}
+}
+
+rule("Back Off")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Health(Event Player) < 75;
+	}
+
+	actions
+	{
+		Event Player.MinDistance = 4;
+	}
+}
+
+rule("Stop Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DesiredMode == Button(Ability 1);
+	}
+
+	actions
+	{
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Forward")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Distance Between(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up, Position Of(Event Player.Target)
+			- Y Component Of(Position Of(Event Player.Target)) * Up) > Event Player.MaxDistance;
+		Event Player.DesiredMode != Button(Ability 1);
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 0);
+	}
+}
+
+rule("Backward")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Distance Between(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up, Position Of(Event Player.Target)
+			- Y Component Of(Position Of(Event Player.Target)) * Up) < Event Player.MinDistance;
+		Event Player.DesiredMode != Button(Ability 1);
+	}
+
+	actions
+	{
+		Start Forcing Throttle(Event Player, 0, 0, 1, 1, 0, 0);
+	}
+}
+
+rule("Stop Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Distance Between(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up, Position Of(Event Player.Target)
+			- Y Component Of(Position Of(Event Player.Target)) * Up) > Event Player.MinDistance;
+		Distance Between(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up, Position Of(Event Player.Target)
+			- Y Component Of(Position Of(Event Player.Target)) * Up) < Event Player.MaxDistance;
+	}
+
+	actions
+	{
+		Stop Forcing Throttle(Event Player);
+	}
+}
+
+rule("Close Mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Array(Button(Primary Fire), Button(Ability 2)), Event Player.DesiredMode) == True;
+		Health(Event Player) < 75;
+	}
+
+	actions
+	{
+		Event Player.MaxDistance = 5;
+	}
+}
+
+disabled rule("**ULT MODES**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDummy == True;
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.UltMode = Custom String("UltCharging");
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDummy == True;
+		Ultimate Charge Percent(Event Player) == 100;
+	}
+
+	actions
+	{
+		Event Player.UltMode = Custom String("UltCharged");
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.UltMode == Custom String("UltCharged");
+		Event Player.DesiredMode == Button(Primary Fire);
+		Altitude Of(Event Player) == 0;
+		Event Player.Target != Null;
+		Altitude Of(Event Player.Target) < 1;
+		Distance Between(Event Player, Event Player.Target) < 18;
+	}
+
+	actions
+	{
+		Wait(0.200, Abort When False);
+		Event Player.UltMode = Custom String("UltNow");
+		Start Holding Button(Event Player, Button(Ultimate));
+		Event Player.UltMode = Custom String("Ulting");
+	}
+}
+
+rule("")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDummy == True;
+		Event Player.UltMode == Custom String("Ulting");
+		(Has Status(Event Player, Stunned) || Is Dead(Event Player)) == True;
+	}
+
+	actions
+	{
+		Event Player.UltMode = Ultimate Charge Percent(Event Player) == 100 ? Custom String("UltCharged") : Custom String("UltCharging");
+	}
+}
+
+rule("Create Bots")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.MaxPlayers > 0;
+		Count Of(Filtered Array(All Players(All Teams), Current Array Element.IsDummy)) < Global.NumberOfBots;
+		Number Of Players(All Teams) < Global.MaxPlayers;
+	}
+
+	actions
+	{
+		Call Subroutine(ChooseSlot);
+		Wait(0.050, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Create Bot")
+{
+	event
+	{
+		Subroutine;
+		ChooseSlot;
+	}
+
+	actions
+	{
+		Global.Slot = Global.MaxPlayers - 1;
+		While(Players In Slot(Global.Slot, All Teams) != Null);
+			Global.Slot -= 1;
+			Abort If(Global.Slot < 0);
+		End;
+		Create Dummy Bot(Hero(Reinhardt), All Teams, Global.Slot, Vector(0, 0, 0), Forward);
+	}
+}
+
+rule("Spawn Bot")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Abort If(Global.NumberOfBots >= Global.MaxPlayers);
+		Global.NumberOfBots += 1;
 	}
 }

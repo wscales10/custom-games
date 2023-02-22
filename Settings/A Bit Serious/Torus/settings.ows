@@ -59,13 +59,15 @@ rule("Rule 2")
 
 	actions
 	{
-		Global.A = 4 * Workshop Setting Integer(Custom String("General"), Custom String("Arena Size"), 8, 1, 20);
-		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(0, 0, 0), Vector(Global.A, 0, 0), Red, Visible To Position and Radius);
-		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(Global.A, 0, 0), Vector(Global.A, 0, Global.A), Red,
+		Global.A = 4 * Workshop Setting Integer(Custom String("General"), Custom String("Arena Size"), 8, 1, 20, 0);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(0, 0, 0), Vector(Global.A, 0, 0), Color(Red),
 			Visible To Position and Radius);
-		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(Global.A, 0, Global.A), Vector(0, 0, Global.A), Red,
+		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(Global.A, 0, 0), Vector(Global.A, 0, Global.A), Color(Red),
 			Visible To Position and Radius);
-		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(0, 0, Global.A), Vector(0, 0, 0), Red, Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(Global.A, 0, Global.A), Vector(0, 0, Global.A), Color(Red),
+			Visible To Position and Radius);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(0, 0, Global.A), Vector(0, 0, 0), Color(Red),
+			Visible To Position and Radius);
 	}
 }
 
@@ -81,69 +83,77 @@ rule("Rule 3")
 	actions
 	{
 		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * Left, 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * Left, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * Right, 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * Right, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * Forward, 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * Forward, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * Backward, 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * Backward, 1, Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * (Left + Forward), 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * (Left + Forward), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * (Right + Backward), 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * (Right + Backward), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * (Forward + Right), 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * (Forward + Right), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))), Event Player), Is Alive(
-			Event Player)), Sphere, Red, Eye Position(Event Player) + Global.A * (Backward + Left), 1, Visible To Position and Radius);
+			Event Player)), Sphere, Color(Red), Eye Position(Event Player) + Global.A * (Backward + Left), 1,
+			Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * Left, 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * Left, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * Right, 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * Right, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * Forward, 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * Forward, 1, Visible To Position and Radius);
 		Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * Backward, 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * Backward, 1, Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * (Left + Forward), 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * (Left + Forward), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * (Right + Backward), 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * (Right + Backward), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * (Forward + Right), 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * (Forward + Right), 1,
+			Visible To Position and Radius);
 		disabled Create Effect(Filtered Array(Remove From Array(All Players(All Teams), Remove From Array(All Players(Opposite Team Of(Team Of(
 			Event Player))), Event Player)), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra) && Is Using Ability 1(
-			Event Player))), Sphere, Blue, Eye Position(Event Player) + Global.A * (Backward + Left), 1, Visible To Position and Radius);
+			Event Player))), Sphere, Color(Blue), Eye Position(Event Player) + Global.A * (Backward + Left), 1,
+			Visible To Position and Radius);
 		Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * Left,
-			1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * Right,
-			1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * Forward,
-			1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player)
-			+ Global.A * Backward, 1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			+ Global.A * Backward, 1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		disabled Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * (
-			Left + Forward), 1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			Left + Forward), 1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		disabled Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * (
-			Right + Backward), 1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			Right + Backward), 1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		disabled Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * (
-			Forward + Right), 1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			Forward + Right), 1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 		disabled Create In-World Text(Filtered Array(All Players(All Teams), Is Alive(Event Player) && !(Hero Of(Event Player) == Hero(Sombra)
 			&& Is Using Ability 1(Event Player))), Hero Icon String(Hero Of(Event Player)), Position Of(Event Player) + Global.A * (
-			Backward + Left), 1.500, Clip Against Surfaces, Visible To Position and String, White, Visible Always);
+			Backward + Left), 1.500, Clip Against Surfaces, Visible To Position and String, Color(White), Visible Always);
 	}
 }
 

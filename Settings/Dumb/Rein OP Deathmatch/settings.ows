@@ -99,6 +99,11 @@ settings
 				Whip Shot: Off
 			}
 
+			Cassidy
+			{
+				Flashbang: Off
+			}
+
 			D.Va
 			{
 				Boosters Knockback Scalar: 0%
@@ -125,11 +130,6 @@ settings
 			Lúcio
 			{
 				Soundwave Knockback Scalar: 0%
-			}
-
-			McCree
-			{
-				Flashbang: Off
 			}
 
 			Mei
@@ -323,16 +323,16 @@ rule("Player Setup")
 
 	actions
 	{
-		Create Icon(Filtered Array(Event Player, Event Player.Target != Null), Event Player.Target, Skull, Visible To and Position, Red,
-			True);
+		Create Icon(Filtered Array(Event Player, Event Player.Target != Null), Event Player.Target, Skull, Visible To and Position, Color(
+			Red), True);
 		Create Icon(Filtered Array(Event Player, Event Player.Target == Null && Event Player.Position != Null), Event Player.Position, X,
-			Visible To and Position, Red, True);
+			Visible To and Position, Color(Red), True);
 		Create Icon(Filtered Array(Event Player, Is Using Ability 1(Event Player) && Event Player.Position != Null && Absolute Value(
 			46 - Horizontal Angle Towards(Event Player, Event Player.Position)) < 44), World Vector Of(Left, Event Player,
-			Rotation And Translation), Arrow: Left, Visible To and Position, White, True);
+			Rotation And Translation), Arrow: Left, Visible To and Position, Color(White), True);
 		Create Icon(Filtered Array(Event Player, Is Using Ability 1(Event Player) && Event Player.Position != Null && Absolute Value(
 			46 + Horizontal Angle Towards(Event Player, Event Player.Position)) < 44), World Vector Of(Right, Event Player,
-			Rotation And Translation), Arrow: Right, Visible To and Position, White, True);
+			Rotation And Translation), Arrow: Right, Visible To and Position, Color(White), True);
 	}
 }
 
@@ -370,6 +370,7 @@ rule("Elimination")
 	actions
 	{
 		Modify Player Score(Event Player, 1);
+		Modify Team Score(Team Of(Event Player), 1);
 	}
 }
 
@@ -391,6 +392,7 @@ rule("Death")
 	actions
 	{
 		Modify Player Score(Event Player, -1);
+		Modify Team Score(Team Of(Event Player), -1);
 	}
 }
 
@@ -585,7 +587,7 @@ rule("Reinhardt Target")
 
 	conditions
 	{
-		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
 	}
 
 	actions
@@ -712,7 +714,7 @@ rule("Down")
 	conditions
 	{
 		Is Using Ability 1(Event Player) == True;
-		Is Button Held(Event Player, Crouch) == True;
+		Is Button Held(Event Player, Button(Crouch)) == True;
 	}
 
 	actions
@@ -734,7 +736,7 @@ rule("Up")
 	conditions
 	{
 		Is Using Ability 1(Event Player) == True;
-		Is Button Held(Event Player, Jump) == True;
+		Is Button Held(Event Player, Button(Jump)) == True;
 	}
 
 	actions
@@ -755,7 +757,8 @@ rule("Stop Accel")
 
 	conditions
 	{
-		(Is Using Ability 1(Event Player) && (Is Button Held(Event Player, Crouch) || Is Button Held(Event Player, Jump))) == False;
+		(Is Using Ability 1(Event Player) && (Is Button Held(Event Player, Button(Crouch)) || Is Button Held(Event Player, Button(Jump))))
+			== False;
 	}
 
 	actions
@@ -813,7 +816,7 @@ rule("Hammer DOWN")
 	conditions
 	{
 		Ultimate Charge Percent(Event Player) % 100 == 0;
-		Is Button Held(Event Player, Ultimate) == True;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
 		Has Status(Event Player, Stunned) == False;
 		Has Status(Event Player, Asleep) == False;
 		Has Status(Event Player, Frozen) == False;
@@ -899,7 +902,7 @@ rule("Charge Cancel")
 
 	conditions
 	{
-		Is Button Held(Event Player, Ability 1) == True;
+		Is Button Held(Event Player, Button(Ability 1)) == True;
 	}
 
 	actions

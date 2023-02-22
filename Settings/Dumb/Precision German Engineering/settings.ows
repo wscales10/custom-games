@@ -66,24 +66,24 @@ rule("Global Setup")
 	{
 		Global.LateralSpeed = 5.500;
 		Global.LateralPower = 1;
-		Create HUD Text(All Players(All Teams), Custom String("New Controls during Charge"), Null, Null, Left, 1, Orange, White, White,
-			Visible To and String, Visible Never);
+		Create HUD Text(All Players(All Teams), Custom String("New Controls during Charge"), Null, Null, Left, 1, Color(Orange), Color(
+			White), Color(White), Visible To and String, Visible Never);
 		Create HUD Text(All Players(All Teams), Custom String("Reverse: {0}", Input Binding String(Button(Crouch))), Null, Null, Left, 2,
-			White, White, White, Visible To and String, Visible Always);
+			Color(White), Color(White), Color(White), Visible To and String, Visible Always);
 		Create HUD Text(All Players(All Teams), Custom String("Left/Right: {0}/{1}", Input Binding String(Button(Primary Fire)),
-			Input Binding String(Button(Secondary Fire))), Null, Null, Left, 3, White, White, White, Visible To and String,
-			Visible Always);
-		Create HUD Text(All Players(All Teams), Custom String("Jump: {0}", Input Binding String(Button(Jump))), Null, Null, Left, 4, White,
-			White, White, Visible To and String, Visible Always);
+			Input Binding String(Button(Secondary Fire))), Null, Null, Left, 3, Color(White), Color(White), Color(White),
+			Visible To and String, Visible Always);
+		Create HUD Text(All Players(All Teams), Custom String("Jump: {0}", Input Binding String(Button(Jump))), Null, Null, Left, 4, Color(
+			White), Color(White), Color(White), Visible To and String, Visible Always);
 		Set Match Time(0);
-		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
-			Default Visibility);
-		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, White, White, White, Visible To and String,
-			Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
 	}
 }
 
@@ -140,7 +140,7 @@ rule("Start Reverse")
 	conditions
 	{
 		Event Player.A == True;
-		Is Button Held(Event Player, Crouch) == True;
+		Is Button Held(Event Player, Button(Crouch)) == True;
 	}
 
 	actions
@@ -160,7 +160,7 @@ rule("Stop Reverse")
 
 	conditions
 	{
-		(Event Player.A && Is Button Held(Event Player, Crouch)) == False;
+		(Event Player.A && Is Button Held(Event Player, Button(Crouch))) == False;
 	}
 
 	actions
@@ -180,7 +180,7 @@ rule("Jump")
 
 	conditions
 	{
-		Is Button Held(Event Player, Jump) == True;
+		Is Button Held(Event Player, Button(Jump)) == True;
 	}
 
 	actions
@@ -201,7 +201,7 @@ rule("Left")
 
 	conditions
 	{
-		Is Button Held(Event Player, Primary Fire) == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
 		Event Player.A == True;
 	}
 
@@ -231,7 +231,7 @@ rule("Right")
 
 	conditions
 	{
-		Is Button Held(Event Player, Secondary Fire) == True;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
 		Event Player.A == True;
 	}
 
@@ -262,9 +262,9 @@ disabled rule("Rule 9")
 	actions
 	{
 		Create HUD Text(Event Player, Speed Of In Direction(Event Player, World Vector Of(Forward, Event Player, Rotation)), Null, Null,
-			Left, 0, White, White, White, Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Distance Between(Event Player, Vector(0, 0, 0)) / 3, Null, Null, Left, 0, White, White, White,
-			Visible To and String, Default Visibility);
+			Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Distance Between(Event Player, Vector(0, 0, 0)) / 3, Null, Null, Left, 0, Color(White), Color(White),
+			Color(White), Visible To and String, Default Visibility);
 	}
 }
 
@@ -279,7 +279,7 @@ disabled rule("Rule 10")
 
 	conditions
 	{
-		Is Button Held(Event Player, Interact) == True;
+		Is Button Held(Event Player, Button(Interact)) == True;
 	}
 
 	actions

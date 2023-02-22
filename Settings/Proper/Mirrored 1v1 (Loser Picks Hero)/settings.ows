@@ -65,7 +65,7 @@ rule("Spawn")
 			Event Player.FirstSpawn = False;
 			All Players(All Teams).UltimateCharge = 0;
 		End;
-		If(Global.Respawner == Null && Number of Players(Opposite Team Of(Team Of(Event Player))) > 0);
+		If(Global.Respawner == Null && Number Of Players(Opposite Team Of(Team Of(Event Player))) > 0);
 			Global.Respawner = Event Player;
 			Respawn(Remove From Array(All Players(All Teams), Event Player));
 			Start Forcing Player To Be Hero(All Living Players(All Teams), Hero Of(Event Player));

@@ -96,10 +96,11 @@ rule("Global Setup")
 		Global.Q = Empty Array;
 		Global.A = Empty Array;
 		Create HUD Text(Filtered Array(All Players(All Teams), Count Of(Global.A) >= 1), String("{0} {1}", Hero Icon String(Hero Of(
-			First Of(Global.A))), First Of(Global.A)), Null, Null, Left, 0, White, White, White, Visible To and String,
-			Default Visibility);
+			First Of(Global.A))), First Of(Global.A)), Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
 		Disable Built-In Game Mode Scoring;
-		Create HUD Text(Host Player, Global.G, Null, Null, Right, 0, Green, White, White, Visible To and String, Default Visibility);
+		Create HUD Text(Host Player, Global.G, Null, Null, Right, 0, Color(Green), Color(White), Color(White), Visible To and String,
+			Default Visibility);
 	}
 }
 
@@ -117,8 +118,8 @@ rule("Player Setup")
 		Disable Built-In Game Mode Respawning(Event Player);
 		Enable Death Spectate All Players(Event Player);
 		Create HUD Text(Filtered Array(Event Player, Array Contains(Global.Q, Event Player) && Count Of(Global.A) + Global.Q >= 2),
-			Custom String("Position in Queue: {0}", Index Of Array Value(Global.Q, Event Player) + 1), Null, Null, Top, 0, White, White,
-			White, Visible To and String, Default Visibility);
+			Custom String("Position in Queue: {0}", Index Of Array Value(Global.Q, Event Player) + 1), Null, Null, Top, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
 	}
 }
 
@@ -289,7 +290,7 @@ disabled rule("Bots")
 
 	conditions
 	{
-		Is Button Held(Host Player, Interact) == True;
+		Is Button Held(Host Player, Button(Interact)) == True;
 	}
 
 	actions
@@ -312,8 +313,8 @@ rule("Player Setup")
 	actions
 	{
 		Create HUD Text(Filtered Array(All Players(All Teams), Array Contains(Array Slice(Global.A, 1, Count Of(Global.A) - 1),
-			Event Player)), String("{0} {1}", Hero Icon String(Hero Of(Event Player)), Event Player), Null, Null, Right, 0, White, White,
-			White, Visible To and String, Default Visibility);
+			Event Player)), String("{0} {1}", Hero Icon String(Hero Of(Event Player)), Event Player), Null, Null, Right, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
 	}
 }
 
@@ -326,7 +327,7 @@ disabled rule("Host Kill")
 
 	conditions
 	{
-		Is Button Held(Host Player, Interact) == True;
+		Is Button Held(Host Player, Button(Interact)) == True;
 	}
 
 	actions

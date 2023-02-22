@@ -2,7 +2,8 @@ settings
 {
 	main
 	{
-		Description: "No health packs, but you are fully healed when you kill someone. Get 5 more kills than the person in last place to win. Switching heroes is temporarily disabled if you die to the hero you switched to counter."
+		Description: "No health packs, but kills fully heal you and reset your cooldowns. Scores are measured relative to the player in last place. Switching heroes is temporarily disabled if you die to the hero you switched to counter."
+		Mode Name: "Queue Deathmatch"
 	}
 
 	lobby
@@ -18,6 +19,8 @@ settings
 	{
 		Deathmatch
 		{
+			Score To Win: 1
+
 			enabled maps
 			{
 				Blizzard World
@@ -27,19 +30,18 @@ settings
 				Hanamura
 				Havana
 				Hollywood
-				Horizon Lunar Colony
+				Kanezaka
 				King's Row
+				Malevento
 				Paris
 				Petra
 				Temple of Anubis
-				Volskaya Industries
 			}
 		}
 
 		General
 		{
-			Game Mode Start: Immediately
-			Score To Win: 7
+			Game Mode Start: Manual
 			Spawn Health Packs: Disabled
 		}
 	}
@@ -47,8 +49,25 @@ settings
 
 variables
 {
+	global:
+		0: ScoreToWin
+		1: GameDuration
+		2: ResetCooldowns
+		3: HeroBansPerPlayer
+		4: AllowedHeroes
+		5: ShortHealingCountdown
+		6: LongHealingCountdown
+		7: Setup
+
 	player:
 		0: Threat
+		1: ShowTextFor
+		3: BannedHeroes
+		4: Banning
+		5: TimeHealingStarted
+		6: TimeHealingFinished
+		8: HealingPercent
+		9: HealingPercentUnrounded
 		11: LastKiller
 		13: NoSwitch
 }
@@ -56,6 +75,41 @@ variables
 subroutines
 {
 	0: Reset
+	1: DockHealing
+	2: StopHealingTimers
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.ScoreToWin = Workshop Setting Integer(Custom String("General"), Custom String("Score to Win"), 8, 1, 50, 0);
+		Global.GameDuration = Workshop Setting Integer(Custom String("General"), Custom String("Game length in minutes (0 = no timer)"),
+			10, 0, 15, 0);
+		Disable Built-In Game Mode Completion;
+		Global.ResetCooldowns = Workshop Setting Toggle(Custom String("General"), Custom String("Reset cooldowns on kill"), True, 0);
+		Global.HeroBansPerPlayer = Workshop Setting Integer(Custom String("General"), Custom String("Hero Bans Per Player"), 0, 0, 2, 0);
+		If(Global.HeroBansPerPlayer == 0);
+			Wait(4, Ignore Condition);
+			Start Game Mode;
+		Else;
+			Create HUD Text(Is Waiting For Players ? All Players(All Teams) : All Dead Players(All Teams), Custom String("Banned Heroes"),
+				Null, Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		End;
+		Create HUD Text(Is Waiting For Players ? Host Player : Null, Null, Null, Custom String("Press [{0}] to start the game",
+			Input Binding String(Button(Ultimate))), Left, 2, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Global.ShortHealingCountdown = Workshop Setting Integer(Custom String("General"), Custom String("Short Healing Countdown"), 3, 1,
+			15, 0);
+		Global.LongHealingCountdown = Workshop Setting Integer(Custom String("General"), Custom String("Long Healing Countdown"), 60, 30,
+			300, 0);
+		Global.Setup = True;
+	}
 }
 
 rule("Reduce Score")
@@ -88,8 +142,30 @@ rule("Kill")
 
 	actions
 	{
+		Call Subroutine(StopHealingTimers);
+		Event Player.HealingPercent = 100;
+		Set Healing Received(Event Player, 100);
 		Call Subroutine(Reset);
-		Heal(Event Player, Null, Max Health(Event Player));
+		Wait(Workshop Setting Real(Custom String("General"), Custom String("Delay between kill and heal"), 1, 0, 12, 0), Ignore Condition);
+		Heal(Event Player, Null, Workshop Setting Toggle(Custom String("General"), Custom String("Only heal 200"), True, 0)
+			? 200 : Max Health(Event Player));
+		If(Global.ResetCooldowns);
+			Set Ability Cooldown(Event Player, Button(Secondary Fire), 0);
+			Set Ability Cooldown(Event Player, Button(Ability 1), 0);
+			Set Ability Cooldown(Event Player, Button(Ability 2), 0);
+			If(Array Contains(Array(Hero(Tracer), Hero(Symmetra)), Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player)
+				: Hero Of(Event Player)));
+				Set Ability Charge(Event Player, Button(Ability 1), 3);
+			End;
+			If(Array Contains(Array(Hero(Junkrat)), Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(
+				Event Player)));
+				Set Ability Charge(Event Player, Button(Ability 1), 2);
+			End;
+			If(Array Contains(Array(Hero(Brigitte)), Is Duplicating(Event Player) ? Hero Being Duplicated(Event Player) : Hero Of(
+				Event Player)));
+				Set Ability Charge(Event Player, Button(Ability 2), 3);
+			End;
+		End;
 	}
 }
 
@@ -107,8 +183,10 @@ rule("Hero Select")
 
 	actions
 	{
-		Disable Built-In Game Mode Completion;
-		Set Match Time(10);
+		All Players(All Teams).Banning = False;
+		Set Match Time(5);
+		Disable Built-In Game Mode Announcer;
+		Global.AllowedHeroes = All Heroes;
 	}
 }
 
@@ -126,7 +204,7 @@ rule("Game Time")
 
 	actions
 	{
-		Set Match Time(0);
+		Set Match Time(Global.GameDuration * 60);
 	}
 }
 
@@ -141,7 +219,7 @@ rule("Victory")
 
 	conditions
 	{
-		Score Of(Event Player) >= 7;
+		Score Of(Event Player) >= Global.ScoreToWin;
 	}
 
 	actions
@@ -161,8 +239,14 @@ rule("Death")
 
 	actions
 	{
-		Event Player.LastKiller = Attacker == Event Player ? Null : Hero Of(Attacker);
-		If(Event Player.LastKiller == Event Player.Threat);
+		Call Subroutine(StopHealingTimers);
+		If(Attacker == Event Player);
+			Event Player.LastKiller = Null;
+		Else;
+			Event Player.LastKiller = Hero Of(Attacker);
+			Attacker.ShowTextFor = 3;
+		End;
+		If(Event Player.LastKiller == Event Player.Threat && Event Player.LastKiller != Null);
 			Event Player.NoSwitch = True;
 			Start Forcing Player To Be Hero(Event Player, Hero Of(Event Player));
 		Else;
@@ -211,7 +295,7 @@ rule("Reset")
 	}
 }
 
-rule("No Switch HUD")
+rule("Player Setup")
 {
 	event
 	{
@@ -220,10 +304,399 @@ rule("No Switch HUD")
 		All;
 	}
 
+	conditions
+	{
+		Global.Setup == True;
+	}
+
 	actions
 	{
+		Event Player.BannedHeroes = Empty Array;
 		Create HUD Text(Filtered Array(Event Player, !(Event Player.Threat == Null || Event Player.NoSwitch)), Custom String(
 			"If you die to {0} {1} again hero switching will be temporarily disabled", Hero Icon String(Event Player.Threat),
-			Event Player.Threat), Null, Null, Left, 0, White, White, White, Visible To and String, Default Visibility);
+			Event Player.Threat), Null, Null, Left, 0, Color(White), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Chase Player Variable At Rate(Event Player, ShowTextFor, 0, 1, Destination and Rate);
+		Create HUD Text(Event Player, Null, Null, Custom String("{0} kills remaining", Global.ScoreToWin - Score Of(Event Player)), Right,
+			0, Color(White), Color(White), Custom Color(255, 255, 255, 255 * Event Player.C), Visible To String and Color,
+			Default Visibility);
+		Create HUD Text(Count Of(Event Player.BannedHeroes) < Global.HeroBansPerPlayer && Is Waiting For Players ? Event Player : Null,
+			Null, Null, Custom String("Press [{0}] to select a hero to ban", Input Binding String(Button(Interact))), Left, 2, Color(
+			White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Custom String("Healing {0}%", Event Player.HealingPercent), String Slice(Custom String(
+			"••••••••••••••"), 0, Round To Integer(14 * (Event Player.TimeHealingStarted ? (
+			Global.LongHealingCountdown + Event Player.TimeHealingStarted - Total Time Elapsed) / Global.LongHealingCountdown : 1), Up)),
+			String Slice(Custom String("•••••••••••"), 0, Round To Integer((Event Player.TimeHealingFinished + 1) * (
+			11 / Global.ShortHealingCountdown), Up)), Left, -1, Color(Yellow), Color(White), Color(White), Visible To and String,
+			Default Visibility);
+		Event Player.TimeHealingFinished = Global.ShortHealingCountdown - 1;
+	}
+}
+
+rule("Enable Music")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is True For Any(All Players(All Teams), Score Of(Current Array Element) > Global.ScoreToWin - 2) || Is Assembling Heroes || (
+			Global.GameDuration && Match Time <= 30)) == True;
+	}
+
+	actions
+	{
+		Enable Built-In Game Mode Music;
+	}
+}
+
+rule("Disable Music")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		(Is True For Any(All Players(All Teams), Score Of(Current Array Element) > Global.ScoreToWin - 2) || Is Assembling Heroes || (
+			Global.GameDuration && Match Time <= 30)) == False;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Music;
+	}
+}
+
+rule("Spawn")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Spawned(Event Player) == True;
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.ShowTextFor = 3;
+		Event Player.HealingPercent = 100;
+		Set Healing Received(Event Player, 100);
+	}
+}
+
+rule("Highlight text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ShowTextFor > 0;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, C);
+		Event Player.C = 1;
+	}
+}
+
+rule("Hide text")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ShowTextFor == 0;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, C, 0.400, 0.250, Destination and Rate);
+	}
+}
+
+rule("Done")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time == 0;
+		Global.GameDuration != 0;
+	}
+
+	actions
+	{
+		Enable Built-In Game Mode Completion;
+	}
+}
+
+rule("Self Kill (Select hero to ban)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Is Waiting For Players == True;
+		Count Of(Event Player.BannedHeroes) < Global.HeroBansPerPlayer;
+	}
+
+	actions
+	{
+		Kill(Event Player, Null);
+		Event Player.Banning = True;
+	}
+}
+
+rule("Ban")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.Banning);
+		Event Player.Banning = False;
+		Abort If(Is True For Any(All Players(All Teams), Array Contains(Current Array Element.BannedHeroes, Hero Of(Event Player))));
+		Modify Player Variable(Event Player, BannedHeroes, Append To Array, Hero Of(Event Player));
+		Create HUD Text(Is Waiting For Players ? All Players(All Teams) : All Dead Players(All Teams), Null, String("{0} {1}",
+			Hero Icon String(Hero Of(Event Player)), Hero Of(Event Player)), Null, Left, 1, Color(White), Color(White), Color(White),
+			Visible To, Default Visibility);
+	}
+}
+
+rule("Hero Select")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Waiting For Players == False;
+	}
+
+	actions
+	{
+		Modify Global Variable(AllowedHeroes, Remove From Array By Value, Event Player.BannedHeroes);
+		Set Player Allowed Heroes(All Players(All Teams), Global.AllowedHeroes);
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ability 2 Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Respawn Max Time(Event Player, 12);
+	}
+}
+
+rule("Disable Abilities")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Waiting For Players == True;
+	}
+
+	actions
+	{
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Set Respawn Max Time(Event Player, 9999);
+	}
+}
+
+rule("Start Game")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Ultimate)) == True;
+		Is Waiting For Players == True;
+	}
+
+	actions
+	{
+		Start Game Mode;
+	}
+}
+
+rule("Start Game Automatically")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Waiting For Players == True;
+		Is True For All(Number Of Players(All Teams), Count Of(Current Array Element.BannedHeroes) == Global.HeroBansPerPlayer) == True;
+		Number Of Players(All Teams) == Number Of Slots(All Teams);
+	}
+
+	actions
+	{
+		Wait(1, Abort When False);
+		Start Game Mode;
+	}
+}
+
+rule("Received Healing")
+{
+	event
+	{
+		Player Received Healing;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Healee.TimeHealingFinished = Global.ShortHealingCountdown - 1;
+		If(Event Healing > 0);
+			Chase Player Variable At Rate(Event Player, TimeHealingFinished, -1, 1, None);
+			If(Event Player.TimeHealingStarted == 0);
+				Event Player.TimeHealingStarted = Total Time Elapsed;
+			End;
+		End;
+	}
+}
+
+rule("Dock Healing (Long)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.TimeHealingStarted != 0;
+		Total Time Elapsed - Event Player.TimeHealingStarted > Global.LongHealingCountdown;
+	}
+
+	actions
+	{
+		Call Subroutine(DockHealing);
+	}
+}
+
+rule("Dock Healing (Short)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.TimeHealingFinished == -1;
+	}
+
+	actions
+	{
+		Call Subroutine(DockHealing);
+	}
+}
+
+rule("Dock Healing")
+{
+	event
+	{
+		Subroutine;
+		DockHealing;
+	}
+
+	actions
+	{
+		Call Subroutine(StopHealingTimers);
+		Event Player.HealingPercentUnrounded = Event Player.HealingPercent * (1 - Workshop Setting Integer(Custom String("General"),
+			Custom String("% Healing Reduction Per Level"), 25, 0, 100, 0) / 100);
+		Event Player.HealingPercentUnrounded = Event Player.HealingPercentUnrounded < 10 ? Round To Integer(
+			Event Player.HealingPercentUnrounded, Up) : 5 * Round To Integer(Event Player.HealingPercentUnrounded / 5, Up);
+		If(Event Player.HealingPercentUnrounded == Event Player.HealingPercent);
+			If(Event Player.HealingPercentUnrounded > 15);
+				Event Player.HealingPercentUnrounded -= 5;
+			Else If(Event Player.HealingPercentUnrounded > 11);
+				Event Player.HealingPercentUnrounded = 10;
+			Else;
+				Event Player.HealingPercentUnrounded -= 1;
+			End;
+		End;
+		Event Player.HealingPercent = Max(Event Player.HealingPercentUnrounded, 1);
+		Set Healing Received(Event Player, Event Player.HealingPercent);
+	}
+}
+
+rule("Stop Healing Timers")
+{
+	event
+	{
+		Subroutine;
+		StopHealingTimers;
+	}
+
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, TimeHealingFinished);
+		Event Player.TimeHealingFinished = Global.ShortHealingCountdown - 1;
+		Event Player.TimeHealingStarted = 0;
 	}
 }
