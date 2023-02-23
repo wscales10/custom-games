@@ -52,11 +52,6 @@ settings
 		}
 	}
 
-	workshop
-	{
-		Player Level: 8
-	}
-
 	extensions
 	{
 		Beam Sounds
@@ -85,7 +80,7 @@ variables
 		14: ItemStackBeingStolenIndex
 		15: ItemStackSizes
 		16: ItemStackOriginalOwners
-		17: ItemIndex
+		17: ItemStackIndex
 		18: ItemToDistribute
 		19: ItemSymbols
 		20: NewItemStackIndex
@@ -115,11 +110,18 @@ variables
 		44: DifficultyCoefficient
 		45: BossCount
 		46: DeathLineRadius
-		47: ItemStackIndicesToUpdate
+		47: ItemStackUpdateInfos
 		48: ItemStackUpdateInfo
 		49: ItemStackEffects
 		50: ExistingMatchingItemStacks
 		51: CurrentItemStackSize
+		52: ItemShops
+		53: ItemShopPositions
+		54: ItemShopEffects1
+		55: ItemShopPrices
+		56: ItemShopIndex
+		57: ItemShopEffects2
+		58: ItemRarities
 
 	player:
 		0: State
@@ -178,6 +180,12 @@ variables
 		53: RemainingMatchingStacks
 		54: ShouldUpdateMoveSpeed
 		55: SlowTime
+		56: BuyIndex
+		57: Currency
+		58: BleedTime
+		59: BleedInfo
+		60: BaseDamageMultiplier
+		61: Master
 }
 
 subroutines
@@ -210,25 +218,32 @@ rule("Global setup")
 
 	actions
 	{
-		Global.ItemStackIndicesToUpdate = Empty Array;
+		Global.ItemStackUpdateInfos = Empty Array;
 		Disable Built-In Game Mode Music;
 		Global.DeathLineRadius = 0.750;
 		Global.DifficultyValue = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Difficulty"), 2, 1, 3, 0);
-		Global.OverallPlayerLevel = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Player Level"), 1, 1, 99, 0);
+		Global.OverallPlayerLevel = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Player Level"), 8, 1, 99, 0);
 		disabled Create HUD Text(All Players(All Teams), Global.State, Custom String("Global State"), Global.Phase, Left, 0, Color(White), Color(
 			White), Color(White), Visible To and String, Default Visibility);
 		Create Effect(All Players(All Teams), Bad Aura, Color(Black), Vector(0, 0, 0), 3.500, Visible To Position and Radius);
 		Global.BossSpawnEffect = Last Created Entity;
-		Global.Items = Array(Custom String("MaxHP"), Custom String("Speed"), Custom String("Slow"));
-		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"));
-		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255));
+		Global.Items = Array(Custom String("MaxHP"), Custom String("Speed"), Custom String("Slow"), Custom String("Bleed"));
+		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"));
+		Global.ItemRarities = Array(1, 1, 2, 1);
+		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
+			Custom Color(171, 43, 43, 255));
 		Global.ItemDistributionQueue = Empty Array;
 		Global.ItemStackOriginalOwners = Empty Array;
 		Global.FlamePillarPositions = Empty Array;
 		Global.FlamePillarExpirationTimes = Empty Array;
 		Global.FlamePillars = Empty Array;
 		Global.OrbCreators = Empty Array;
-		Global.State = Custom String("Waiting");
+		Create HUD Text(All Players(Team 1), Custom String("{0}{1}", Array(Icon String(Happy), Icon String(Sad), Icon String(Skull))
+			[Global.DifficultyValue - 1], Array(Custom String("Easy"), Custom String("Normal"), Custom String("Hard"))
+			[Global.DifficultyValue - 1]), Null, Global.Phase > 0 ? Custom String("Objective: Defeat the boss") : Custom String(" "),
+			Right, 0, Array(Custom Color(102, 153, 102, 255), Custom Color(204, 153, 102, 255), Custom Color(153, 51, 51, 255))
+			[Global.DifficultyValue - 1], Color(White), Color(White), Visible To and String, Default Visibility);
+		Global.State = Custom String("Buy");
 	}
 }
 
@@ -243,6 +258,7 @@ rule("Boss Setup")
 
 	actions
 	{
+		Event Player.Master = Event Player;
 		Create Progress Bar HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Empty Array, 100 * Normalized Health(Event Player),
 			String("{0} / {1}", Max(1, Round To Integer(Health(Event Player), To Nearest)), Round To Integer(Max Health(Event Player),
 			To Nearest)), Top, Slot Of(Event Player), Color(Red), Color(White), Visible To and Values, Default Visibility);
@@ -254,42 +270,40 @@ rule("Boss Setup")
 		Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, SlamCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, NeedleCooldown, 0, 1, None);
-		disabled Create HUD Text(Host Player, Event Player.State, Custom String("Boss State"), Null, Left, 0, Color(White), Color(White), Color(
-			White), Visible To and String, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Reinhardt), Button(
 			Primary Fire)), Custom String("[{0}]", Input Binding String(Button(Primary Fire))),
-			Event Player.CanSwing ? Event Player.SwingCooldown : Custom String(" "), Left, 0, Event Player.CanSwing ? (
+			Event Player.CanSwing ? Event Player.SwingCooldown : Custom String(" "), Right, 0, Event Player.CanSwing ? (
 			Event Player.SwingCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Soldier: 76), Button(
-			Ability 1)), Custom String("[{0}]", Input Binding String(Button(Ability 1))), Null, Left, 0, Event Player.CanSprint ? (
+			Ability 1)), Custom String("[{0}]", Input Binding String(Button(Ability 1))), Null, Right, 0, Event Player.CanSprint ? (
 			Event Player.State == Custom String("ClosingIn") ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Tracer), Button(
 			Ability 1)), Event Player.State == Custom String("ClosingIn") ? Custom String("←/↓/→") : Custom String("[{0}]",
-			Input Binding String(Button(Jump))), Event Player.CanDash ? Event Player.DashCooldown : Custom String(" "), Left, 0,
+			Input Binding String(Button(Jump))), Event Player.CanDash ? Event Player.DashCooldown : Custom String(" "), Right, 0,
 			Event Player.CanDash ? (Event Player.DashCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Reinhardt), Button(
 			Ultimate)), Custom String("[{0}]", Input Binding String(Button(Ultimate))),
-			Event Player.CanSlam ? Event Player.SlamCooldown : Custom String(" "), Left, 0, Event Player.CanSlam ? (
+			Event Player.CanSlam ? Event Player.SlamCooldown : Custom String(" "), Right, 0, Event Player.CanSlam ? (
 			Event Player.SlamCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Doomfist), Button(
-			Ultimate)), Null, Event Player.CanTakeOff ? Event Player.TakeoffCooldown : Custom String(" "), Left, 0,
+			Ultimate)), Null, Event Player.CanTakeOff ? Event Player.TakeoffCooldown : Custom String(" "), Right, 0,
 			Event Player.CanTakeOff ? Color(Orange) : Color(Red), Color(White), Color(White), String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3, 4), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Ramattra), Button(
 			Primary Fire)), Custom String("[{0}]", Input Binding String(Button(Secondary Fire))),
-			Event Player.CanNeedle[1] ? Event Player.NeedleCooldown : Custom String(" "), Left, 0, Event Player.CanNeedle[1] ? (
+			Event Player.CanNeedle[1] ? Event Player.NeedleCooldown : Custom String(" "), Right, 0, Event Player.CanNeedle[1] ? (
 			Event Player.NeedleCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(4), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Echo), Button(
-			Secondary Fire)), Custom String("[{0}]", Input Binding String(Button(Ability 2))), Null, Left, 0, Event Player.CanUseOrbs ? (
+			Secondary Fire)), Custom String("[{0}]", Input Binding String(Button(Ability 2))), Null, Right, 0, Event Player.CanUseOrbs ? (
 			Event Player.State == Custom String("Orbs") ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Orisa), Button(Ability 2)),
 			Null, Event Player.PizzaIndex == Custom String("Dormant") ? Null : Max(0, Event Player.PizzaTime[0] - Total Time Elapsed),
-			Left, 0, Event Player.PizzaIndex == Custom String("Dormant") ? Color(Red) : (Event Player.PizzaIndex == Custom String("Soon")
+			Right, 0, Event Player.PizzaIndex == Custom String("Dormant") ? Color(Red) : (Event Player.PizzaIndex == Custom String("Soon")
 			? Color(Gray) : Color(Orange)), Color(White), Color(White), Visible To String and Color, Default Visibility);
 		Set Jump Enabled(Event Player, False);
 		Disable Built-In Game Mode Respawning(Event Player);
@@ -337,8 +351,9 @@ rule("Boss Setup")
 		Add Health Pool To Player(Event Player, Armor, Event Player.NormalExtraArmourHealth, True, True);
 		Event Player.ItemStackReturnInfo = Empty Array;
 		Event Player.State = Custom String("Waiting");
-		Create HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Null, Null, Null, Event Player, Top, Slot Of(Event Player)
-			+ 0.100, Color(White), Color(White), Color(White), Visible To, Default Visibility);
+		Create HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Null, Null, Event Player.BleedInfo[0] == 0 ? Custom String("")
+			: Event Player.BleedInfo[0], Event Player, Top, Slot Of(Event Player) + 0.100, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
 	}
 }
 
@@ -351,11 +366,25 @@ rule("Player Setup")
 		All;
 	}
 
+	conditions
+	{
+		Event Player.Master == Event Player;
+	}
+
 	actions
 	{
 		Event Player.ItemStacks = Empty Array;
 		Event Player.BaseMoveSpeedModifier = 100;
 		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, BleedTime, 0, 1, None);
+		Create HUD Text(Array Contains(Array(Null, Custom String("Buy")), Global.State) ? Null : Event Player, Null, Null, Custom String(
+			"{0}{1}{2}", Event Player.CrippleTime ? Icon String(Skull) : Custom String(""), Event Player.SlowTime ? Icon String(
+			Arrow: Down) : Custom String(""), Event Player.BleedInfo[0] ? Custom String("†×{0}", Event Player.BleedInfo[0])
+			: Custom String(" ")), Left, 2, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create Progress Bar HUD Text(Remove From Array(All Players(Team Of(Event Player)), Event Player), Normalized Health(Event Player),
+			String("{0} {1}", Hero Icon String(Hero Of(Event Player)), Event Player), Left, 3, Normalized Health(Event Player)
+			> 0.900 ? Color(Green) : Color(Lime Green), Color(White), Visible To Values and Color, Default Visibility);
+		Disable Kill Feed(Event Player);
 	}
 }
 
@@ -416,12 +445,15 @@ rule("Team 1 Spawn")
 
 	actions
 	{
-		disabled Teleport(Event Player, Vector(Random Real(17, 20), 1.580, Random Real(-19, 19)));
-		Teleport(Event Player, 80 * Direction From Angles(Random Integer(-179, 180), 0));
+		Event Player.Currency = 400;
+		Teleport(Event Player, Vector(Random Real(105, 115), 0, Random Real(-19, 19)));
+		disabled Teleport(Event Player, 80 * Direction From Angles(Random Integer(45, 135), 0));
+		Event Player.Master = Event Player;
 		Disable Built-In Game Mode Respawning(Event Player);
 		Chase Player Variable At Rate(Event Player, CrippleTime, 0, 1, None);
-		Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Random Value In Array(Global.Items), Event Player, 10));
-		Set Damage Dealt(Event Player, (80 + 20 * Global.OverallPlayerLevel) / 2.400);
+		disabled Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Random Value In Array(Global.Items), Event Player, 10));
+		Event Player.BaseDamageMultiplier = (0.800 + 0.200 * Global.OverallPlayerLevel) / 2.400;
+		Set Damage Dealt(Event Player, Event Player.BaseDamageMultiplier * 100);
 		Set Max Health(Event Player, 20.800 + 9.900 * Global.OverallPlayerLevel);
 		Set Facing(Event Player, Direction From Angles(Horizontal Angle Towards(Event Player, Vector(0, 0, 0)), 0), To Player);
 		Create Effect(Event Player.CrippleTime > 0 ? All Players(All Teams) : Null, Good Aura, Color(Sky Blue), Eye Position(Event Player),
@@ -429,6 +461,15 @@ rule("Team 1 Spawn")
 		If(Global.DifficultyValue == 1);
 			Event Player.Armour[3] = 70;
 		End;
+		Create Effect(Global.State == Custom String("Buy") && Is True For Any(Global.ItemShopPositions, Distance Between(
+			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
+			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Sphere, Color(Yellow), Sorted Array(
+			Global.ItemShopPositions, Distance Between(Current Array Element, Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False)))[0], 0.600,
+			Visible To Position Radius and Color);
+		Create HUD Text(Global.State == Custom String("Buy") ? Event Player : Null, Custom String("£{0}", Event Player.Currency), Null,
+			Max(0, Round To Integer(60 - Total Time Elapsed, Up)), Left, 1, Color(Yellow), Color(White), Color(White),
+			Visible To and String, Default Visibility);
 	}
 }
 
@@ -562,6 +603,48 @@ rule("Not Slowed")
 	}
 }
 
+rule("Bleeding")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BleedTime > 0;
+	}
+
+	actions
+	{
+		Damage(Event Player, Null, 1.400 * Event Player.BleedInfo[0] * Event Player.BleedInfo[1]);
+		Wait(0.250, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Not Bleeding")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BleedTime == 0;
+	}
+
+	actions
+	{
+		Event Player.BleedInfo = Array(0, 0);
+	}
+}
+
 rule("Update Move Speed (From Flag)")
 {
 	event
@@ -644,7 +727,8 @@ rule("Update boss health, armour and damage (after setting TotalHPUnits)")
 		Event Player.NormalExtraHealth = Round To Integer(Event Player.TotalHPUnits * 0.533, Down) * 25 - Event Player.DefaultHealth;
 		Event Player.NormalExtraArmourHealth = Round To Integer(Event Player.TotalHPUnits * 0.467, Down)
 			* 25 - Event Player.DefaultArmourHealth;
-		Set Damage Dealt(Event Player, 18.188 + 4.400 * Global.OverallBossLevel);
+		Event Player.BaseDamageMultiplier = 0.182 + 0.044 * Global.OverallBossLevel;
+		Set Damage Dealt(Event Player, Event Player.BaseDamageMultiplier * 100);
 		"When we start adding items, damage modifications on boss will also have to be applied to bot :/"
 		Set Damage Dealt(Event Player.NeedleBot, 20.614 + 4.987 * Global.OverallBossLevel);
 		Wait(0.250, Ignore Condition);
@@ -665,7 +749,14 @@ rule("On hit effects")
 	{
 		Modify Player Variable(Victim, SlowTime, Max, 2 * Filtered Array(Global.ItemStackSizes,
 			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Slow")
-			&& Global.ItemStackOwners[Current Array Index] == Attacker)[0]);
+			&& Global.ItemStackOwners[Current Array Index] == Attacker.Master)[0]);
+		If(Random Real(0, 1) < 0.100 * Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Bleed")
+			&& Global.ItemStackOwners[Current Array Index] == Attacker.Master)[0] * Min(1, Event Damage / 36));
+			Modify Player Variable(Victim, BleedTime, Max, 3 * Min(1, Event Damage / 36));
+			Victim.BleedInfo[0] += 1;
+			Victim.BleedInfo[1] = Max(Attacker.Master.BaseDamageMultiplier, (Attacker.Master.BaseDamageMultiplier + Victim.BleedInfo[1]) / 2);
+		End;
 	}
 }
 
@@ -687,11 +778,13 @@ rule("Steal subroutine")
 
 	actions
 	{
+		Play Effect(Global.CurrentStealee, Moira Fade Disappear Sound, Color(White), Global.CurrentStealee, 100);
 		Global.ItemStackOriginalOwners[Global.ItemStackBeingStolenIndex] = Global.CurrentStealee;
 		Global.ItemStackOwners[Global.ItemStackBeingStolenIndex] = Null;
 		Modify Player Variable(Global.CurrentStealee, ItemStacks, Remove From Array By Index, 0);
 		Global.ItemStackNewOwners[Global.ItemStackBeingStolenIndex] = Global.Stealer;
-		Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.ItemStackBeingStolenIndex, 2));
+		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackBeingStolenIndex, 2,
+			-1 * Global.ItemStackSizes[Global.ItemStackBeingStolenIndex]));
 	}
 }
 
@@ -704,6 +797,7 @@ rule("Handle Item Instances")
 
 	conditions
 	{
+		Global.State != Null;
 		Count Of(Global.ItemStacks) > 0;
 		Array Contains(Global.ItemStackOwners, Null) == True;
 	}
@@ -711,7 +805,7 @@ rule("Handle Item Instances")
 	actions
 	{
 		Call Subroutine(HandleItemInstance);
-		Global.ItemIndex = (Global.ItemIndex + 1) % Count Of(Global.ItemStacks);
+		Global.ItemStackIndex = (Global.ItemStackIndex + 1) % Count Of(Global.ItemStacks);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
 	}
@@ -727,21 +821,23 @@ rule("Acquire Item Subroutine")
 
 	actions
 	{
-		Global.CurrentItemStackSize = Global.ItemStackSizes[Global.ItemIndex];
+		Global.CurrentItemStackSize = Global.ItemStackSizes[Global.ItemStackIndex];
 		Global.ExistingMatchingItemStacks = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
-			Global.ItemStacks[Current Array Element] == Global.ItemStacks[Global.ItemIndex] && Global.ItemStackOwners[Current Array Element] == Global.ItemStackNewOwners[Global.ItemIndex]);
-		Global.ItemStackOwners[Global.ItemIndex] = Global.ItemStackNewOwners[Global.ItemIndex];
+			Global.ItemStacks[Current Array Element] == Global.ItemStacks[Global.ItemStackIndex] && Global.ItemStackOwners[Current Array Element] == Global.ItemStackNewOwners[Global.ItemStackIndex]);
+		Global.ItemStackOwners[Global.ItemStackIndex] = Global.ItemStackNewOwners[Global.ItemStackIndex];
 		If(Count Of(Global.ExistingMatchingItemStacks) == 0);
-			Modify Player Variable(Global.ItemStackOwners[Global.ItemIndex], ItemStacks, Append To Array, Global.ItemStacks[Global.ItemIndex]);
-			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.ItemIndex, 1));
+			Modify Player Variable(Global.ItemStackOwners[Global.ItemStackIndex], ItemStacks, Append To Array,
+				Global.ItemStacks[Global.ItemStackIndex]);
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackIndex, 1, Global.CurrentItemStackSize));
 		Else;
-			Global.ItemStackSizes[Global.ItemIndex] -= Global.CurrentItemStackSize;
+			Global.ItemStackSizes[Global.ItemStackIndex] -= Global.CurrentItemStackSize;
 			Global.ItemStackSizes[Global.ExistingMatchingItemStacks[0]] += Global.CurrentItemStackSize;
-			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.ExistingMatchingItemStacks[0], 0));
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ExistingMatchingItemStacks[0], 0,
+				Global.CurrentItemStackSize));
 		End;
-		Modify Player Variable(Global.ItemStackNewOwners[Global.ItemIndex], ItemStackReturnInfo, Append To Array, Array(Global.ItemIndex,
-			Global.CurrentItemStackSize));
-		Global.ItemStackNewOwners[Global.ItemIndex] = Null;
+		Modify Player Variable(Global.ItemStackNewOwners[Global.ItemStackIndex], ItemStackReturnInfo, Append To Array, Array(
+			Global.ItemStackIndex, Global.CurrentItemStackSize));
+		Global.ItemStackNewOwners[Global.ItemStackIndex] = Null;
 	}
 }
 
@@ -760,7 +856,7 @@ rule("Distribute Item Subroutine")
 		If(Count Of(Global.NewItemStackIndex) > 0);
 			Global.NewItemStackIndex = Global.NewItemStackIndex[0];
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
-			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.NewItemStackIndex, 0));
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[1]));
 		Else;
 			Call Subroutine(CreateItemStack);
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
@@ -778,7 +874,7 @@ rule("Handle Item Instance")
 
 	actions
 	{
-		If(Global.ItemStackNewOwners[Global.ItemIndex]);
+		If(Global.ItemStackNewOwners[Global.ItemStackIndex]);
 			Call Subroutine(Acquire);
 		End;
 	}
@@ -824,11 +920,11 @@ rule("Create Item Stack Subroutine")
 		Modify Player Variable(Global.ItemDistributionInfo[0], ItemStacks, Append To Array, Global.ItemStacks[Global.NewItemStackIndex]);
 		Create HUD Text(Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)] == 0 ? Null : Global.ItemStackOwners[Evaluate Once(
 			Global.NewItemStackIndex)], Evaluate Once(Global.ItemSymbols[Index Of Array Value(Global.Items, Global.ItemToDistribute)]),
-			Custom String("×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, Global.NewItemStackIndex,
-			Global.ItemColours[Index Of Array Value(Global.Items, Global.ItemToDistribute)], Color(White), Null, Visible To and String,
-			Default Visibility);
+			Custom String("×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, 4 + Evaluate Once(
+			Global.NewItemStackIndex) / Count Of(Global.ItemStacks), Global.ItemColours[Index Of Array Value(Global.Items,
+			Global.ItemToDistribute)], Color(White), Null, Visible To Sort Order and String, Default Visibility);
 		Global.ItemStackTexts[Global.NewItemStackIndex] = Last Text ID;
-		Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Global.NewItemStackIndex, 1));
+		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[1]));
 	}
 }
 
@@ -842,25 +938,26 @@ rule("Update Item Stacks from Queue")
 	conditions
 	{
 		Global.State != Null;
-		Count Of(Global.ItemStackIndicesToUpdate) > 1;
+		Count Of(Global.ItemStackUpdateInfos) > 2;
 	}
 
 	actions
 	{
-		Global.ItemStackUpdateInfo = Array(Global.ItemStackIndicesToUpdate[0], Global.ItemStacks[Global.ItemStackIndicesToUpdate[0]],
-			Global.ItemStackOwners[Global.ItemStackIndicesToUpdate[0]]);
-		If(Global.ItemStackIndicesToUpdate[1] == 0);
+		Global.ItemStackUpdateInfo = Array(Global.ItemStackUpdateInfos[0], Global.ItemStacks[Global.ItemStackUpdateInfos[0]],
+			Global.ItemStackOwners[Global.ItemStackUpdateInfos[0]], Global.ItemStackUpdateInfos[2]);
+		If(Global.ItemStackUpdateInfos[1] == 0);
 			Call Subroutine(UpdateItemStack_Modify);
 		Else;
-			If(Global.ItemStackIndicesToUpdate[1] > 1);
+			If(Global.ItemStackUpdateInfos[1] > 1);
 				Call Subroutine(UpdateItemStack_Remove);
 			End;
-			If(Global.ItemStackIndicesToUpdate[1] % 2 == 1);
+			If(Global.ItemStackUpdateInfos[1] % 2 == 1);
 				Call Subroutine(UpdateItemStack_Add);
 			End;
 		End;
-		Modify Global Variable(ItemStackIndicesToUpdate, Remove From Array By Index, 0);
-		Modify Global Variable(ItemStackIndicesToUpdate, Remove From Array By Index, 0);
+		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
+		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
+		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
 		Wait(0.100, Abort When False);
 		Loop If Condition Is True;
 	}
@@ -896,7 +993,10 @@ rule("Update Item Stack (Modify)")
 
 	actions
 	{
-		If(Global.ItemStackUpdateInfo[1] == Custom String("Speed"));
+		If(Global.ItemStackUpdateInfo[1] == Custom String("MaxHP"));
+			Wait(0.100, Ignore Condition);
+			Heal(Global.ItemStackUpdateInfo[2], Null, 25 * Global.ItemStackUpdateInfo[3]);
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Speed"));
 			Global.ItemStackUpdateInfo[2].MoveSpeedBuffs[2] = 14 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			Global.ItemStackUpdateInfo[2].ShouldUpdateMoveSpeed = True;
 		End;
@@ -928,6 +1028,52 @@ disabled rule("PHASE 0")
 	event
 	{
 		Ongoing - Global;
+	}
+}
+
+rule("On Enter State: Buy")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.State == Custom String("Buy");
+	}
+
+	actions
+	{
+		Global.ItemShops = Append To Array(Global.Items, Array(Custom String("?"), Custom String("??"), Custom String("???")));
+		Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
+			/ 2 - Current Array Index) * 3));
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
+			Create In-World Text(All Players(Team 1), Mapped Array(Index Of Array Value(Global.Items, Global.ItemShops[Global.ItemShopIndex]),
+				Current Array Element == -1 ? Global.ItemShops[Global.ItemShopIndex] : Global.ItemSymbols[Current Array Element]),
+				Global.ItemShopPositions[Global.ItemShopIndex] + Up, 4, Do Not Clip, Visible To, Mapped Array(Index Of Array Value(
+				Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(White)
+				: Global.ItemColours[Current Array Element]), Default Visibility);
+			Global.ItemShopEffects1[Global.ItemShopIndex] = Last Text ID;
+			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red))[Mapped Array(Index Of Array Value(
+				Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? String Length(
+				Global.ItemShops[Global.ItemShopIndex]) : Global.ItemRarities[Current Array Element]) - 1],
+				Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
+			Global.ItemShopEffects2[Global.ItemShopIndex] = Last Created Entity;
+			Wait(0.016, Ignore Condition);
+		End;
+		Global.ItemShopPrices = Mapped Array(Global.ItemShops, (Array Contains(Global.Items, Current Array Element) ? 30 : 25) * Array(1,
+			2, 16)[(Array Contains(Global.Items, Current Array Element) ? Global.ItemRarities[Index Of Array Value(Global.Items,
+			Current Array Element)] : String Length(Current Array Element)) - 1]);
+		Wait(20, Abort When False);
+		Wait Until(Is True For All(All Players(Team 1), X Component Of(Position Of(Current Array Element))
+			< 80 || Current Array Element.Currency < 25), 40);
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
+			Destroy In-World Text(Global.ItemShopEffects1[Global.ItemShopIndex]);
+			Destroy Effect(Global.ItemShopEffects2[Global.ItemShopIndex]);
+			Wait(0.016, Ignore Condition);
+		End;
+		Global.State = Custom String("Waiting");
 	}
 }
 
@@ -968,7 +1114,7 @@ rule("Enter State: OnTheWay")
 		disabled Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && Absolute Value(X Component Of(Position Of(
 			Current Array Element))) < 16 && Absolute Value(Z Component Of(Position Of(Current Array Element))) < 16) == True;
 		Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && Distance Between(Current Array Element, Vector(0,
-			0, 0)) < 65) == True;
+			0, 0)) < 70) == True;
 		Is True For Any(Players On Hero(Hero(Reinhardt), Team 2), Has Spawned(Current Array Element)) == True;
 	}
 
@@ -1041,7 +1187,7 @@ rule("On Enter State: Cutscene (Boss)")
 
 	actions
 	{
-		Start Facing(Event Player, Forward, 10000, To World, None);
+		Start Facing(Event Player, Left, 10000, To World, None);
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Stop Forcing Player Position(Event Player);
 		Clear Status(Event Player, Phased Out);
@@ -1092,11 +1238,18 @@ rule("On Enter State: Cutscene (Team 1)")
 		Set Reload Enabled(Event Player, False);
 		Start Camera(Event Player, Event Player.CameraPosition, World Vector Of(2 * Up, Global.Bosses[Slot Of(Event Player) % Count Of(
 			Global.Bosses)], Rotation And Translation), 60);
-		Chase Player Variable Over Time(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 35), Global.Bosses[0],
-			Rotation And Translation), 1, Destination and Duration);
-		Wait(1, Abort When False);
-		Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Global.Bosses[Slot Of(Event Player)
-			% Count Of(Global.Bosses)], Rotation And Translation), 30, Destination and Rate);
+		If(Distance Between(Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], Event Player.CameraPosition)
+			< Distance Between(Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], World Vector Of(Vector(0, 2, 35),
+			Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], Rotation And Translation)));
+			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Global.Bosses[Slot Of(Event Player)
+				% Count Of(Global.Bosses)], Rotation And Translation), 15, Destination and Rate);
+		Else;
+			Chase Player Variable Over Time(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 35), Global.Bosses[Slot Of(Event Player)
+				% Count Of(Global.Bosses)], Rotation And Translation), 1, Destination and Duration);
+			Wait(1, Abort When False);
+			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Global.Bosses[Slot Of(Event Player)
+				% Count Of(Global.Bosses)], Rotation And Translation), 30, Destination and Rate);
+		End;
 	}
 }
 
@@ -1125,8 +1278,8 @@ rule("On Exit State: Cutscene (Team 1)")
 		Allow Button(Event Player, Button(Interact));
 		Set Melee Enabled(Event Player, True);
 		Set Reload Enabled(Event Player, True);
-		Chase Player Variable Over Time(Event Player, CameraPosition, Eye Position(Event Player) + World Vector Of(Forward, Event Player,
-			Rotation), 1, Destination and Duration);
+		Chase Player Variable At Rate(Event Player, CameraPosition, Eye Position(Event Player) + World Vector Of(Forward, Event Player,
+			Rotation), 60, Destination and Rate);
 		Enable Hero HUD(Event Player);
 		Wait(1, Ignore Condition);
 		Stop Camera(Event Player);
@@ -1982,6 +2135,7 @@ rule("On Enter State: Dashing")
 	actions
 	{
 		Event Player.DashCooldown = 4;
+		Event Player.SlowTime = 0;
 		Disable Movement Collision With Players(Event Player);
 		Event Player.CanSlam = False;
 		Event Player.DashAngles[0] = Horizontal Angle From Direction(World Vector Of(Mapped Array(Throttle Of(Event Player),
@@ -2033,7 +2187,7 @@ rule("Dash subroutine")
 		Event Player.DashStartTime = Total Time Elapsed;
 		Apply Impulse(Event Player, Direction From Angles(Event Player.DashAngles[0], Is On Ground(Event Player)
 			? -1 * Event Player.DashAngles[1] : Max(-1 * Event Player.DashAngles[1], Vertical Facing Angle Of(Event Player))),
-			Event Player.DashSpeed, To World, Cancel Contrary Motion XYZ);
+			Event Player.DashSpeed / Event Player.MoveSpeedDebuffs[0], To World, Cancel Contrary Motion XYZ);
 	}
 }
 
@@ -2059,17 +2213,16 @@ rule("Needler Bot")
 		Abort If(!Is Dummy Bot(Event Player));
 		Random Value In Array(Filtered Array(All Players(All Teams), Current Array Element.NeedleBot == -1)).NeedleBot = Event Player;
 		Wait(0.250, Ignore Condition);
-		Event Player.NeedleBot = Filtered Array(All Players(All Teams), Current Array Element.NeedleBot == Event Player)[0];
+		Event Player.Master = Filtered Array(All Players(All Teams), Current Array Element.NeedleBot == Event Player)[0];
 		Wait(0.250, Ignore Condition);
 		Set Gravity(Event Player, 0);
 		Disable Movement Collision With Environment(Event Player, True);
-		Attach Players(Event Player, Event Player.NeedleBot, Vector Towards(Local Vector Of(Eye Position(Event Player), Event Player,
-			Rotation And Translation), Local Vector Of(Eye Position(Event Player.NeedleBot), Event Player.NeedleBot,
-			Rotation And Translation)));
+		Attach Players(Event Player, Event Player.Master, Vector Towards(Local Vector Of(Eye Position(Event Player), Event Player,
+			Rotation And Translation), Local Vector Of(Eye Position(Event Player.Master), Event Player.Master, Rotation And Translation)));
 		Set Max Ammo(Event Player, 0, 30);
 		Set Status(Event Player, Null, Phased Out, 9999);
 		Set Invisible(Event Player, All);
-		Start Facing(Event Player, Facing Direction Of(Event Player.NeedleBot), 720, To World, Direction and Turn Rate);
+		Start Facing(Event Player, Facing Direction Of(Event Player.Master), 720, To World, Direction and Turn Rate);
 	}
 }
 
@@ -2298,7 +2451,8 @@ rule("On Enter State: Pizza")
 				Event Player.PizzaAngle + 135) * X Component Of(Vector Towards(Current Array Element, Event Player)) - Sine From Degrees(
 				Event Player.PizzaAngle + 135) * Z Component Of(Vector Towards(Current Array Element, Event Player)))
 				< Global.DeathLineRadius);
-			Play Effect(All Players(All Teams), Sombra Translocating Sound, Color(White), Event Player, 100);
+			Play Effect(All Players(All Teams), Ashe Dynamite Explosion Sound, Color(White), Event Player, 100);
+			Play Effect(All Players(All Teams), Brigitte Repair Pack Impact Sound, Color(White), Event Player, 100);
 			Damage(Event Player.PizzaVictims, Event Player, 382.500);
 			"Make sure that the cripple doesn't apply before the pizza damage"
 			Modify Player Variable(Event Player.PizzaVictims, CrippleTime, Max, 3);
@@ -2705,36 +2859,44 @@ rule("Return Items")
 
 	actions
 	{
-		Event Player.StackBeingReturnedIndex = Event Player.ItemStackReturnInfo[0];
-		Event Player.RemainingMatchingStacks = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
-			Global.ItemStacks[Current Array Element] == Global.ItemStacks[Event Player.StackBeingReturnedIndex] && Global.ItemStackOwners[Current Array Element] == Event Player);
-		Global.ItemStackOwners[Event Player.StackBeingReturnedIndex] = Null;
-		If(Count Of(Event Player.RemainingMatchingStacks) == 1);
-			Modify Player Variable(Event Player, ItemStacks, Remove From Array By Value,
-				Global.ItemStacks[Event Player.StackBeingReturnedIndex]);
-			Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2));
-		Else;
-			Event Player.StackBeingDepletedIndex = Filtered Array(Event Player.RemainingMatchingStacks,
-				Global.ItemStackSizes[Current Array Element] > 0)[0];
-			If(Event Player.StackBeingReturnedIndex == Event Player.StackBeingDepletedIndex);
-				Global.ItemStackSizes[Remove From Array(Event Player.RemainingMatchingStacks, Event Player.StackBeingDepletedIndex)
-					[0]] += Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] - Event Player.ItemStackReturnInfo[1];
-				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] = Event Player.ItemStackReturnInfo[1];
-				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2));
-				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks,
-					Event Player.StackBeingDepletedIndex)[0], 1));
+		Play Effect(Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex], Moira Fade Reappear Sound, Color(White),
+			Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex], 100);
+		While(True);
+			Abort If Condition Is False;
+			Event Player.StackBeingReturnedIndex = Event Player.ItemStackReturnInfo[0];
+			Event Player.RemainingMatchingStacks = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
+				Global.ItemStacks[Current Array Element] == Global.ItemStacks[Event Player.StackBeingReturnedIndex] && Global.ItemStackOwners[Current Array Element] == Event Player);
+			Global.ItemStackOwners[Event Player.StackBeingReturnedIndex] = Null;
+			If(Count Of(Event Player.RemainingMatchingStacks) == 1);
+				Modify Player Variable(Event Player, ItemStacks, Remove From Array By Value,
+					Global.ItemStacks[Event Player.StackBeingReturnedIndex]);
+				Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2,
+					-1 * Global.ItemStackSizes[Event Player.StackBeingReturnedIndex]));
 			Else;
-				Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] -= Event Player.ItemStackReturnInfo[1];
-				Global.ItemStackSizes[Event Player.StackBeingReturnedIndex] += Event Player.ItemStackReturnInfo[1];
-				Modify Global Variable(ItemStackIndicesToUpdate, Append To Array, Array(Event Player.StackBeingDepletedIndex, 0));
+				Event Player.StackBeingDepletedIndex = Filtered Array(Event Player.RemainingMatchingStacks,
+					Global.ItemStackSizes[Current Array Element] > 0)[0];
+				If(Event Player.StackBeingReturnedIndex == Event Player.StackBeingDepletedIndex);
+					Global.ItemStackSizes[Remove From Array(Event Player.RemainingMatchingStacks, Event Player.StackBeingDepletedIndex)
+						[0]] += Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] - Event Player.ItemStackReturnInfo[1];
+					Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] = Event Player.ItemStackReturnInfo[1];
+					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2,
+						-1 * Event Player.ItemStackReturnInfo[1]));
+					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks,
+						Event Player.StackBeingDepletedIndex)[0], 1, Global.ItemStackSizes[Remove From Array(Event Player.RemainingMatchingStacks,
+						Event Player.StackBeingDepletedIndex)[0]]));
+				Else;
+					Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] -= Event Player.ItemStackReturnInfo[1];
+					Global.ItemStackSizes[Event Player.StackBeingReturnedIndex] += Event Player.ItemStackReturnInfo[1];
+					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingDepletedIndex, 0,
+						-1 * Event Player.ItemStackReturnInfo[1]));
+				End;
 			End;
+			Global.ItemStackNewOwners[Event Player.StackBeingReturnedIndex] = Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex];
+			Event Player.NumberOfStacksReturned += 1;
+			Modify Player Variable(Event Player, ItemStackReturnInfo, Remove From Array By Index, 0);
+			Modify Player Variable(Event Player, ItemStackReturnInfo, Remove From Array By Index, 0);
+			Wait(0.100, Abort When False);
 		End;
-		Global.ItemStackNewOwners[Event Player.StackBeingReturnedIndex] = Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex];
-		Event Player.NumberOfStacksReturned += 1;
-		Modify Player Variable(Event Player, ItemStackReturnInfo, Remove From Array By Index, 0);
-		Modify Player Variable(Event Player, ItemStackReturnInfo, Remove From Array By Index, 0);
-		Wait(0.100, Abort When False);
-		Loop If Condition Is True;
 	}
 }
 
@@ -2783,6 +2945,7 @@ rule("Boss Died")
 	{
 		Event Player.ShowBossBar = False;
 		Event Player.HasLostThisPhase = True;
+		Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Color(White), Event Player, 100);
 	}
 }
 
@@ -2797,8 +2960,8 @@ rule("Ramattra Bot Boss Gone")
 
 	conditions
 	{
-		Event Player.NeedleBot != Null;
-		Array Contains(All Living Players(Team 2), Event Player.NeedleBot) == False;
+		Event Player.Master != Null;
+		Array Contains(All Living Players(Team 2), Event Player.Master) == False;
 	}
 
 	actions
@@ -2857,6 +3020,46 @@ rule("Choose State (Closing In / Becoming Idle)")
 			Event Player.State = Custom String("BecomingIdle");
 		Else;
 			Event Player.State = Custom String("ClosingIn");
+		End;
+	}
+}
+
+rule("Buy")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+		Global.State == Custom String("Buy");
+		Is True For Any(Global.ItemShopPositions, Distance Between(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(
+			Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False), Current Array Element) < 1.500) == True;
+	}
+
+	actions
+	{
+		Event Player.BuyIndex = Filtered Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
+			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
+			Event Player, False), Global.ItemShopPositions[Current Array Element]) < 1.500);
+		Abort If(Count Of(Event Player.BuyIndex) == 0);
+		Event Player.BuyIndex = Event Player.BuyIndex[0];
+		If(Event Player.Currency < Global.ItemShopPrices[Event Player.BuyIndex]);
+			Play Effect(Event Player, Sombra Translocator Reappear Sound, Color(White), Global.ItemShopPositions[Event Player.BuyIndex], 50);
+		Else;
+			Event Player.Currency -= Global.ItemShopPrices[Event Player.BuyIndex];
+			If(Array Contains(Global.Items, Global.ItemShops[Event Player.BuyIndex]));
+				Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Global.ItemShops[Event Player.BuyIndex], Event Player, 1));
+			Else;
+				Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Random Value In Array(Filtered Array(Global.Items,
+					Global.ItemRarities[Current Array Index] == String Length(Global.ItemShops[Event Player.BuyIndex]))), Event Player, 1));
+			End;
+			Play Effect(All Players(All Teams), Brigitte Repair Pack Armor Sound, Color(White),
+				Global.ItemShopPositions[Event Player.BuyIndex], 100);
 		End;
 	}
 }
