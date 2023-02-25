@@ -65,127 +65,127 @@ variables
 	global:
 		0: State
 		1: Phase
-		2: BossSpawnEffect
-		3: Heroes
-		4: Bosses
-		5: Stealees
-		6: StealerIndex
-		7: Stealer
-		8: CurrentStealee
-		9: StealeeIndex
-		10: Items
-		11: ItemStacks
-		12: ItemStackOwners
-		13: ItemStackNewOwners
-		14: ItemStackBeingStolenIndex
-		15: ItemStackSizes
-		16: ItemStackOriginalOwners
-		17: ItemStackIndex
-		19: ItemSymbols
-		20: NewItemStackIndex
-		21: ItemColours
-		22: ItemDistributionQueue
-		23: ItemDistributionInfo
-		24: FlamePillars
-		25: FlamePillarPositions
-		26: FlamePillarExpirationTimes
-		27: OrbCreationTimes
-		28: OrbEffects
-		29: OrbInitialAngles
-		30: OrbPositions
-		31: OrbCreators
-		32: OrbEvaluationIndex
-		33: OrbVictims
-		34: OrbInitialPositions
-		35: OrbSounds
-		36: ItemStackTexts
-		37: OverallBossLevel
-		38: OverallPlayerLevel
-		39: PlayerCount
-		40: PlayerFactor
-		41: DifficultyValue
-		42: TimeFactor
-		43: StageFactor
-		44: DifficultyCoefficient
-		45: BossCount
-		46: DeathLineRadius
-		47: ItemStackUpdateInfos
-		48: ItemStackUpdateInfo
-		49: ItemStackEffects
-		50: ExistingMatchingItemStacks
-		51: CurrentItemStackSize
-		52: ItemShops
-		53: ItemShopPositions
-		54: ItemShopEffects1
-		55: ItemShopPrices
-		56: ItemShopIndex
-		57: ItemShopEffects2
-		58: ItemRarities
-		59: TestMode
+		2: Heroes
+		3: Bosses
+		4: TestMode
+		5: DeathLineRadius
+		6: OverallBossLevel
+		7: OverallPlayerLevel
+		8: PlayerCount
+		9: PlayerFactor
+		10: DifficultyValue
+		11: TimeFactor
+		12: StageFactor
+		13: DifficultyCoefficient
+		14: BossCount
+		15: Items
+		16: ItemSymbols
+		17: ItemRarities
+		18: ItemColours
+		19: ItemDistributionQueue
+		20: ItemDistributionInfo
+		21: ItemStacks
+		22: ItemStackOwners
+		23: ItemStackNewOwners
+		24: ItemStackOriginalOwners
+		25: ItemStackSizes
+		26: ItemStackIndex
+		27: NewItemStackIndex
+		28: ItemStackHUDs
+		29: ItemStackEffects
+		30: ItemStackUpdateInfos
+		31: ItemStackUpdateInfo
+		32: ExistingMatchingItemStacks
+		33: CurrentItemStackSize
+		34: ItemShops
+		35: ItemShopPositions
+		36: ItemShopPrices
+		37: ItemShopEffects1
+		38: ItemShopEffects2
+		39: ItemShopIndex
+		40: Stealees
+		41: StealerIndex
+		42: CurrentStealee
+		43: StealeeIndex
+		44: Stealer
+		45: ItemStackBeingStolenIndex
+		46: BossSpawnEffect
+		47: FlamePillars
+		48: FlamePillarPositions
+		49: FlamePillarExpirationTimes
+		50: OrbCreationTimes
+		51: OrbEffects
+		52: OrbInitialAngles
+		53: OrbPositions
+		54: OrbCreators
+		55: OrbEvaluationIndex
+		56: OrbVictims
+		57: OrbInitialPositions
+		58: OrbSounds
 
 	player:
-		0: State
-		1: PizzaIndex
-		2: SwingCooldown
-		3: SlamCooldown
-		4: TakeoffCooldown
-		5: ShockwaveRadius
-		6: ShockwaveEffect
-		7: PizzaAngle
-		8: PizzaAngularVelocity
-		9: PizzaRadius
-		10: Armour
-		11: ItemStacks
-		12: NeedleBot
-		13: NeedleCooldown
-		14: CanNeedle
-		15: DashStartTime
-		16: DashStartPosition
-		17: DashAngles
-		18: DashSpeed
-		19: CrippleTime
-		20: MoveSpeedBuffs
-		21: MoveSpeedDebuffs
-		22: MoveSpeedIndex
-		23: PizzaVictims
-		24: ArmourModifiers
-		25: ArmourIndex
-		26: BaseMoveSpeedModifier
-		27: CanUseOrbs
-		28: Phase4DamageReceived
-		29: HealthPerItemStack
-		30: NumberOfStacksReturned
-		31: OrbCreationIndex
-		32: NewOrbGlobalIndex
-		33: StackBeingReturnedIndex
-		34: DamageReceivedNewAmount
-		35: NormalExtraHealth
-		36: NormalExtraArmourHealth
-		37: PizzaTime
-		38: DefaultHealth
-		39: DefaultArmourHealth
-		40: TotalHPUnits
-		41: ShowBossBar
-		42: HasLostThisPhase
-		43: NumPizzaLines
-		44: CameraPosition
-		45: CanSwing
-		46: CanSlam
-		47: CanTakeOff
-		48: DashCooldown
-		49: CanDash
-		50: CanSprint
-		51: ItemStackReturnInfo
-		52: StackBeingDepletedIndex
-		53: RemainingMatchingStacks
-		54: ShouldUpdateMoveSpeed
-		55: SlowTime
-		56: BuyIndex
-		57: Currency
-		58: BleedTime
-		59: BleedInfo
-		60: BaseDamageMultiplier
-		61: Master
+		0: Master
+		1: ItemStacks
+		2: BaseDamageMultiplier
+		3: Armour
+		4: ArmourModifiers
+		5: ArmourIndex
+		6: DamageReceivedNewAmount
+		7: BaseMoveSpeedModifier
+		8: ShouldUpdateMoveSpeed
+		9: MoveSpeedBuffs
+		10: MoveSpeedDebuffs
+		11: MoveSpeedIndex
+		12: SlowTime
+		13: BleedTime
+		14: BleedInfo
+		15: Currency
+		16: BuyIndex
+		17: CameraPosition
+		18: CrippleTime
+		19: State
+		20: ShowBossBar
+		21: HasLostThisPhase
+		22: DefaultHealth
+		23: DefaultArmourHealth
+		24: NormalExtraHealth
+		25: NormalExtraArmourHealth
+		26: TotalHPUnits
+		27: NeedleBot
+		28: CanSwing
+		29: CanDash
+		30: CanSlam
+		31: CanSprint
+		32: CanNeedle
+		33: CanTakeOff
+		34: CanUseOrbs
+		35: SwingCooldown
+		36: DashCooldown
+		37: SlamCooldown
+		38: NeedleCooldown
+		39: TakeoffCooldown
+		40: ShockwaveRadius
+		41: ShockwaveEffect
+		42: DashStartTime
+		43: DashStartPosition
+		44: DashAngles
+		45: DashSpeed
+		46: NumPizzaLines
+		47: PizzaIndex
+		48: PizzaAngle
+		49: PizzaAngularVelocity
+		50: PizzaRadius
+		51: PizzaVictims
+		52: PizzaTime
+		53: Phase4DamageReceived
+		54: HealthPerItemStack
+		55: NumberOfStacksReturned
+		56: ItemStackReturnInfo
+		57: StackBeingReturnedIndex
+		58: StackBeingDepletedIndex
+		59: RemainingMatchingStacks
+		60: OrbCreationIndex
+		61: NewOrbGlobalIndex
 }
 
 subroutines
@@ -415,30 +415,6 @@ rule("Player Setup")
 	}
 }
 
-rule("On Game Start")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		(Current Game Mode == Game Mode(Skirmish) ? !Has Spawned(Host Player) : Is Waiting For Players) == False;
-		disabled Count Of(Filtered Array(All Players(All Teams), Has Spawned(Current Array Element))) == 3;
-	}
-
-	actions
-	{
-		Global.PlayerCount = Number Of Players(Team 1);
-		Global.BossCount = Count Of(Filtered Array(All Players(Team 2), !Is Dummy Bot(Current Array Element)));
-		Global.PlayerFactor = 1 + 0.300 * (Global.PlayerCount - 1);
-		Global.TimeFactor = 0.051 * Global.DifficultyValue * Global.PlayerCount ^ 0.200;
-		Global.StageFactor = 1.150 ^ 5;
-		Call Subroutine(SetCoefficient);
-	}
-}
-
 rule("Update Difficulty Coefficient (And Boss Level)")
 {
 	event
@@ -449,7 +425,7 @@ rule("Update Difficulty Coefficient (And Boss Level)")
 
 	actions
 	{
-		Global.DifficultyCoefficient = (Global.PlayerFactor + (Total Time Elapsed + 775) / 60 * Global.TimeFactor) * Global.StageFactor;
+		Global.DifficultyCoefficient = (Global.PlayerFactor + (Total Time Elapsed + 715) / 60 * Global.TimeFactor) * Global.StageFactor;
 		Global.OverallBossLevel = 1 + 3 * (Global.DifficultyCoefficient - Global.PlayerFactor);
 	}
 }
@@ -961,7 +937,7 @@ rule("Create Item Stack Subroutine")
 			Custom String("×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, 4 + Evaluate Once(
 			Global.NewItemStackIndex) / Count Of(Global.ItemStacks), Global.ItemColours[Index Of Array Value(Global.Items,
 			Global.ItemDistributionInfo[0])], Color(White), Null, Visible To Sort Order and String, Default Visibility);
-		Global.ItemStackTexts[Global.NewItemStackIndex] = Last Text ID;
+		Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
 		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2]));
 	}
 }
@@ -1217,6 +1193,14 @@ rule("On Enter State: OnTheWay")
 
 	actions
 	{
+		Global.Heroes = All Players(Team 1);
+		Global.Bosses = Players On Hero(Hero(Reinhardt), Team 2);
+		Global.PlayerCount = Number Of Players(Team 1);
+		Global.BossCount = Count Of(Global.Bosses);
+		Global.PlayerFactor = 1 + 0.300 * (Global.PlayerCount - 1);
+		Global.TimeFactor = 0.051 * Global.DifficultyValue * Global.PlayerCount ^ 0.200;
+		Global.StageFactor = 1.150 ^ 5;
+		Call Subroutine(SetCoefficient);
 		Wait(2, Ignore Condition);
 		Global.State = Custom String("Cutscene");
 	}
@@ -1237,8 +1221,6 @@ rule("On Enter State: Cutscene (Global)")
 	actions
 	{
 		Enable Built-In Game Mode Music;
-		Global.Heroes = All Players(Team 1);
-		Global.Bosses = Players On Hero(Hero(Reinhardt), Team 2);
 		Wait(2, Ignore Condition);
 		Global.Bosses.State = Custom String("Cutscene");
 		Call Subroutine(SetCoefficient);
@@ -1271,7 +1253,7 @@ rule("On Enter State: Cutscene (Boss)")
 		Clear Status(Event Player, Phased Out);
 		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
 		Event Player.TotalHPUnits = 1 / 2.400 * (600 + 180 * (Global.OverallBossLevel - 1)) * (1 + Global.DifficultyCoefficient)
-			* Square Root(Count Of(Filtered Array(All Living Players(Team 1), !Is Dummy Bot(Current Array Element))))
+			* Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
 			/ Global.BossCount / 25;
 		Call Subroutine(UpdateHealthAndArmour);
 		Set Invisible(Event Player, None);
@@ -2447,7 +2429,7 @@ rule("On Phase 3 Start")
 		Event Player.CanNeedle = Array(False, False);
 		Call Subroutine(SetCoefficient);
 		Event Player.TotalHPUnits = 1 / 2.400 * (600 + 180 * (Global.OverallBossLevel - 1)) * (1 + Global.DifficultyCoefficient)
-			* Square Root(Count Of(Filtered Array(All Living Players(Team 1), !Is Dummy Bot(Current Array Element))))
+			* Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
 			/ Global.BossCount / 25;
 		Call Subroutine(UpdateHealthAndArmour);
 		Event Player.ShowBossBar = True;
