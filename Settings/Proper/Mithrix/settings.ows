@@ -81,7 +81,6 @@ variables
 		15: ItemStackSizes
 		16: ItemStackOriginalOwners
 		17: ItemStackIndex
-		18: ItemToDistribute
 		19: ItemSymbols
 		20: NewItemStackIndex
 		21: ItemColours
@@ -891,14 +890,14 @@ rule("Distribute Item Subroutine")
 	actions
 	{
 		Global.NewItemStackIndex = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
-			Global.ItemStacks[Current Array Element] == Global.ItemToDistribute && Global.ItemStackOwners[Current Array Element] == Global.ItemDistributionInfo[0]);
+			Global.ItemStacks[Current Array Element] == Global.ItemDistributionInfo[0] && Global.ItemStackOwners[Current Array Element] == Global.ItemDistributionInfo[1]);
 		If(Count Of(Global.NewItemStackIndex) > 0);
 			Global.NewItemStackIndex = Global.NewItemStackIndex[0];
-			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
-			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[1]));
+			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[2]));
 		Else;
 			Call Subroutine(CreateItemStack);
-			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[1];
+			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
 		End;
 	}
 }
@@ -933,8 +932,8 @@ rule("Distribute Queued Items")
 
 	actions
 	{
-		Global.ItemToDistribute = Global.ItemDistributionQueue[0];
-		Global.ItemDistributionInfo = Array Slice(Global.ItemDistributionQueue, 1, 2);
+		"[Item (name), Target Player, Count]"
+		Global.ItemDistributionInfo = Array Slice(Global.ItemDistributionQueue, 0, 3);
 		Call Subroutine(DistributeItem);
 		Global.ItemDistributionQueue = Array Slice(Global.ItemDistributionQueue, 3, 1000);
 		Wait(0.016, Abort When False);
@@ -953,17 +952,17 @@ rule("Create Item Stack Subroutine")
 	actions
 	{
 		Global.NewItemStackIndex = Count Of(Global.ItemStacks);
-		Global.ItemStacks[Global.NewItemStackIndex] = Global.ItemToDistribute;
-		Global.ItemStackOwners[Global.NewItemStackIndex] = Global.ItemDistributionInfo[0];
+		Global.ItemStacks[Global.NewItemStackIndex] = Global.ItemDistributionInfo[0];
+		Global.ItemStackOwners[Global.NewItemStackIndex] = Global.ItemDistributionInfo[1];
 		Global.ItemStackNewOwners[Global.NewItemStackIndex] = Null;
-		Modify Player Variable(Global.ItemDistributionInfo[0], ItemStacks, Append To Array, Global.ItemStacks[Global.NewItemStackIndex]);
+		Modify Player Variable(Global.ItemDistributionInfo[1], ItemStacks, Append To Array, Global.ItemStacks[Global.NewItemStackIndex]);
 		Create HUD Text(Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)] == 0 ? Null : Global.ItemStackOwners[Evaluate Once(
-			Global.NewItemStackIndex)], Evaluate Once(Global.ItemSymbols[Index Of Array Value(Global.Items, Global.ItemToDistribute)]),
+			Global.NewItemStackIndex)], Evaluate Once(Global.ItemSymbols[Index Of Array Value(Global.Items, Global.ItemDistributionInfo[0])]),
 			Custom String("×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, 4 + Evaluate Once(
 			Global.NewItemStackIndex) / Count Of(Global.ItemStacks), Global.ItemColours[Index Of Array Value(Global.Items,
-			Global.ItemToDistribute)], Color(White), Null, Visible To Sort Order and String, Default Visibility);
+			Global.ItemDistributionInfo[0])], Color(White), Null, Visible To Sort Order and String, Default Visibility);
 		Global.ItemStackTexts[Global.NewItemStackIndex] = Last Text ID;
-		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[1]));
+		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2]));
 	}
 }
 
