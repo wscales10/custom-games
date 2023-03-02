@@ -355,9 +355,10 @@ rule("Global setup")
 			Custom String("Stability"), Custom String("Dance"), Custom String("Song"));
 		Create Effect(All Players(All Teams), Light Shaft, Color(Sky Blue), Vector(0, 0, 0), 1.060 * Global.ArenaRadius, Visible To);
 		Create Effect(All Players(All Teams), Ring, Color(Gray), Vector(0, 0, 0), 57, Visible To);
+		Create Beam Effect(Count Of(Global.LightningStrikes) ? All Players(All Teams) : Null, Bad Beam, Update Every Frame(
+			Global.LightningStrikes[1] + 30 * Up), Update Every Frame(Global.LightningStrikes[1] + Down), Color(White),
+			Visible To Position Radius and Color);
 		Global.State = Custom String("Buy");
-		Create Beam Effect(Global.LightningStrikes[0] && Total Time Elapsed > Global.LightningStrikes[0] ? All Players(All Teams) : Null,
-			Good Beam, Event Player, Event Player, Color(White), Visible To Position and Radius);
 	}
 }
 
@@ -1175,9 +1176,11 @@ rule("On hit effects")
 				Set Status(Victim, Attacker.Master[0], Stunned, 2);
 			End;
 		End;
-		If(Is True For Any(Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String(
-			"Lightning") && Global.ItemStackOwners[Current Array Index] == Attacker.Master[0]) && Random Real(0, 1) < 0.100 * Min(1,
-			Event Damage / (Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36));
+		If(!Array Contains(Global.LightningStrikes, Attacker.Master[0]) && Is True For Any(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lightning")
+			&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0]) && Random Real(0, 1) < 0.100 * Min(1, Event Damage / (
+			Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36));
+			Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Color(White), Eye Position(Victim), 100);
 			Modify Global Variable(LightningStrikes, Append To Array, Array(Total Time Elapsed + 0.250, Eye Position(Victim),
 				Attacker.Master[0], 5 * Filtered Array(Global.ItemStackSizes,
 				Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lightning")
@@ -1378,13 +1381,12 @@ rule("Lightning Strike Loop")
 
 	actions
 	{
-		Play Effect(All Players(All Teams), Reinhardt Fire Strike Target Impact Sound, Color(White), Global.LightningStrikes[1], 100);
 		Global.StrikeVictims = Filtered Array(All Living Players(Opposite Team Of(Team Of(Global.LightningStrikes[2]))), Distance Between(
 			Eye Position(Current Array Element), Global.LightningStrikes[1]) < 3);
 		Damage(Global.StrikeVictims, Global.LightningStrikes[2],
 			Global.LightningStrikes[3] / Global.LightningStrikes[2].BaseDamageMultiplier);
 		Apply Impulse(Global.StrikeVictims, Down, 70, To World, Cancel Contrary Motion);
-		Wait(0.016, Ignore Condition);
+		Wait(0.080, Ignore Condition);
 		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 4, 1000);
 		Loop If Condition Is True;
 	}
