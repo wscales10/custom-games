@@ -315,16 +315,16 @@ rule("Global setup")
 			"Armour Piercing"), Custom String("Extra Life"), Custom String("Close Range Damage"), Custom String("Ice Blast"),
 			Custom String("Flame Blast"), Custom String("Lifesteal"), Custom String("Stun Chance"), Custom String("Recovery"),
 			Custom String("Double Jump"), Custom String("Armour Reduction"), Custom String("Egg"), Custom String("Reprieve"),
-			Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"));
+			Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"), Custom String("Shields"));
 		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
 			Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"),
-			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt), Icon String(Warning), Custom String("●"));
-		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4);
+			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt), Icon String(Warning), Custom String("●"), Custom String("♥"));
+		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1);
 		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
 			Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,
 			255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,
 			53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,
-			185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255));
+			185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165, 239, 246, 255));
 		Global.Items = Sorted Array(Global.Items, Global.ItemRarities[Current Array Index]);
 		Global.ItemSymbols = Sorted Array(Global.ItemSymbols, Global.ItemRarities[Current Array Index]);
 		Global.ItemColours = Sorted Array(Global.ItemColours, Global.ItemRarities[Current Array Index]);
@@ -1822,14 +1822,19 @@ rule("Update Item Stack (Add)")
 	actions
 	{
 		If(Global.ItemStackUpdateInfo[1] == Custom String("Max HP"));
-			Add Health Pool To Player(Global.ItemStackUpdateInfo[2], Health, 25 * Global.ItemStackSizes[Evaluate Once(
+			Add Health Pool To Player(Global.ItemStackUpdateInfo[2], Health, Evaluate Once(Global.ItemStackUpdateInfo[2]).HealthScale * 25 * Global.ItemStackSizes[Evaluate Once(
+				Global.ItemStackUpdateInfo[0])], True, True);
+			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Last Created Health Pool;
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Shields"));
+			Add Health Pool To Player(Global.ItemStackUpdateInfo[2], Shields, Max Health Of Type(Evaluate Once(Global.ItemStackUpdateInfo[2]), Health) * 0.080 * Global.ItemStackSizes[Evaluate Once(
 				Global.ItemStackUpdateInfo[0])], True, True);
 			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Last Created Health Pool;
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Rock"));
-			Add Health Pool To Player(Global.ItemStackUpdateInfo[2], Health, 25 * Global.ItemStackSizes[Evaluate Once(
+			Add Health Pool To Player(Global.ItemStackUpdateInfo[2], Health, Evaluate Once(Global.ItemStackUpdateInfo[2]).HealthScale * 40 * Global.ItemStackSizes[Evaluate Once(
 				Global.ItemStackUpdateInfo[0])], True, True);
 			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Last Created Health Pool;
-			Call Subroutine(UpdateItemStack_Modify);
+			Global.ItemStackUpdateInfo[2].HealingModifiers[2] = 1.6 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
+			Global.ItemStackUpdateInfo[2].ShouldUpdateHealing = True;
 		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump")), Global.ItemStackUpdateInfo[1]));
 			Call Subroutine(UpdateItemStack_Modify);
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Close Range Damage"));
@@ -1864,7 +1869,11 @@ rule("Update Item Stack (Modify)")
 		If(Global.ItemStackUpdateInfo[1] == Custom String("Max HP"));
 			Wait(0.100, Ignore Condition);
 			Heal(Global.ItemStackUpdateInfo[2], Null,
-				25 * Global.ItemStackUpdateInfo[3] / Global.ItemStackUpdateInfo[2].HealingModifiers[0]);
+				Global.ItemStackUpdateInfo[2].HealthScale * 25 * Global.ItemStackUpdateInfo[3] / Global.ItemStackUpdateInfo[2].HealingModifiers[0]);
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Shields"));
+			Wait(0.100, Ignore Condition);
+			Heal(Global.ItemStackUpdateInfo[2], Null,
+				Max Health Of Type(Global.ItemStackUpdateInfo[2], Health) * 0.080 * Global.ItemStackUpdateInfo[3] / Global.ItemStackUpdateInfo[2].HealingModifiers[0]);
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Speed"));
 			Global.ItemStackUpdateInfo[2].MoveSpeedBuffs[2] = 14 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			Global.ItemStackUpdateInfo[2].ShouldUpdateMoveSpeed = True;
@@ -1873,6 +1882,9 @@ rule("Update Item Stack (Modify)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Rock"));
 			Global.ItemStackUpdateInfo[2].HealingModifiers[2] = 1.6 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			Global.ItemStackUpdateInfo[2].ShouldUpdateHealing = True;
+			Wait(0.100, Ignore Condition);
+			Heal(Global.ItemStackUpdateInfo[2], Null,
+				Global.ItemStackUpdateInfo[2].HealthScale * 40 * Global.ItemStackUpdateInfo[3] / Global.ItemStackUpdateInfo[2].HealingModifiers[0]);
 		End;
 	}
 }
@@ -1903,7 +1915,8 @@ rule("Update Item Stack (Remove)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Rock"));
 			Remove Health Pool From Player(Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]]);
 			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Null;
-			Call Subroutine(UpdateItemStack_Modify);
+			Global.ItemStackUpdateInfo[2].HealingModifiers[2] = 0;
+			Global.ItemStackUpdateInfo[2].ShouldUpdateHealing = True;
 		End;
 	}
 }
