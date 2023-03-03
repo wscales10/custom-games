@@ -2,7 +2,7 @@ settings
 {
 	lobby
 	{
-		Max Team 1 Players: 2
+		Max Team 1 Players: 3
 		Max Team 2 Players: 1
 	}
 
@@ -88,12 +88,6 @@ settings
 		}
 	}
 
-	workshop
-	{
-		Difficulty: 2
-		Test Mode: Off
-	}
-
 	extensions
 	{
 		Beam Effects
@@ -102,6 +96,7 @@ settings
 		Energy Explosion Effects
 		Explosion Sounds
 		Play More Effects
+		Spawn More Dummy Bots
 	}
 }
 
@@ -310,7 +305,8 @@ rule("Global setup")
 		Global.LightningStrikes = Empty Array;
 		Disable Built-In Game Mode Music;
 		Global.BotCreationQueue = Empty Array;
-		Global.AvailableBotSlots = Array(8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23);
+		Global.AvailableBotSlots = Append To Array(Vector(1, 23, 0), Mapped Array(Array(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+			19, 20, 21, 22, 23), Vector(2, Current Array Element, 0)));
 		Call Subroutine(Settings);
 		Global.ItemStackUpdateInfos = Empty Array;
 		Global.DeathLineRadius = 0.750;
@@ -324,7 +320,8 @@ rule("Global setup")
 			"Barrier"));
 		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
 			Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"),
-			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt), Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"));
+			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt),
+			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"));
 		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1);
 		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
 			Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,
@@ -430,9 +427,9 @@ rule("Boss Setup")
 		Create HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Null, Null, Custom String("{0} {1}", Custom String("{0} {1} {2}",
 			Custom String("{0} {1}", Event Player.BlastCooldown ? Custom String("{0}×{1}", Icon String(Asterisk), Round To Integer(
 			Event Player.BlastCooldown, Up)) : Custom String(" "),
-			Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick) : Custom String(" ")),
-			Event Player.RecoveryTime ? Icon String(Plus) : Custom String(" "), Event Player.StealthTime[1] ? Custom String("{0}{1}",
-			Icon String(Eye), Event Player.StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
+			Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick) : Custom String(
+			" ")), Event Player.RecoveryTime ? Icon String(Plus) : Custom String(" "), Event Player.StealthTime[1] ? Custom String(
+			"{0}{1}", Icon String(Eye), Event Player.StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
 			Event Player.StealthTime[1] - Total Time Elapsed, Up))) : Custom String(" ")), Custom String("{0} {1} {2}",
 			Event Player.CrippleTime ? Icon String(Skull) : Custom String(" "), Event Player.SlowTime ? Icon String(Arrow: Down)
 			: Custom String(" "), Custom String("{0} {1} {2}", Event Player.BleedInfo[0] ? Custom String("†×{0}",
@@ -574,9 +571,9 @@ rule("Player Setup")
 			Create HUD Text(Array Contains(Array(Null, Custom String("Buy")), Global.State) ? Null : Event Player, Null, Null, Custom String(
 				"{0} {1}", Custom String("{0} {1} {2}", Custom String("{0} {1}", Event Player.BlastCooldown ? Custom String("{0}×{1}",
 				Icon String(Asterisk), Round To Integer(Event Player.BlastCooldown, Up)) : Custom String(" "),
-				Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick) : Custom String(" ")),
-				Event Player.RecoveryTime ? Icon String(Plus) : Custom String(" "), Event Player.StealthTime[1] ? Custom String("{0}{1}",
-				Icon String(Eye), Event Player.StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
+				Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick) : Custom String(
+				" ")), Event Player.RecoveryTime ? Icon String(Plus) : Custom String(" "), Event Player.StealthTime[1] ? Custom String(
+				"{0}{1}", Icon String(Eye), Event Player.StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
 				Event Player.StealthTime[1] - Total Time Elapsed, Up))) : Custom String(" ")), Custom String("{0} {1} {2}",
 				Event Player.CrippleTime ? Icon String(Skull) : Custom String(" "), Event Player.SlowTime ? Icon String(Arrow: Down)
 				: Custom String(" "), Custom String("{0} {1} {2}", Event Player.BleedInfo[0] ? Custom String("†×{0}",
@@ -689,11 +686,11 @@ rule("Team 1 Setup")
 			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Global.ItemShops[Sorted Array(Mapped Array(
 			Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
-			Global.ItemShopPositions[Current Array Element]))[0]], Null, Custom String("£{0}",
-			Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
-			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
-			Event Player, False), Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(White),
-			Color(White), Visible To and String, Default Visibility);
+			Global.ItemShopPositions[Current Array Element]))[0]], Null, Custom String("£{0}", Global.ItemShopPrices[Sorted Array(
+			Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
+			Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
 		Event Player.State = Custom String("Ready");
 	}
 }
@@ -1595,8 +1592,14 @@ rule("Create Queued Bots")
 
 	actions
 	{
-		Create Dummy Bot(Global.BotCreationQueue[0], Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) ? Team Of(
-			Global.BotCreationQueue[1]) : Global.BotCreationQueue[1], Last Of(Global.AvailableBotSlots), Vector(0, 0, 0), Forward);
+		If((Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) && Team Of(Global.BotCreationQueue[1]) == Team 1) || (
+			Global.BotCreationQueue[1] == Team 1));
+			Create Dummy Bot(Global.BotCreationQueue[0], Team 1, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
+				X Component Of(Current Array Element) == 1))), Vector(0, 0, 0), Forward);
+		Else;
+			Create Dummy Bot(Global.BotCreationQueue[0], Team 2, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
+				X Component Of(Current Array Element) == 2))), Vector(0, 0, 0), Forward);
+		End;
 		Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		Global.BotCreationQueue = Array Slice(Global.BotCreationQueue, 2, 1000);
 		Wait(0.016, Ignore Condition);
@@ -1621,7 +1624,8 @@ rule("Dummy Bot Setup")
 	actions
 	{
 		Event Player.CouldBeHumanPlayer = False;
-		Modify Global Variable(AvailableBotSlots, Remove From Array By Value, Slot Of(Event Player));
+		Modify Global Variable(AvailableBotSlots, Remove From Array By Value, Vector(Team Of(Event Player) == Team 1 ? 1 : 2, Slot Of(
+			Event Player), 0));
 		If(Array Contains(All Players(All Teams), Global.BotCreationQueue[1]));
 			Event Player.Master[0] = Global.BotCreationQueue[1];
 		Else;
@@ -1642,7 +1646,8 @@ rule("Destroy bot subroutine")
 	actions
 	{
 		If(Team Of(Event Player) == Team 2);
-			Modify Global Variable(AvailableBotSlots, Append To Array, Slot Of(Event Player));
+			Modify Global Variable(AvailableBotSlots, Append To Array, Vector(Team Of(Event Player) == Team 1 ? 1 : 2, Slot Of(Event Player),
+				0));
 		End;
 		Destroy Dummy Bot(Team Of(Event Player), Slot Of(Event Player));
 	}
@@ -1885,8 +1890,7 @@ rule("Update Item Stack (Add)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Barrier"));
 			Global.ItemStackUpdateInfo[2].BarrierInfo[0] = True;
 			Call Subroutine(UpdateItemStack_Modify);
-		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump")),
-				Global.ItemStackUpdateInfo[1]));
+		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump")), Global.ItemStackUpdateInfo[1]));
 			Call Subroutine(UpdateItemStack_Modify);
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Close Range Damage"));
 			Start Damage Modification(Players Within Radius(Eye Position(Global.ItemStackUpdateInfo[2]), 13, All Teams, Off),
@@ -2007,20 +2011,28 @@ rule("On Enter State: Buy")
 	{
 		Global.ItemShops = Append To Array(Global.Items, Array(Custom String("?"), Custom String("??"), Custom String("???")));
 		Global.ItemShopRarities = Append To Array(Global.ItemRarities, Array(1, 2, 3));
-		Global.ItemShops = Sorted Array(Global.ItemShops, Global.ItemShopRarities[Current Array Index] + Index Of Array Value(Global.Items, Current Array Element) / Count Of(Global.Items));
+		Global.ItemShops = Sorted Array(Global.ItemShops, Global.ItemShopRarities[Current Array Index] + Index Of Array Value(Global.Items,
+			Current Array Element) / Count Of(Global.Items));
 		Global.ItemShopRarities = Sorted Array(Global.ItemShopRarities, Current Array Element);
 		Global.ItemShopRadii = Array(0);
 		For Global Variable(ShopIndex, 1, 5, 1);
-			Global.ItemShopRadii[Global.ShopIndex * 2 - 1] = 4 * (Max(Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ShopIndex)), 5) - 1) / 6.283;
-			Global.ItemShopRadii[Global.ShopIndex * 2] = Global.ItemShopRadii[Global.ShopIndex * 2 - 2] + Global.ItemShopRadii[Global.ShopIndex * 2 - 1] * 2 + (Global.ShopIndex > 1 ? 4 : 0);
+			Global.ItemShopRadii[Global.ShopIndex * 2 - 1] = 4 * (Max(Count Of(Filtered Array(Global.ItemShopRarities,
+				Current Array Element == Global.ShopIndex)), 5) - 1) / 6.283;
+			Global.ItemShopRadii[Global.ShopIndex * 2] = Global.ItemShopRadii[Global.ShopIndex * 2 - 2] + Global.ItemShopRadii[Global.ShopIndex * 2 - 1] * 2 + (
+				Global.ShopIndex > 1 ? 4 : 0);
 			Modify Global Variable At Index(ItemShopRadii, 0, Max, Global.ItemShopRadii[Global.ShopIndex * 2 - 1]);
 		End;
 		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
 			If(Global.ItemShopRarities[Global.ItemShopIndex - 1] != Global.ItemShopRarities[Global.ItemShopIndex]);
 				Global.ShopIndex = Global.ItemShopIndex;
 			End;
-			Global.ItemShopPositions[Global.ItemShopIndex] = Vector(90 + Global.ItemShopRadii[0], 0, Last Of(Global.ItemShopRadii) / 2 - Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2] + Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1]);
-			Global.ItemShopPositions[Global.ItemShopIndex] += Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1] * Direction From Angles((180 / (1 - Max(Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])), 5))) * (Global.ItemShopIndex - Global.ShopIndex - (Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])) - 1) / 2) - 90, 0);
+			Global.ItemShopPositions[Global.ItemShopIndex] = Vector(90 + Global.ItemShopRadii[0], 0, Last Of(Global.ItemShopRadii)
+				/ 2 - Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2] + Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1]);
+			Global.ItemShopPositions[Global.ItemShopIndex] += Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1] * Direction From Angles(
+				180 / (1 - Max(Count Of(Filtered Array(Global.ItemShopRarities,
+				Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])), 5)) * (Global.ItemShopIndex - Global.ShopIndex - (
+				Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])) - 1)
+				/ 2) - 90, 0);
 		End;
 		disabled Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
 			/ 2 - Current Array Index) * 3));
@@ -2031,8 +2043,8 @@ rule("On Enter State: Buy")
 				Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(White)
 				: Global.ItemColours[Current Array Element]), Default Visibility);
 			Global.ItemShopEffects1[Global.ItemShopIndex] = Last Text ID;
-			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))[Global.ItemShopRarities[Global.ItemShopIndex] - 1],
-				Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
+			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))
+				[Global.ItemShopRarities[Global.ItemShopIndex] - 1], Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
 			Global.ItemShopEffects2[Global.ItemShopIndex] = Last Created Entity;
 			Wait(0.016, Ignore Condition);
 		End;
