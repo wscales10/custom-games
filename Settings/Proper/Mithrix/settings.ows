@@ -176,6 +176,9 @@ variables
 		65: StrikeVictims
 		66: LightningStrikes
 		67: NullPlayer
+		68: ItemShopRadii
+		69: ShopIndex
+		70: ItemShopRarities
 
 	player:
 		0: Master
@@ -683,13 +686,13 @@ rule("Team 1 Setup")
 			Visible To and String, Default Visibility);
 		Create HUD Text(Global.State == Custom String("Buy") && Is True For Any(Global.ItemShopPositions, Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
-			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Global.ItemShops[Filtered Array(Mapped Array(
+			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Global.ItemShops[Sorted Array(Mapped Array(
 			Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
-			Global.ItemShopPositions[Current Array Element]) < 1.500)[0]], Null, Custom String("£{0}",
-			Global.ItemShopPrices[Filtered Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
+			Global.ItemShopPositions[Current Array Element]))[0]], Null, Custom String("£{0}",
+			Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
-			Event Player, False), Global.ItemShopPositions[Current Array Element]) < 1.500)[0]]), Top, 1, Color(White), Color(White),
+			Event Player, False), Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(White),
 			Color(White), Visible To and String, Default Visibility);
 		Event Player.State = Custom String("Ready");
 	}
@@ -1251,7 +1254,7 @@ rule("On hit effects")
 			"Recovery") && Global.ItemStackOwners[Current Array Index] == Victim));
 			Victim.RecoveryTime = 2;
 		End;
-		If(Count Of(Attacker.Master[0].ItemStacks) > 0);
+		If(Count Of(Attacker.Master[0].ItemStacks) > 0 && Attacker.Master[0] != Victim);
 			Modify Player Variable(Victim, SlowTime, Max, 2 * Filtered Array(Global.ItemStackSizes,
 				Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Slow")
 				&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0]);
@@ -1879,9 +1882,11 @@ rule("Update Item Stack (Add)")
 			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Last Created Health Pool;
 			Global.ItemStackUpdateInfo[2].HealingModifiers[2] = 1.600 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			Global.ItemStackUpdateInfo[2].ShouldUpdateHealing = True;
-		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump"), Custom String("Barrier")),
-				Global.ItemStackUpdateInfo[1]));
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Barrier"));
 			Global.ItemStackUpdateInfo[2].BarrierInfo[0] = True;
+			Call Subroutine(UpdateItemStack_Modify);
+		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump")),
+				Global.ItemStackUpdateInfo[1]));
 			Call Subroutine(UpdateItemStack_Modify);
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Close Range Damage"));
 			Start Damage Modification(Players Within Radius(Eye Position(Global.ItemStackUpdateInfo[2]), 13, All Teams, Off),
@@ -1930,7 +1935,6 @@ rule("Update Item Stack (Modify)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Double Jump"));
 			Global.ItemStackUpdateInfo[2].DoubleJumps[0] = Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Barrier"));
-			Global.ItemStackUpdateInfo[2].BarrierInfo[0] = False;
 			Global.ItemStackUpdateInfo[2].ArmourModifiers[6] = 100 * Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			Global.ItemStackUpdateInfo[2].ShouldUpdateArmour = True;
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Rock"));
@@ -1967,6 +1971,7 @@ rule("Update Item Stack (Remove)")
 			Destroy Effect(Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]]);
 			Global.ItemStackUpdateInfo[2].BoomTime[0] = 0;
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Barrier"));
+			Global.ItemStackUpdateInfo[2].BarrierInfo[0] = False;
 			Global.ItemStackUpdateInfo[2].ArmourModifiers[6] = 0;
 			Global.ItemStackUpdateInfo[2].ShouldUpdateArmour = True;
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Rock"));
@@ -2001,7 +2006,23 @@ rule("On Enter State: Buy")
 	actions
 	{
 		Global.ItemShops = Append To Array(Global.Items, Array(Custom String("?"), Custom String("??"), Custom String("???")));
-		Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
+		Global.ItemShopRarities = Append To Array(Global.ItemRarities, Array(1, 2, 3));
+		Global.ItemShops = Sorted Array(Global.ItemShops, Global.ItemShopRarities[Current Array Index] + Index Of Array Value(Global.Items, Current Array Element) / Count Of(Global.Items));
+		Global.ItemShopRarities = Sorted Array(Global.ItemShopRarities, Current Array Element);
+		Global.ItemShopRadii = Array(0);
+		For Global Variable(ShopIndex, 1, 5, 1);
+			Global.ItemShopRadii[Global.ShopIndex * 2 - 1] = 4 * (Max(Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ShopIndex)), 5) - 1) / 6.283;
+			Global.ItemShopRadii[Global.ShopIndex * 2] = Global.ItemShopRadii[Global.ShopIndex * 2 - 2] + Global.ItemShopRadii[Global.ShopIndex * 2 - 1] * 2 + (Global.ShopIndex > 1 ? 4 : 0);
+			Modify Global Variable At Index(ItemShopRadii, 0, Max, Global.ItemShopRadii[Global.ShopIndex * 2 - 1]);
+		End;
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
+			If(Global.ItemShopRarities[Global.ItemShopIndex - 1] != Global.ItemShopRarities[Global.ItemShopIndex]);
+				Global.ShopIndex = Global.ItemShopIndex;
+			End;
+			Global.ItemShopPositions[Global.ItemShopIndex] = Vector(90 + Global.ItemShopRadii[0], 0, Last Of(Global.ItemShopRadii) / 2 - Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2] + Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1]);
+			Global.ItemShopPositions[Global.ItemShopIndex] += Global.ItemShopRadii[Global.ItemShopRarities[Global.ItemShopIndex] * 2 - 1] * Direction From Angles((180 / (1 - Max(Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])), 5))) * (Global.ItemShopIndex - Global.ShopIndex - (Count Of(Filtered Array(Global.ItemShopRarities, Current Array Element == Global.ItemShopRarities[Global.ItemShopIndex])) - 1) / 2) - 90, 0);
+		End;
+		disabled Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
 			/ 2 - Current Array Index) * 3));
 		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
 			Create In-World Text(All Players(Team 1), Mapped Array(Index Of Array Value(Global.Items, Global.ItemShops[Global.ItemShopIndex]),
@@ -2010,9 +2031,7 @@ rule("On Enter State: Buy")
 				Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(White)
 				: Global.ItemColours[Current Array Element]), Default Visibility);
 			Global.ItemShopEffects1[Global.ItemShopIndex] = Last Text ID;
-			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))[Mapped Array(
-				Index Of Array Value(Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? String Length(
-				Global.ItemShops[Global.ItemShopIndex]) : Global.ItemRarities[Current Array Element]) - 1],
+			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))[Global.ItemShopRarities[Global.ItemShopIndex] - 1],
 				Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
 			Global.ItemShopEffects2[Global.ItemShopIndex] = Last Created Entity;
 			Wait(0.016, Ignore Condition);
@@ -2053,11 +2072,9 @@ rule("Buy (with interact)")
 
 	actions
 	{
-		Event Player.BuyIndex = Filtered Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
+		Event Player.BuyIndex = Sorted Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
-			Event Player, False), Global.ItemShopPositions[Current Array Element]) < 1.500);
-		Abort If(Count Of(Event Player.BuyIndex) == 0);
-		Event Player.BuyIndex = Event Player.BuyIndex[0];
+			Event Player, False), Global.ItemShopPositions[Current Array Element]))[0];
 		Call Subroutine(Buy);
 	}
 }
