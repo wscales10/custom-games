@@ -174,6 +174,7 @@ variables
 		68: ItemShopRadii
 		69: ShopIndex
 		70: ItemShopRarities
+		71: Director
 
 	player:
 		0: Master
@@ -289,6 +290,7 @@ subroutines
 	20: DestroyMe
 	21: Buy
 	22: UpdateHealing
+	23: TrySpawn
 }
 
 rule("Global setup")
@@ -1595,10 +1597,10 @@ rule("Create Queued Bots")
 		If((Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) && Team Of(Global.BotCreationQueue[1]) == Team 1) || (
 			Global.BotCreationQueue[1] == Team 1));
 			Create Dummy Bot(Global.BotCreationQueue[0], Team 1, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
-				X Component Of(Current Array Element) == 1))), Vector(0, 0, 0), Forward);
+				X Component Of(Current Array Element) == 1))), Vector(300, 0, 0), Forward);
 		Else;
 			Create Dummy Bot(Global.BotCreationQueue[0], Team 2, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
-				X Component Of(Current Array Element) == 2))), Vector(0, 0, 0), Forward);
+				X Component Of(Current Array Element) == 2))), Vector(-300, 0, 0), Forward);
 		End;
 		Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		Global.BotCreationQueue = Array Slice(Global.BotCreationQueue, 2, 1000);
@@ -3675,7 +3677,7 @@ rule("Add. enter state: shoot")
 		Event Player.Master[1] == Null;
 		Event Player.State == Custom String("Idle");
 		Event Player.Target != Null;
-		Distance Between(Event Player, Event Player.Target) < 25;
+		Distance Between(Event Player, Event Player.Target) < (Hero Of(Event Player) == Hero(Wrecking Ball) ? 18 : 25);
 		(Distance Between(Event Player, Event Player.Target) < 15 && Ultimate Charge Percent(Event Player) == 100) == False;
 		(Hero Of(Event Player) != Hero(Tracer) || Is In View Angle(Event Player, Eye Position(Event Player.Target), 35)) == True;
 	}
@@ -3702,7 +3704,7 @@ rule("Add. enter state: idle")
 		Event Player.CouldBeHumanPlayer == False;
 		Event Player.Master[1] == Null;
 		Event Player.State == Custom String("Shoot");
-		Distance Between(Event Player, Event Player.Target) > 25;
+		Distance Between(Event Player, Event Player.Target) > (Hero Of(Event Player) == Hero(Wrecking Ball) ? 18 : 25);
 		Is Firing Secondary(Event Player) == False;
 	}
 
@@ -3872,7 +3874,11 @@ rule("Exploder Setup")
 		Event Player.BaseMoveSpeedModifier = 55;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Start Scaling Player(Event Player, 0.400, False);
-		Teleport(Event Player, Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
+		If(Global.Phase == 2);
+			Teleport(Event Player, Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
+		Else;
+			Teleport(Event Player, Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer)), Current Array Element ? (Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179, 179), 0)) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
+		End;
 		Set Max Ammo(Event Player, 0, Round To Integer(Event Player.Level, To Nearest) + 3);
 		Event Player.Name = Random Value In Array(Remove From Array(Global.BallNames, Mapped Array(All Players(Team 2),
 			Current Array Element.Name)));
@@ -4009,7 +4015,11 @@ rule("Golem Setup")
 		Event Player.BaseDamageMultiplier = (35 + 7 * (Event Player.Level - 1)) * 0.600 / 48;
 		Call Subroutine(UpdateStats);
 		Start Scaling Player(Event Player, 1.150, False);
-		Teleport(Event Player, Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
+		If(Global.Phase == 2);
+			Teleport(Event Player, 2.500 * Up + Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
+		Else;
+			Teleport(Event Player, 2.500 * Up + Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer)), Current Array Element ? (Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179, 179), 0)) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
+		End;
 		Set Max Ammo(Event Player, 0, 1);
 		Event Player.Name = Random Value In Array(Remove From Array(Global.ZenyattaNames, Mapped Array(All Players(Team 2),
 			Current Array Element.Name)));
@@ -4719,6 +4729,75 @@ rule("On Phase 3 Start")
 	}
 }
 
+rule("On Enter Phase: 3 (Global)")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Global.Phase == 3;
+		Is True For Any(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetCoefficient);
+		Global.Director[0] = 300;
+		While(True);
+			Call Subroutine(TrySpawn);
+			Wait(Global.Director[1], Abort When False);
+			Global.Director[0] += Global.Director[1] * (1 + 0.4 * Global.DifficultyCoefficient) * (Global.PlayerCount + 1) / 2;
+		End;
+	}
+}
+
+rule("Try Spawn")
+{
+	event
+	{
+		Subroutine;
+		TrySpawn;
+	}
+
+	actions
+	{
+		If(!Is True For Any(Global.AvailableBotSlots, X Component Of(Current Array Element) == 2));
+			Global.Director[5] = False;
+			Global.Director[1] = Random Real(4.500, 9);
+			Call Subroutine(SetCoefficient);
+		Else;
+			If(!Global.Director[5]);
+				If(Random Real(0, 1) < 0.200);
+					Global.Director[2] = 0;
+				Else If(Random Real(0, 1) < 0.75);
+					Global.Director[2] = 1;
+				Else;
+					Global.Director[2] = 2;
+				End;
+				Global.Director[3] = Array(80, 350, 550)[Global.Director[2]];
+			End;
+			If(Global.Director[0] < Global.Director[3]);
+				Global.Director[5] = False;
+				Global.Director[1] = Random Real(4.500, 9);
+				Call Subroutine(SetCoefficient);
+			Else If(Global.Director[0] >= 36 * Global.Director[3]);
+				Global.Director[5] = False;
+				Global.Director[1] = Random Real(0.100, 1);
+			Else;
+				Global.Director[5] = True;
+				Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))[Global.Director[2]], Team 2));
+				Global.Director[0] -= Global.Director[3];
+				Global.Director[1] = Random Real(0.100, 1);
+			End;
+		End;			
+	}
+}
+
+
+
 rule("Pizza Time")
 {
 	event
@@ -4902,6 +4981,8 @@ rule("On Enter Phase: 4 (Global)")
 	actions
 	{
 		Call Subroutine(SetCoefficient);
+		Wait(0.500, Ignore Condition);
+		Kill(Remove From Array(All Players(Team 2), Append To Array(Global.Bosses, Global.NullPlayer)), Global.NullPlayer[0]);
 		disabled Wait(5, Ignore Condition);
 		disabled Global.FlamePillarExpirationTimes = Mapped Array(Global.FlamePillarExpirationTimes, Total Time Elapsed);
 	}
