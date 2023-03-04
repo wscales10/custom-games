@@ -88,6 +88,12 @@ settings
 		}
 	}
 
+	workshop
+	{
+		Difficulty: 1
+		Player Level: 20
+	}
+
 	extensions
 	{
 		Beam Effects
@@ -248,7 +254,7 @@ variables
 		68: RemainingMatchingStacks
 		69: OrbCreationIndex
 		70: NewOrbGlobalIndex
-		71: CouldBeHumanPlayer
+		71: Role
 		72: Target
 		73: DoubleJumps
 		74: RecoveryTime
@@ -264,6 +270,7 @@ variables
 		84: HealingIndex
 		85: HealthScale
 		86: BarrierInfo
+		87: Sounds
 }
 
 subroutines
@@ -291,6 +298,9 @@ subroutines
 	21: Buy
 	22: UpdateHealing
 	23: TrySpawn
+	24: SoundCue
+	25: PrepareSounds
+	26: Call
 }
 
 rule("Global setup")
@@ -305,7 +315,6 @@ rule("Global setup")
 		Global.ArenaRadius = 80;
 		Global.StagesCompleted = 5;
 		Global.LightningStrikes = Empty Array;
-		Disable Built-In Game Mode Music;
 		Global.BotCreationQueue = Empty Array;
 		Global.AvailableBotSlots = Append To Array(Vector(1, 23, 0), Mapped Array(Array(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
 			19, 20, 21, 22, 23), Vector(2, Current Array Element, 0)));
@@ -359,6 +368,8 @@ rule("Global setup")
 		If(Global.TestMode);
 			disabled Create HUD Text(All Players(All Teams), Global.State, Custom String("Global State"), Global.Phase, Left, 0, Color(White), Color(
 				White), Color(White), Visible To and String, Default Visibility);
+			Create HUD Text(All Players(All Teams), Server Load Average, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+				Visible To and String, Default Visibility);
 		End;
 		Global.BallNames = Array(Custom String("Interference"), Custom String("Locomotion"), Custom String("Destruction"));
 		Global.TracerNames = Array(Custom String("Soul"), Custom String("Design"), Custom String("Wonder"), Custom String("Speed"),
@@ -405,7 +416,7 @@ rule("Identify Boss")
 	actions
 	{
 		Event Player.Level = Global.OverallBossLevel;
-		Event Player.CouldBeHumanPlayer = True;
+		Event Player.Role = Custom String("Boss");
 		Event Player.Master[0] = Event Player;
 	}
 }
@@ -485,13 +496,14 @@ rule("Boss Setup")
 			Null, Event Player.PizzaIndex == Custom String("Dormant") ? Null : Max(0, Event Player.PizzaTime[0] - Total Time Elapsed),
 			Right, 0, Event Player.PizzaIndex == Custom String("Dormant") ? Color(Red) : (Event Player.PizzaIndex == Custom String("Soon")
 			? Color(Gray) : Color(Orange)), Color(White), Color(White), Visible To String and Color, Default Visibility);
+		Create Effect(If-Then-Else(Is Alive(Event Player) && (Global.Phase == 1 || Global.Phase == 3), All Players(All Teams), Null), Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
 		Set Jump Enabled(Event Player, False);
 		Event Player.ShockwaveRadius = -1;
 		Event Player.PizzaIndex = Custom String("Dormant");
-		Create Icon(Global.State == Custom String("BossFight") ? Filtered Array(Global.Heroes,
-			Event Player.CameraPosition == Null && Has Spawned(Event Player) && Is Alive(Event Player) && !Has Status(Event Player,
-			Phased Out) && !Is In View Angle(Current Array Element, Eye Position(Event Player), 45)) : Null, Event Player, Arrow: Down,
-			Visible To and Position, Color(Red), True);
+		Create Icon(Global.State == Custom String("BossFight") && Event Player.State != Custom String("Absent") ? Filtered Array(
+			Global.Heroes, Current Array Element.CameraPosition == Null && Has Spawned(Event Player) && Is Alive(Event Player) && (
+			!Is In View Angle(Current Array Element, Eye Position(Event Player), 45) || String Contains(Event Player.State, Custom String(
+			"FullTakeoff")))) : Null, Event Player, Arrow: Down, Visible To and Position, Color(Red), True);
 		Event Player.NumPizzaLines = 4;
 		For Player Variable(Event Player, PizzaIndex, 0, Event Player.NumPizzaLines, 1);
 			Create Beam Effect(Array Contains(Array(Custom String("Pizza"), Custom String("PizzaDamage")), Event Player.State) ? All Players(
@@ -546,19 +558,18 @@ rule("Player Setup")
 
 	actions
 	{
-		If(Team Of(Event Player) == Team 2 && Hero Of(Event Player) == Hero(Sigma) && !Event Player.CouldBeHumanPlayer);
-			Global.NullPlayer[1] = Event Player;
+		If(Event Player.Role == Custom String("NullPlayer"));
 			Set Invisible(Event Player, All);
-			Start Forcing Player Position(Event Player, Vector(-5, 300, 0), False);
 			Set Status(Event Player, Null, Phased Out, 9999);
-			Start Forcing Dummy Bot Name(Event Player, Custom String("The Planet"));
-			Abort;
-		Else If(Team Of(Event Player) == Team 1 && Hero Of(Event Player) == Hero(Soldier: 76) && !Event Player.CouldBeHumanPlayer);
-			Global.NullPlayer[0] = Event Player;
-			Set Invisible(Event Player, All);
-			Start Forcing Player Position(Event Player, Vector(5, 300, 0), False);
-			Set Status(Event Player, Null, Phased Out, 9999);
-			Start Forcing Dummy Bot Name(Event Player, Custom String("The Captain"));
+			If(Team Of(Event Player) == Team 2);
+				Global.NullPlayer[1] = Event Player;
+				Start Forcing Player Position(Event Player, Vector(-5, 300, 0), False);
+				Start Forcing Dummy Bot Name(Event Player, Custom String("The Planet"));
+			Else If(Team Of(Event Player) == Team 1);
+				Global.NullPlayer[0] = Event Player;
+				Start Forcing Player Position(Event Player, Vector(5, 300, 0), False);
+				Start Forcing Dummy Bot Name(Event Player, Custom String("The Captain"));
+			End;
 			Abort;
 		End;
 		Disable Built-In Game Mode Respawning(Event Player);
@@ -568,7 +579,7 @@ rule("Player Setup")
 		Chase Player Variable At Rate(Event Player, APTime, 0, 1, None);
 		Event Player.WispAcceleration = Vector(0, 0, 0);
 		Event Player.HealthScale = Team Of(Event Player) == Team 2 ? 0.600 / 2.400 : 0.600;
-		If(Event Player.CouldBeHumanPlayer);
+		If(Array Contains(Array(Custom String("Hero"), Custom String("Boss")), Event Player.Role));
 			Chase Player Variable At Rate(Event Player, RecoveryTime, 0, 1, None);
 			Create HUD Text(Array Contains(Array(Null, Custom String("Buy")), Global.State) ? Null : Event Player, Null, Null, Custom String(
 				"{0} {1}", Custom String("{0} {1} {2}", Custom String("{0} {1}", Event Player.BlastCooldown ? Custom String("{0}×{1}",
@@ -599,7 +610,7 @@ rule("Player Setup")
 		If(Event Player.DefaultHealth[3]);
 			Add Health Pool To Player(Event Player, Shields, Event Player.NormalExtraHealth[2], True, True);
 		End;
-		If(Team Of(Event Player) == Team 2 && !Event Player.CouldBeHumanPlayer);
+		If(Event Player.Role == Custom String("Add"));
 			Event Player.Level = Global.OverallBossLevel;
 			Set Crouch Enabled(Event Player, False);
 			Event Player.BaseRegen = 15 / Event Player.HealthScale * (5 + (Event Player.Level - 1)) / 24;
@@ -618,8 +629,8 @@ rule("Update Difficulty Coefficient (And Boss Level)")
 
 	actions
 	{
-		Global.DifficultyCoefficient = (Global.PlayerFactor + ((Global.OverallPlayerLevel - 2.27) / 0.394 + Total Time Elapsed / 60) * Global.TimeFactor)
-			* 1.150 ^ Global.StagesCompleted;
+		Global.DifficultyCoefficient = (Global.PlayerFactor + ((Global.OverallPlayerLevel - 2.270) / 0.394 + Total Time Elapsed / 60)
+			* Global.TimeFactor) * 1.150 ^ Global.StagesCompleted;
 		Global.OverallBossLevel = 1 + 3 * (Global.DifficultyCoefficient - Global.PlayerFactor);
 		All Players(Team 2).Level = Global.OverallBossLevel;
 	}
@@ -636,7 +647,9 @@ rule("Identify Heroes")
 
 	actions
 	{
-		Event Player.CouldBeHumanPlayer = True;
+		If(!Is Dummy Bot(Event Player));
+			Event Player.Role = Custom String("Hero");
+		End;
 		Event Player.Master[0] = Event Player;
 	}
 }
@@ -672,7 +685,7 @@ rule("Team 1 Setup")
 		Create Effect(Event Player.CrippleTime > 0 ? All Players(All Teams) : Null, Good Aura, Color(Sky Blue), Eye Position(Event Player),
 			1, Visible To Position and Radius);
 		If(Global.DifficultyValue == 1);
-			Event Player.Armour[3] = 70;
+			Event Player.ArmourModifiers[3] = 70;
 		End;
 		Create Effect(Global.State == Custom String("Buy") && Is True For Any(Global.ItemShopPositions, Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
@@ -782,25 +795,7 @@ rule("Crippled")
 		Event Player.ArmourModifiers[2] = -20;
 		Start Rule(UpdateArmour, Restart Rule);
 		Big Message(Event Player, Custom String("CRIPPLED"));
-	}
-}
-
-rule("Not Crippled")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.CrippleTime == 0;
-	}
-
-	actions
-	{
+		Wait Until(Event Player.CrippleTime == 0, 9999);
 		Event Player.MoveSpeedDebuffs[1] = 0;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Event Player.ArmourModifiers[2] = 0;
@@ -827,25 +822,7 @@ rule("Slowed")
 		Event Player.MoveSpeedDebuffs[2] = 60;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Big Message(Event Player, Custom String("SLOWED"));
-	}
-}
-
-rule("Not Slowed")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.SlowTime == 0;
-	}
-
-	actions
-	{
+		Wait Until(Event Player.SlowTime == 0, 9999);
 		Event Player.MoveSpeedDebuffs[2] = 0;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 	}
@@ -883,6 +860,7 @@ rule("Barrier")
 
 	conditions
 	{
+		Event Player.BarrierInfo[0] == True;
 		Event Player.BarrierInfo[1] < Total Time Elapsed;
 	}
 
@@ -931,7 +909,7 @@ rule("Allow double jump if > 0.8 altitude & have double jumps")
 
 	conditions
 	{
-		((Team Of(Event Player) == Team 2 && Event Player.CouldBeHumanPlayer) || (Altitude Of(Event Player) > 0.800)) == True;
+		(Event Player.Role == Custom String("Boss") || Altitude Of(Event Player) > 0.800) == True;
 		Event Player.DoubleJumps[0] - Event Player.DoubleJumps[1] > 0;
 	}
 
@@ -1097,10 +1075,10 @@ rule("Update Move Speed")
 			"1: Cripple, 2: Slow"
 			Event Player.MoveSpeedDebuffs[0] += Event Player.MoveSpeedDebuffs[Event Player.MoveSpeedIndex] / 100;
 		End;
-		Log To Inspector(Custom String("Updating move speed for {0}", Event Player));
+		disabled Log To Inspector(Custom String("Updating move speed for {0}", Event Player));
 		Set Move Speed(Event Player, Event Player.BaseMoveSpeedModifier * (
 			Event Player.MoveSpeedBuffs[0] / Event Player.MoveSpeedDebuffs[0]));
-		Log To Inspector(Custom String("Updated move speed for {0}", Event Player));
+		disabled Log To Inspector(Custom String("Updated move speed for {0}", Event Player));
 	}
 }
 
@@ -1135,7 +1113,6 @@ rule("Update Armour")
 
 	actions
 	{
-		Log To Inspector(Custom String("updating armour for {0}", Event Player));
 		Event Player.ArmourModifiers[0] = 0;
 		For Player Variable(Event Player, ArmourIndex, 1, Count Of(Event Player.ArmourModifiers), 1);
 			"1: Armour Boost, 2: Cripple, 3: Easy Mode, 4: Armour Piercing, 5: Armour Reduction, 6: Barrier"
@@ -1144,7 +1121,6 @@ rule("Update Armour")
 		Event Player.Armour = Event Player.ArmourModifiers[0];
 		Event Player.DamageReceivedNewAmount = 1 - Event Player.Armour / (100 + Absolute Value(Event Player.Armour));
 		Set Damage Received(Event Player, 100 * Event Player.DamageReceivedNewAmount);
-		Log To Inspector(Custom String("updated damage received for {0} to {1}", Event Player, Event Player.DamageReceivedNewAmount));
 	}
 }
 
@@ -1186,11 +1162,11 @@ rule("Update Healing")
 		End;
 		Event Player.HealingModifiers[1] *= 1 + 0.200 * (Event Player.Level - 1);
 		Event Player.HealingModifiers[1] += Event Player.BaseRegen;
-		Log To Inspector(Custom String("Updating healing for {0}", Event Player));
+		disabled Log To Inspector(Custom String("Updating healing for {0}", Event Player));
 		Event Player.HealingModifiers[0] = Event Player.HealingModifiers[1] * Array(1.500, 1, 0.600)[Global.DifficultyValue - 1] / (
 			15 / Event Player.HealthScale);
 		Set Healing Received(Event Player, Event Player.HealingModifiers[0] * 100);
-		Log To Inspector(Custom String("Updated healing for {0}", Event Player));
+		disabled Log To Inspector(Custom String("Updated healing for {0}", Event Player));
 	}
 }
 
@@ -1204,19 +1180,27 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 
 	actions
 	{
-		If(Event Player.CouldBeHumanPlayer && Team Of(Event Player) == Team 2);
+		If(Event Player.Role == Custom String("Boss"));
 			Event Player.NormalExtraHealth = Mapped Array(Array Slice(Event Player.DefaultHealth, 1, 2), Max(1, Round To Integer(
 				Event Player.TotalHPUnits * Array(0.533, 0.467)[Current Array Index], Down)) * 25 - Current Array Element);
 			Set Damage Dealt(Event Player.Bots[0], Event Player.BaseDamageMultiplier * 113.300);
 		Else;
-			Event Player.IntendedMaxHealth[1] = Event Player.TotalHPUnits * Event Player.DefaultHealth[2] / (
-				Event Player.DefaultHealth[0] + Event Player.DefaultHealth[2] * (Event Player.CouldBeHumanPlayer ? 0 : 0.429));
-			Event Player.IntendedMaxHealth[0] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1] / (
-				Event Player.CouldBeHumanPlayer ? 1 : 0.700)) * (Event Player.DefaultHealth[1] + 0.600 * Event Player.DefaultHealth[3]) / (
-				Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
-			Event Player.IntendedMaxHealth[2] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1] / (
-				Event Player.CouldBeHumanPlayer ? 1 : 0.700)) * Event Player.DefaultHealth[3] * 0.400 / (
-				Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+			If(Event Player.Role == Custom String("Hero"));
+				Event Player.IntendedMaxHealth[1] = Event Player.TotalHPUnits * Event Player.DefaultHealth[2] / Event Player.DefaultHealth[0];
+				Event Player.IntendedMaxHealth[0] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1]) * (
+					Event Player.DefaultHealth[1] + 0.600 * Event Player.DefaultHealth[3]) / (
+					Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+				Event Player.IntendedMaxHealth[2] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1])
+					* Event Player.DefaultHealth[3] * 0.400 / (Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+			Else If(Event Player.Role == Custom String("Add"));
+				Event Player.IntendedMaxHealth[1] = Event Player.TotalHPUnits * Event Player.DefaultHealth[2] / (
+					Event Player.DefaultHealth[0] + Event Player.DefaultHealth[2] * 0.429);
+				Event Player.IntendedMaxHealth[0] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1] / 0.700) * (
+					Event Player.DefaultHealth[1] + 0.600 * Event Player.DefaultHealth[3]) / (
+					Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+				Event Player.IntendedMaxHealth[2] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1] / 0.700)
+					* Event Player.DefaultHealth[3] * 0.400 / (Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+			End;
 			Event Player.NormalExtraHealth = Mapped Array(Event Player.IntendedMaxHealth, Max(1, Round To Integer(Current Array Element, Down))
 				* 25 - Event Player.DefaultHealth[Current Array Index + 1]);
 		End;
@@ -1253,7 +1237,11 @@ rule("On hit effects")
 			"Recovery") && Global.ItemStackOwners[Current Array Index] == Victim));
 			Victim.RecoveryTime = 2;
 		End;
-		If(Count Of(Attacker.Master[0].ItemStacks) > 0 && Attacker.Master[0] != Victim);
+		If(Count Of(Attacker.Master[0].ItemStacks) == 0);
+			disabled Log To Inspector(Custom String("{0} has no items", Attacker.Master[0]));
+		Else If(Attacker.Master[0] == Victim);
+			Log To Inspector(Custom String("{0} is also the victim", Attacker.Master[0]));
+		Else;
 			Modify Player Variable(Victim, SlowTime, Max, 2 * Filtered Array(Global.ItemStackSizes,
 				Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Slow")
 				&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0]);
@@ -1312,8 +1300,8 @@ rule("On hit effects")
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) / Attacker.Master[0].HealingModifiers[0]);
 			If(Is True For Any(Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String(
 				"Stun Chance") && Global.ItemStackOwners[Current Array Index] == Attacker.Master[0]));
-				If((Team Of(Victim) == Team 1 || !Victim.CouldBeHumanPlayer) && Random Real(0, 1) < (1 - 1 / (0.050 * Filtered Array(
-					Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Stun Chance")
+				If(Victim.Role != Custom String("Boss") && Random Real(0, 1) < (1 - 1 / (0.050 * Filtered Array(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Stun Chance")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] + 1)) * Min(1, Event Damage / (
 					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36));
 					Set Status(Victim, Attacker.Master[0], Stunned, 2);
@@ -1335,11 +1323,8 @@ rule("On hit effects")
 			Victim.ArmourModifiers[5] = -2 * Victim.ArmourPiercingStacks[1];
 			Victim.ShouldUpdateArmour = True;
 		End;
-		If(Team Of(Victim) == Team 2 && Victim.CouldBeHumanPlayer && Global.Phase == 4);
+		If(Victim.Role == Custom String("Boss") && Global.Phase == 4);
 			Victim.Phase4DamageReceived += Event Damage;
-		End;
-		If(Global.TestMode);
-			Small Message(Attacker.Master[0], Event Damage);
 		End;
 	}
 }
@@ -1536,10 +1521,10 @@ rule("Flame Tornado Damage")
 	actions
 	{
 		Event Player.Victims = Filtered Array(Players Within Radius(Event Player.FlameTornadoPosition, 5, Opposite Team Of(Team Of(
-			Event Player)), Off), Event Player.CouldBeHumanPlayer || Is On Ground(Current Array Element));
+			Event Player)), Off), Event Player.Role != Custom String("Add") || Is On Ground(Current Array Element));
 		Set Status(Event Player.Victims, Event Player, Burning, 0.350);
-		Damage(Event Player.Victims, Event Player.CouldBeHumanPlayer ? Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2),
-			Team Of(Event Player))] : Event Player, Event Player.FlameTornadoDamage * 0.304);
+		Damage(Event Player.Victims, Event Player.Role != Custom String("Add") ? Global.NullPlayer[Index Of Array Value(Array(Team 1,
+			Team 2), Team Of(Event Player))] : Event Player, Event Player.FlameTornadoDamage * 0.304);
 		Wait(0.304, Abort When False);
 		Loop If Condition Is True;
 	}
@@ -1625,7 +1610,13 @@ rule("Dummy Bot Setup")
 
 	actions
 	{
-		Event Player.CouldBeHumanPlayer = False;
+		If(Array Contains(Array(Hero(Sigma), Hero(Soldier: 76)), Hero Of(Event Player)));
+			Event Player.Role = Custom String("NullPlayer");
+		Else If(Array Contains(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)), Hero Of(Event Player)));
+			Event Player.Role = Custom String("Add");
+		Else If(Hero Of(Event Player) == Hero(Ramattra));
+			Event Player.Role = Custom String("Needler");
+		End;
 		Modify Global Variable(AvailableBotSlots, Remove From Array By Value, Vector(Team Of(Event Player) == Team 1 ? 1 : 2, Slot Of(
 			Event Player), 0));
 		If(Array Contains(All Players(All Teams), Global.BotCreationQueue[1]));
@@ -1727,7 +1718,8 @@ rule("Acquire Item Subroutine")
 		If(Count Of(Global.ExistingMatchingItemStacks) == 0);
 			Modify Player Variable(Global.ItemStackOwners[Global.ItemStackIndex], ItemStacks, Append To Array,
 				Global.ItemStacks[Global.ItemStackIndex]);
-			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackIndex, 1, Global.CurrentItemStackSize, Global.ItemStackOwners[Global.ItemStackIndex]));
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackIndex, 1, Global.CurrentItemStackSize,
+				Global.ItemStackOwners[Global.ItemStackIndex]));
 		Else;
 			Global.ItemStackSizes[Global.ItemStackIndex] -= Global.CurrentItemStackSize;
 			Global.ItemStackSizes[Global.ExistingMatchingItemStacks[0]] += Global.CurrentItemStackSize;
@@ -1755,7 +1747,8 @@ rule("Distribute Item Subroutine")
 		If(Count Of(Global.NewItemStackIndex) > 0);
 			Global.NewItemStackIndex = Global.NewItemStackIndex[0];
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
-			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[2], Global.ItemStackOwners[Global.NewItemStackIndex]));
+			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[2],
+				Global.ItemStackOwners[Global.NewItemStackIndex]));
 		Else;
 			Call Subroutine(CreateItemStack);
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
@@ -1823,7 +1816,8 @@ rule("Create Item Stack Subroutine")
 			Global.NewItemStackIndex + 1) / (Count Of(Global.ItemStacks) + 1), Global.ItemColours[Index Of Array Value(Global.Items,
 			Global.ItemDistributionInfo[0])], Color(White), Null, Visible To Sort Order and String, Default Visibility);
 		Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
-		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2], Global.ItemStackOwners[Global.NewItemStackIndex]));
+		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2],
+			Global.ItemStackOwners[Global.NewItemStackIndex]));
 	}
 }
 
@@ -2055,10 +2049,10 @@ rule("On Enter State: Buy")
 			Current Array Element)] > 3 ? Custom String("∞") : (Array Contains(Global.Items, Current Array Element) ? 30 : 25) * Array(1,
 			2, 16)[(Array Contains(Global.Items, Current Array Element) ? Global.ItemRarities[Index Of Array Value(Global.Items,
 			Current Array Element)] : String Length(Current Array Element)) - 1]);
-		Wait(20, Abort When False);
-		Wait Until(Is True For All(All Players(Team 1), !Current Array Element.CouldBeHumanPlayer || (
+		Wait(10, Abort When False);
+		Wait Until(Is True For All(All Players(Team 1), Current Array Element.Role != Custom String("Hero") || (
 			Current Array Element.State == Custom String("Ready") && (X Component Of(Position Of(Current Array Element))
-			< 80 || Current Array Element.Currency < 25))), 70);
+			< 80 || Current Array Element.Currency < 25))), 80);
 		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
 			Destroy In-World Text(Global.ItemShopEffects1[Global.ItemShopIndex]);
 			Destroy Effect(Global.ItemShopEffects2[Global.ItemShopIndex]);
@@ -2216,9 +2210,10 @@ rule("On Enter State: OnTheWay")
 
 	actions
 	{
-		Global.Heroes = Filtered Array(All Players(Team 1), Current Array Element.CouldBeHumanPlayer);
-		Global.Bosses = Players On Hero(Hero(Reinhardt), Team 2);
-		Global.PlayerCount = Number Of Players(Team 1);
+		Disable Built-In Game Mode Music;
+		Global.Heroes = Filtered Array(All Players(All Teams), Current Array Element.Role == Custom String("Hero"));
+		Global.Bosses = Filtered Array(All Players(All Teams), Current Array Element.Role == Custom String("Boss"));
+		Global.PlayerCount = Count Of(Global.Heroes);
 		Global.BossCount = Count Of(Global.Bosses);
 		Global.PlayerFactor = 1 + 0.300 * (Global.PlayerCount - 1);
 		Global.TimeFactor = 0.051 * Global.DifficultyValue * Global.PlayerCount ^ 0.200;
@@ -2242,8 +2237,7 @@ rule("On Enter State: Cutscene (Global)")
 
 	actions
 	{
-		Enable Built-In Game Mode Music;
-		Wait(2, Ignore Condition);
+		Wait(2.850, Ignore Condition);
 		Global.Bosses.State = Custom String("Cutscene");
 		Call Subroutine(SetCoefficient);
 		Destroy Effect(Global.BossSpawnEffect);
@@ -2281,11 +2275,9 @@ rule("On Enter State: Cutscene (Boss)")
 		Event Player.BaseRegen = 15 / Event Player.HealthScale * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
 		Set Invisible(Event Player, None);
-		Create Icon(Has Spawned(Event Player) && Event Player.State != Custom String("Waiting") && Event Player.State != Custom String(
-			"Absent") ? Filtered Array(Global.Heroes, Has Status(Event Player, Phased Out) || !Is In View Angle(Current Array Element,
-			Eye Position(Event Player), 45)) : Null, Event Player, Arrow: Down, Visible To and Position, Color(Red), True);
 		Start Holding Button(Event Player, Button(Crouch));
 		Wait Until(Is On Ground(Event Player), 99999);
+		Play Effect(All Players(All Teams), Doomfist Meteor Strike Impact Sound, Color(White), Position Of(Event Player), 100);
 		Wait(1.500, Ignore Condition);
 		Stop Holding Button(Event Player, Button(Crouch));
 		Wait(1.500, Ignore Condition);
@@ -2311,6 +2303,7 @@ rule("On Enter State: Cutscene (Team 1)")
 	{
 		Event Player.CameraPosition = Eye Position(Event Player) + World Vector Of(Forward, Event Player, Rotation);
 		Disable Hero HUD(Event Player);
+		Start Rule(PrepareSounds, Do Nothing);
 		Set Status(Event Player, Null, Rooted, 9999);
 		Set Ability 1 Enabled(Event Player, False);
 		Set Ability 2 Enabled(Event Player, False);
@@ -2320,39 +2313,23 @@ rule("On Enter State: Cutscene (Team 1)")
 		Disallow Button(Event Player, Button(Interact));
 		Set Melee Enabled(Event Player, False);
 		Set Reload Enabled(Event Player, False);
+		Wait(0.050, Abort When False);
 		Start Camera(Event Player, Event Player.CameraPosition, World Vector Of(2 * Up, Global.Bosses[Slot Of(Event Player) % Count Of(
 			Global.Bosses)], Rotation And Translation), 60);
+		Start Rule(SoundCue, Restart Rule);
 		If(Distance Between(Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], Event Player.CameraPosition)
 			< Distance Between(Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], World Vector Of(Vector(0, 2, 35),
 			Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)], Rotation And Translation)));
 			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Global.Bosses[Slot Of(Event Player)
-				% Count Of(Global.Bosses)], Rotation And Translation), 15, Destination and Rate);
+				% Count Of(Global.Bosses)], Rotation And Translation), 10, Destination and Rate);
 		Else;
 			Chase Player Variable Over Time(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 35), Global.Bosses[Slot Of(Event Player)
 				% Count Of(Global.Bosses)], Rotation And Translation), 1, Destination and Duration);
 			Wait(1, Abort When False);
 			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Global.Bosses[Slot Of(Event Player)
-				% Count Of(Global.Bosses)], Rotation And Translation), 30, Destination and Rate);
+				% Count Of(Global.Bosses)], Rotation And Translation), 15, Destination and Rate);
 		End;
-	}
-}
-
-rule("On Exit State: Cutscene (Team 1)")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 1;
-		All;
-	}
-
-	conditions
-	{
-		Global.State != Custom String("Cutscene");
-	}
-
-	actions
-	{
+		Wait Until(Global.State != Custom String("Cutscene"), 9999);
 		Clear Status(Event Player, Rooted);
 		Set Ability 1 Enabled(Event Player, True);
 		Set Ability 2 Enabled(Event Player, True);
@@ -2369,6 +2346,157 @@ rule("On Exit State: Cutscene (Team 1)")
 		Stop Camera(Event Player);
 		Stop Chasing Player Variable(Event Player, CameraPosition);
 		Event Player.CameraPosition = Null;
+	}
+}
+
+rule("Prepare Sound Cue")
+{
+	event
+	{
+		Subroutine;
+		PrepareSounds;
+	}
+
+	actions
+	{
+		Event Player.Sounds = Array(False, False, False, False, False);
+		Create Effect(If-Then-Else(Event Player.Sounds[0] || Event Player.Sounds[1] || Event Player.Sounds[4], Event Player, Null), Energy Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[0], Event Player, Null), Echo Focusing Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[1], Event Player, Null), Zarya Particle Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Create Effect(If-Then-Else(Event Player.Sounds[4], Event Player, Null), Decal Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[0], Event Player, Null), Echo Focusing Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[1], Event Player, Null), Zarya Particle Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Create Effect(If-Then-Else(Event Player.Sounds[4], Event Player, Null), Decal Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[0], Event Player, Null), Echo Focusing Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[1], Event Player, Null), Zarya Particle Beam Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Create Effect(If-Then-Else(Event Player.Sounds[4], Event Player, Null), Decal Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[0], Event Player, Null), Beacon Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[2] || Event Player.Sounds[0], Event Player, Null), Bad Aura Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[1] || Event Player.Sounds[4], Event Player, Null), Echo Cloning Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[2], Event Player, Null), Omnic Slicer Beam Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+		Create Effect(If-Then-Else(Event Player.Sounds[3], Event Player, Null), Baptiste Immortality Field Protected Sound, Color(White), Event Player, If-Then-Else(Event Player.Sounds[2], 100, 40), Visible To Position and Radius);
+		Modify Player Variable(Event Player, Sounds, Append To Array, Last Created Entity);
+	}
+}
+
+
+rule("Sound Cue")
+{
+	event
+	{
+		Subroutine;
+		SoundCue;
+	}
+
+	actions
+	{
+		Wait(0.300, Ignore Condition);
+        Call Subroutine(Call);
+		If(Global.Phase < 2);
+			Event Player.Sounds[3] = True;
+			Event Player.Sounds[1] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[1] = False;
+		Else;
+			Event Player.Sounds[1] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[1] = False;
+			Wait(0.188, Ignore Condition);
+			Call Subroutine(Call);
+			Wait(0.375, Ignore Condition);
+			Call Subroutine(Call);
+			Event Player.Sounds[1] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[1] = False;
+			Wait(0.188, Ignore Condition);
+			Call Subroutine(Call);
+			Wait(0.375, Ignore Condition);
+			Call Subroutine(Call);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[0] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[0] = False;
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[1] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[1] = False;
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[3] = True;
+			Event Player.Sounds[4] = True;
+			Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+			Wait(0.188, Ignore Condition);
+			Event Player.Sounds[4] = False;
+		End;
+		Wait(0.188, Ignore Condition);
+		Event Player.Sounds[0] = True;
+		Event Player.Sounds[2] = True;
+		Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+		Wait(0.188, Ignore Condition);
+		Event Player.Sounds[0] = False;
+		Wait(2.82, Ignore Condition);
+		Event Player.Sounds[2] = False;
+		Event Player.Sounds[3] = False;
+		Destroy Effect(Array Slice(Event Player.Sounds, 5, 1000));
+	}
+}
+
+rule("Motif")
+{
+	event
+	{
+		Subroutine;
+		Call;
+	}
+
+	actions
+	{
+		Event Player.Sounds[0] = True;
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Event Player.Sounds[0] = False;
+        Wait(0.375, Ignore Condition);
+        Event Player.Sounds[0] = True;
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Event Player.Sounds[0] = False;
+        Wait(0.188, Ignore Condition);
+        Event Player.Sounds[0] = True;
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Play Effect(Event Player, DVa Micro Missiles Explosion Sound, Color(White), Event Player.CameraPosition ? Event Player.CameraPosition : Eye Position(Event Player), 100);
+        Wait(0.188, Ignore Condition);
+        Event Player.Sounds[0] = False;
+        Wait(0.188, Ignore Condition);
 	}
 }
 
@@ -2724,6 +2852,7 @@ rule("On Enter State: Landing")
 		Set Invisible(Event Player, None);
 		Start Holding Button(Event Player, Button(Crouch));
 		Wait Until(Is On Ground(Event Player), 99999);
+		Play Effect(All Players(All Teams), Doomfist Meteor Strike Impact Sound, Color(White), Position Of(Event Player), 100);
 		If(Global.Phase == 1 || Event Player.PizzaIndex == Custom String("Soon"));
 			Create Effect(All Players(All Teams), Ring, Color(Sky Blue), Vector(0, 0, 0), Event Player.ShockwaveRadius + 2,
 				Visible To Position and Radius);
@@ -2803,6 +2932,7 @@ rule("Low health")
 				Event Player.State = Custom String("StartingTakeoff2");
 			End;
 		Else If(Global.Phase == 3);
+			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Color(White), Event Player, 100);
 			Event Player.HasLostThisPhase = True;
 			Event Player.CanSwing = False;
 			Event Player.CanSlam = False;
@@ -3053,7 +3183,7 @@ rule("On Enter State: StartingSwing")
 		Disable Movement Collision With Players(Event Player);
 		Event Player.CanSlam = False;
 		Event Player.SwingCooldown = 5;
-		Wait(0.200, Ignore Condition);
+		Wait(0.200, Abort When False);
 		Start Forcing Throttle(Event Player, 0, 1, 0, 1, 0, 0);
 		Wait Until(Is On Ground(Event Player), 1);
 		Event Player.DashAngles[0] = Horizontal Facing Angle Of(Event Player);
@@ -3368,7 +3498,7 @@ rule("Is On Ground")
 	{
 		Event Player.DoubleJumps[1] = 0;
 		Event Player.DoubleJumps[2] = 0;
-		If(Team Of(Event Player) != Team 2 || !Event Player.CouldBeHumanPlayer);
+		If(Event Player.Role != Custom String("Boss"));
 			Event Player.DoubleJumps[3] = False;
 		End;
 		If(Array Contains(Array(Custom String("Dashing"), Custom String("Swinging")), Event Player.State));
@@ -3440,7 +3570,7 @@ rule("Needler Bot")
 	conditions
 	{
 		Event Player.Master[0] != Null;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Role == Custom String("Needler");
 	}
 
 	actions
@@ -3592,14 +3722,12 @@ rule("Enter Phase: 3")
 	conditions
 	{
 		Global.Phase == 2;
-		Is True For All(Remove From Array(Filtered Array(All Players(Team 2),
-			Current Array Element.Master[0] == Current Array Element && !Current Array Element.CouldBeHumanPlayer), Global.NullPlayer),
-			Current Array Element.IsDead) == True;
+		Is True For Any(All Living Players(Team 2), Current Array Element.Role == Custom String("Add")) == False;
 	}
 
 	actions
 	{
-		Wait(5, Abort When False);
+		Wait(1, Abort When False);
 		Global.Phase = 3;
 	}
 }
@@ -3615,8 +3743,8 @@ rule("Add. choose target")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.State == Custom String("Idle");
 		Is Alive(Event Player) == True;
@@ -3644,9 +3772,9 @@ rule("Add. target attacker")
 
 	conditions
 	{
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Array Contains(Global.NullPlayer, Attacker) == False;
-		Event Player.Master[0] == Event Player;
 		Event Player.Master[1] == Null;
 		Event Player.Target != Null;
 		Is Alive(Event Player) == True;
@@ -3672,14 +3800,15 @@ rule("Add. enter state: shoot")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.State == Custom String("Idle");
 		Event Player.Target != Null;
 		Distance Between(Event Player, Event Player.Target) < (Hero Of(Event Player) == Hero(Wrecking Ball) ? 18 : 25);
 		(Distance Between(Event Player, Event Player.Target) < 15 && Ultimate Charge Percent(Event Player) == 100) == False;
 		(Hero Of(Event Player) != Hero(Tracer) || Is In View Angle(Event Player, Eye Position(Event Player.Target), 35)) == True;
+		(Hero Of(Event Player) != Hero(Wrecking Ball) || Ammo(Event Player, 0) == Max Ammo(Event Player, 0)) == True;
 	}
 
 	actions
@@ -3700,8 +3829,8 @@ rule("Add. enter state: idle")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.State == Custom String("Shoot");
 		Distance Between(Event Player, Event Player.Target) > (Hero Of(Event Player) == Hero(Wrecking Ball) ? 18 : 25);
@@ -3725,8 +3854,8 @@ rule("Add. on exit state: shoot")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.State != Custom String("Shoot");
 	}
@@ -3749,8 +3878,8 @@ rule("Add. clear target")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Target != Null;
 		Array Contains(Filtered Array(All Living Players(Team 1), Current Array Element.StealthTime[0] == 0), Event Player.Target)
 			== False;
@@ -3773,15 +3902,15 @@ rule("Add. has target")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.Target != Null;
 	}
 
 	actions
 	{
-		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Event Player.Target)), Array(12.600, 720,
+		Start Facing(Event Player, Direction Towards(Eye Position(Event Player), Eye Position(Event Player.Target)), Array(Is In Alternate Form(Event Player) ? 35 : 12.600, 720,
 			Is Firing Primary(Event Player) ? 12.600 : 35)[Index Of Array Value(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)),
 			Hero Of(Event Player))], To World, Direction and Turn Rate);
 	}
@@ -3798,8 +3927,8 @@ rule("Add. has no target")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Target == Null;
 		Array Contains(Array(Custom String("Shoot"), Custom String("Ult")), Event Player.State) == True;
 		Event Player.State != Custom String("Idle");
@@ -3824,8 +3953,8 @@ rule("Add. move forward")
 
 	conditions
 	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
+		Event Player.Master[0] != Null;
+		Event Player.Role == Custom String("Add");
 		Event Player.Master[1] == Null;
 		Event Player.Target != Null;
 		Magnitude Of(Mapped Array(Vector Towards(Event Player, Event Player.Target), Vector(X Component Of(Current Array Element), 0,
@@ -3835,7 +3964,7 @@ rule("Add. move forward")
 	actions
 	{
 		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 1);
-		Log To Inspector(Custom String("start moving forward"));
+		disabled Log To Inspector(Custom String("start moving forward"));
 	}
 }
 
@@ -3877,7 +4006,11 @@ rule("Exploder Setup")
 		If(Global.Phase == 2);
 			Teleport(Event Player, Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
 		Else;
-			Teleport(Event Player, Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer)), Current Array Element ? (Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179, 179), 0)) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
+			Teleport(Event Player, Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1),
+				Current Array Element.Role == Custom String("Hero"))), Current Array Element ? Position Of(Current Array Element)
+				- Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179,
+				179), 0) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(
+				Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
 		End;
 		Set Max Ammo(Event Player, 0, Round To Integer(Event Player.Level, To Nearest) + 3);
 		Event Player.Name = Random Value In Array(Remove From Array(Global.BallNames, Mapped Array(All Players(Team 2),
@@ -3886,6 +4019,30 @@ rule("Exploder Setup")
 			Event Player.Name = Random Value In Array(Global.BallNames);
 		End;
 		Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
+		Event Player.State = Custom String("Idle");
+	}
+}
+
+rule("Exploder exit state: shoot")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Wrecking Ball;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Event Player.State == Custom String("Shoot");
+		Ammo(Event Player, 0) == 0;
+		Is In View Angle(Event Player, Eye Position(Event Player.Target), 40) == False;
+	}
+
+	actions
+	{
+		Wait(0.150, Abort When False);
 		Event Player.State = Custom String("Idle");
 	}
 }
@@ -3981,7 +4138,7 @@ rule("Exploder stop moving forward")
 	actions
 	{
 		Stop Forcing Throttle(Event Player);
-		Log To Inspector(Custom String("exploder stop throttle"));
+		disabled Log To Inspector(Custom String("exploder stop throttle"));
 	}
 }
 
@@ -4018,7 +4175,11 @@ rule("Golem Setup")
 		If(Global.Phase == 2);
 			Teleport(Event Player, 2.500 * Up + Random Real(25, 60) * Direction From Angles(Random Integer(-179, 0), 0));
 		Else;
-			Teleport(Event Player, 2.500 * Up + Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer)), Current Array Element ? (Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179, 179), 0)) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
+			Teleport(Event Player, 2.500 * Up + Mapped Array(Mapped Array(Random Value In Array(Filtered Array(All Living Players(Team 1),
+				Current Array Element.Role == Custom String("Hero"))), Current Array Element ? Position Of(Current Array Element)
+				- Y Component Of(Position Of(Current Array Element)) * Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179,
+				179), 0) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(
+				Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
 		End;
 		Set Max Ammo(Event Player, 0, 1);
 		Event Player.Name = Random Value In Array(Remove From Array(Global.ZenyattaNames, Mapped Array(All Players(Team 2),
@@ -4027,6 +4188,7 @@ rule("Golem Setup")
 			Event Player.Name = Random Value In Array(Global.ZenyattaNames);
 		End;
 		Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
+		Play Effect(All Players(All Teams), Pharah Barrage Explosion Sound, Color(White), Position Of(Event Player), 100);
 		Event Player.State = Custom String("Idle");
 	}
 }
@@ -4051,7 +4213,7 @@ rule("Golem stop moving forward")
 	actions
 	{
 		Stop Forcing Throttle(Event Player);
-		Log To Inspector(Custom String("golem stop throttle"));
+		disabled Log To Inspector(Custom String("golem stop throttle"));
 	}
 }
 
@@ -4446,7 +4608,7 @@ rule("Wisp move backward")
 	actions
 	{
 		Start Forcing Throttle(Event Player, 0, 0, 1, 1, 0, 1);
-		Log To Inspector(Custom String("wisp move back"));
+		disabled Log To Inspector(Custom String("wisp move back"));
 	}
 }
 
@@ -4471,7 +4633,7 @@ rule("Wisp stop moving forward/backward")
 	actions
 	{
 		Stop Forcing Throttle(Event Player);
-		Log To Inspector(Custom String("wisp stop throttle"));
+		disabled Log To Inspector(Custom String("wisp stop throttle"));
 	}
 }
 
@@ -4610,7 +4772,7 @@ rule("Wisp ascend")
 	actions
 	{
 		Start Holding Button(Event Player, Button(Jump));
-		Log To Inspector(Custom String("ascend"));
+		disabled Log To Inspector(Custom String("ascend"));
 	}
 }
 
@@ -4634,7 +4796,7 @@ rule("Wisp stop ascending")
 	actions
 	{
 		Stop Holding Button(Event Player, Button(Jump));
-		Log To Inspector(Custom String("stop ascend"));
+		disabled Log To Inspector(Custom String("stop ascend"));
 	}
 }
 
@@ -4659,7 +4821,7 @@ rule("Wisp descend")
 	actions
 	{
 		Start Holding Button(Event Player, Button(Crouch));
-		Log To Inspector(Custom String("descend"));
+		disabled Log To Inspector(Custom String("descend"));
 	}
 }
 
@@ -4683,7 +4845,7 @@ rule("Wisp stop descending")
 	actions
 	{
 		Stop Holding Button(Event Player, Button(Crouch));
-		Log To Inspector(Custom String("stop descend"));
+		disabled Log To Inspector(Custom String("stop descend"));
 	}
 }
 
@@ -4695,7 +4857,7 @@ disabled rule("PHASE 3")
 	}
 }
 
-rule("On Phase 3 Start")
+rule("On Phase 3 Start (Boss)")
 {
 	event
 	{
@@ -4724,8 +4886,32 @@ rule("On Phase 3 Start")
 		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
 		Event Player.BaseRegen = 15 / Event Player.HealthScale * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
+		Wait(4, Abort When False);
 		Event Player.ShowBossBar = True;
 		Event Player.State = Custom String("Landing");
+	}
+}
+
+rule("On Phase 3 Start (Team 1)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Global.Phase == 3;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Role != Custom String("Hero"));
+		Start Rule(PrepareSounds, Do Nothing);
+		Wait(0.200, Abort When False);
+		Start Rule(SoundCue, Restart Rule);
 	}
 }
 
@@ -4739,17 +4925,17 @@ rule("On Enter Phase: 3 (Global)")
 	conditions
 	{
 		Global.Phase == 3;
-		Is True For Any(All Living Players(Team 1), Current Array Element.CouldBeHumanPlayer) == True;
 	}
 
 	actions
 	{
-		Call Subroutine(SetCoefficient);
+		Wait(4, Abort When False);
 		Global.Director[0] = 300;
+		Call Subroutine(SetCoefficient);
 		While(True);
 			Call Subroutine(TrySpawn);
 			Wait(Global.Director[1], Abort When False);
-			Global.Director[0] += Global.Director[1] * (1 + 0.4 * Global.DifficultyCoefficient) * (Global.PlayerCount + 1) / 2;
+			Global.Director[0] += Global.Director[1] * (1 + 0.400 * Global.DifficultyCoefficient) * (Global.PlayerCount + 1) / 2;
 		End;
 	}
 }
@@ -4772,7 +4958,7 @@ rule("Try Spawn")
 			If(!Global.Director[5]);
 				If(Random Real(0, 1) < 0.200);
 					Global.Director[2] = 0;
-				Else If(Random Real(0, 1) < 0.75);
+				Else If(Random Real(0, 1) < 0.750);
 					Global.Director[2] = 1;
 				Else;
 					Global.Director[2] = 2;
@@ -4788,15 +4974,14 @@ rule("Try Spawn")
 				Global.Director[1] = Random Real(0.100, 1);
 			Else;
 				Global.Director[5] = True;
-				Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))[Global.Director[2]], Team 2));
+				Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))
+					[Global.Director[2]], Team 2));
 				Global.Director[0] -= Global.Director[3];
 				Global.Director[1] = Random Real(0.100, 1);
 			End;
-		End;			
+		End;
 	}
 }
-
-
 
 rule("Pizza Time")
 {
@@ -4982,7 +5167,7 @@ rule("On Enter Phase: 4 (Global)")
 	{
 		Call Subroutine(SetCoefficient);
 		Wait(0.500, Ignore Condition);
-		Kill(Remove From Array(All Players(Team 2), Append To Array(Global.Bosses, Global.NullPlayer)), Global.NullPlayer[0]);
+		Kill(Filtered Array(All Players(Team 2), Current Array Element.Role == Custom String("Add")), Global.NullPlayer[0]);
 		disabled Wait(5, Ignore Condition);
 		disabled Global.FlamePillarExpirationTimes = Mapped Array(Global.FlamePillarExpirationTimes, Total Time Elapsed);
 	}
@@ -5365,6 +5550,16 @@ rule("Player Died")
 			Set Status(Event Player, Null, Invincible, 3);
 		Else;
 			Event Player.IsDead = True;
+			If(Event Player.Role == Custom String("Add"));
+				If(Hero Of(Event Player) == Hero(Wrecking Ball));
+					Event Player.FlameTornadoPosition = Position Of(Event Player);
+					Event Player.FlameTornadoExpirationTime = Total Time Elapsed + 7;
+					Create Effect(All Players(All Teams), Ring, Color(Sky Blue), Event Player.FlameTornadoPosition, 5, Visible To);
+					Event Player.FlameTornado = Last Created Entity;
+				End;
+				Wait(9, Ignore Condition);
+				Call Subroutine(DestroyMe);
+			End;
 		End;
 	}
 }
@@ -5387,35 +5582,6 @@ rule("Player Is Alive")
 	actions
 	{
 		Event Player.IsDead = False;
-	}
-}
-
-rule("Add. Died")
-{
-	event
-	{
-		Player Died;
-		Team 2;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.Master[0] == Event Player;
-		Event Player.CouldBeHumanPlayer == False;
-		Event Player.IsDead == True;
-	}
-
-	actions
-	{
-		If(Hero Of(Event Player) == Hero(Wrecking Ball));
-			Event Player.FlameTornadoPosition = Position Of(Event Player);
-			Event Player.FlameTornadoExpirationTime = Total Time Elapsed + 7;
-			Create Effect(All Players(All Teams), Ring, Color(Sky Blue), Event Player.FlameTornadoPosition, 5, Visible To);
-			Event Player.FlameTornado = Last Created Entity;
-		End;
-		Wait(9, Ignore Condition);
-		Call Subroutine(DestroyMe);
 	}
 }
 
@@ -5600,8 +5766,8 @@ rule("On enter Phase 2 (Boss)")
 	actions
 	{
 		Wait(2, Abort When False);
-		Event Player.Target = Random Value In Array(Remove From Array(Filtered Array(All Living Players(Team 2),
-			Current Array Element.Master[0] == Current Array Element && !Current Array Element.CouldBeHumanPlayer), Global.NullPlayer));
+		Event Player.Target = Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String(
+			"Add")));
 	}
 }
 
