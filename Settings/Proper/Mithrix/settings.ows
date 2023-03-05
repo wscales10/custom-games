@@ -1221,11 +1221,12 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 					* Event Player.DefaultHealth[3] * 0.400 / (Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
 			End;
 		End;
+		Event Player.IntendedMaxHealth = Mapped Array(Event Player.IntendedMaxHealth, Round To Integer(Current Array Element, Up));
 		Event Player.HealthScale[1] = Max(Min(Sorted Array(Remove From Array(Mapped Array(Event Player.IntendedMaxHealth,
 			Current Array Element / (Event Player.DefaultHealth[Current Array Index + 1] / 25)), 0), Current Array Element)[0], 10),
 			0.010);
 		Set Max Health(Event Player, Event Player.HealthScale[1] * 100);
-		Event Player.NormalExtraHealth = Mapped Array(Event Player.IntendedMaxHealth, Round To Integer(Current Array Element, Down)
+		Event Player.NormalExtraHealth = Mapped Array(Event Player.IntendedMaxHealth, Current Array Element
 			* 25 - Event Player.DefaultHealth[Current Array Index + 1] * Event Player.HealthScale[1]);
 		Set Damage Dealt(Event Player, Event Player.BaseDamageMultiplier * 100);
 		Call Subroutine(UpdateHealing);
@@ -1234,6 +1235,7 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Remove Health Pool From Player(Event Player.NormalExtraHealthPools[0]);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Remove From Array By Index, 0);
 		End;
+		Set Player Health(Event Player, 100000);
 		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[0] / 9999, Down)),
 			1);
 			Add Health Pool To Player(Event Player, Health, 9999, True, False);
@@ -1266,7 +1268,6 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 		End;
 		Wait(0.250, Ignore Condition);
 		Modify Player Variable(Event Player, NormalExtraHealth, Remove From Array By Index, 3);
-		Set Player Health(Event Player, Max Health(Event Player) + 1);
 	}
 }
 
@@ -1730,10 +1731,9 @@ rule("Steal subroutine")
 		Play Effect(Global.CurrentStealee, Moira Fade Disappear Sound, Color(White), Global.CurrentStealee, 100);
 		Global.ItemStackOriginalOwners[Global.ItemStackBeingStolenIndex] = Global.CurrentStealee;
 		Global.ItemStackOwners[Global.ItemStackBeingStolenIndex] = Null;
-		Modify Player Variable(Global.CurrentStealee, ItemStacks, Remove From Array By Index, 0);
 		Global.ItemStackNewOwners[Global.ItemStackBeingStolenIndex] = Global.Stealer;
 		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackBeingStolenIndex, 2,
-			-1 * Global.ItemStackSizes[Global.ItemStackBeingStolenIndex], Global.CurrentStealee));
+			-1 * Global.ItemStackSizes[Global.ItemStackBeingStolenIndex], Global.CurrentStealee, False));
 	}
 }
 
@@ -1782,12 +1782,12 @@ rule("Acquire Item Subroutine")
 			Modify Player Variable(Global.ItemStackOwners[Global.ItemStackIndex], ItemStacks, Append To Array,
 				Global.ItemStacks[Global.ItemStackIndex]);
 			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ItemStackIndex, 1, Global.CurrentItemStackSize,
-				Global.ItemStackOwners[Global.ItemStackIndex]));
+				Global.ItemStackOwners[Global.ItemStackIndex], False));
 		Else;
 			Global.ItemStackSizes[Global.ItemStackIndex] -= Global.CurrentItemStackSize;
 			Global.ItemStackSizes[Global.ExistingMatchingItemStacks[0]] += Global.CurrentItemStackSize;
 			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.ExistingMatchingItemStacks[0], 0,
-				Global.CurrentItemStackSize, Global.ItemStackOwners[Global.ItemStackIndex]));
+				Global.CurrentItemStackSize, Global.ItemStackOwners[Global.ItemStackIndex], False));
 		End;
 		Modify Player Variable(Global.ItemStackNewOwners[Global.ItemStackIndex], ItemStackReturnInfo, Append To Array, Array(
 			Global.ItemStackIndex, Global.CurrentItemStackSize));
@@ -1811,7 +1811,7 @@ rule("Distribute Item Subroutine")
 			Global.NewItemStackIndex = Global.NewItemStackIndex[0];
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
 			Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 0, Global.ItemDistributionInfo[2],
-				Global.ItemStackOwners[Global.NewItemStackIndex]));
+				Global.ItemStackOwners[Global.NewItemStackIndex], False));
 		Else;
 			Call Subroutine(CreateItemStack);
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
@@ -1880,7 +1880,7 @@ rule("Create Item Stack Subroutine")
 			Global.ItemDistributionInfo[0])], Color(White), Null, Visible To Sort Order and String, Default Visibility);
 		Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
 		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2],
-			Global.ItemStackOwners[Global.NewItemStackIndex]));
+			Global.ItemStackOwners[Global.NewItemStackIndex], False));
 	}
 }
 
@@ -1894,7 +1894,7 @@ rule("Update Item Stacks from Queue")
 	conditions
 	{
 		Global.State != Null;
-		Count Of(Global.ItemStackUpdateInfos) > 3;
+		Count Of(Global.ItemStackUpdateInfos) > 4;
 	}
 
 	actions
@@ -1904,16 +1904,25 @@ rule("Update Item Stacks from Queue")
 		If(Array Contains(Array(2, 4), Global.ItemRarities[Index Of Array Value(Global.Items, Global.ItemStackUpdateInfo[1])]));
 			Global.ItemStackUpdateInfo[2].EvenRarityItemsCount += Global.ItemStackUpdateInfo[3];
 		End;
+		If(Global.ItemStackUpdateInfos[4]);
+			Global.ItemStackSizes[Global.ItemStackUpdateInfos[0]] += Global.ItemStackUpdateInfo[3];
+		End;
 		If(Global.ItemStackUpdateInfos[1] == 0);
 			Call Subroutine(UpdateItemStack_Modify);
 		Else;
 			If(Global.ItemStackUpdateInfos[1] > 1);
+				If(!Is True For Any(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Global.ItemStackUpdateInfo[1]
+					&& Global.ItemStackOwners[Current Array Index] == Global.ItemStackUpdateInfo[2]));
+					Modify Player Variable(Global.ItemStackUpdateInfo[2], ItemStacks, Remove From Array By Value, Global.ItemStackUpdateInfo[1]);
+				End;
 				Call Subroutine(UpdateItemStack_Remove);
 			End;
 			If(Global.ItemStackUpdateInfos[1] % 2 == 1);
 				Call Subroutine(UpdateItemStack_Add);
 			End;
 		End;
+		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
 		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
 		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
 		Modify Global Variable(ItemStackUpdateInfos, Remove From Array By Index, 0);
@@ -3850,7 +3859,7 @@ rule("AI Loop")
 	{
 		Global.Adds = Filtered Array(All Living Players(Team 2),
 			Current Array Element.Master[0] && Current Array Element.Role == Custom String("Add")
-			&& Current Array Element.Master[1] == Null);
+			&& Current Array Element.Master[1] == Null && Current Array Element.State && Current Array Element.State != Custom String("IndividualSetup"));
 		For Global Variable(AiIndex, 0, Count Of(Global.Adds), 1);
 			Global.Add = Global.Adds[Global.AiIndex];
 			Call Subroutine(AiStep);
@@ -4915,8 +4924,12 @@ rule("Try Spawn")
 				Global.Director[1] = Random Real(0.100, 1);
 			Else;
 				Global.Director[5] = True;
-				Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))
-					[Global.Director[2]], Team 2));
+				Global.Director[6] = Global.BossCount;
+				While(Global.Director[6] > 0);
+					Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))
+						[Global.Director[2]], Team 2));
+					Global.Director[6] -= 1;
+				End;
 				Global.Director[0] -= Global.Director[3];
 				Global.Director[1] = Random Real(0.100, 1);
 			End;
@@ -5177,6 +5190,7 @@ rule("On Enter State: Stealing (Global)")
 		While(Count Of(Global.Stealees) > 0);
 			Global.Stealer = Global.Bosses[Global.BossIndex];
 			Global.CurrentStealee = Global.Stealees[Global.StealeeIndex];
+			Wait Until(Count Of(Global.ItemStackUpdateInfos) == 0, 3);
 			If(Count Of(Global.CurrentStealee.ItemStacks) == 0);
 				Modify Global Variable(Stealees, Remove From Array By Index, Global.StealeeIndex);
 			Else;
@@ -5403,7 +5417,7 @@ rule("Return Items")
 				Modify Player Variable(Event Player, ItemStacks, Remove From Array By Value,
 					Global.ItemStacks[Event Player.StackBeingReturnedIndex]);
 				Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2,
-					-1 * Global.ItemStackSizes[Event Player.StackBeingReturnedIndex], Event Player));
+					-1 * Global.ItemStackSizes[Event Player.StackBeingReturnedIndex], Event Player, False));
 			Else;
 				Event Player.StackBeingDepletedIndex = Filtered Array(Event Player.RemainingMatchingStacks,
 					Global.ItemStackSizes[Current Array Element] > 0)[0];
@@ -5412,15 +5426,15 @@ rule("Return Items")
 						[0]] += Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] - Event Player.ItemStackReturnInfo[1];
 					Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] = Event Player.ItemStackReturnInfo[1];
 					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingReturnedIndex, 2,
-						-1 * Event Player.ItemStackReturnInfo[1], Event Player));
+						-1 * Event Player.ItemStackReturnInfo[1], Event Player, False));
 					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Remove From Array(Event Player.RemainingMatchingStacks,
 						Event Player.StackBeingDepletedIndex)[0], 1, Global.ItemStackSizes[Remove From Array(Event Player.RemainingMatchingStacks,
-						Event Player.StackBeingDepletedIndex)[0]], Event Player));
+						Event Player.StackBeingDepletedIndex)[0]], Event Player, False));
 				Else;
 					Global.ItemStackSizes[Event Player.StackBeingDepletedIndex] -= Event Player.ItemStackReturnInfo[1];
 					Global.ItemStackSizes[Event Player.StackBeingReturnedIndex] += Event Player.ItemStackReturnInfo[1];
 					Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Event Player.StackBeingDepletedIndex, 0,
-						-1 * Event Player.ItemStackReturnInfo[1], Event Player));
+						-1 * Event Player.ItemStackReturnInfo[1], Event Player, False));
 				End;
 			End;
 			Global.ItemStackNewOwners[Event Player.StackBeingReturnedIndex] = Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex];
@@ -5481,12 +5495,11 @@ rule("Player Died")
 		If(Event Player.Role == Custom String("Add"));
 			Call Subroutine(LoseTarget);
 		End;
-		If(Is True For Any(Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String(
-			"Extra Life") && Global.ItemStackOwners[Current Array Index] == Event Player));
+		If(Array Contains(Event Player.ItemStacks, Custom String("Extra Life")));
 			If(Team Of(Event Player) != Team 2);
-				Global.ItemStackSizes[Filtered Array(Mapped Array(Global.ItemStackSizes, Current Array Index),
+				Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Filtered Array(Mapped Array(Global.ItemStackSizes, Current Array Index),
 					Global.ItemStackSizes[Current Array Element] > 0 && Global.ItemStacks[Current Array Element] == Custom String("Extra Life")
-					&& Global.ItemStackOwners[Current Array Element] == Event Player)[0]] -= 1;
+					&& Global.ItemStackOwners[Current Array Element] == Event Player)[0], 0, -1, Event Player, True));
 			End;
 			Wait(2, Ignore Condition);
 			Resurrect(Event Player);
