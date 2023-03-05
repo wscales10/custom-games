@@ -34,6 +34,18 @@ settings
 
 	heroes
 	{
+		Team 1
+		{
+			Ultimate Generation - Combat: 0%
+			Ultimate Generation - Passive: 380%
+			
+			disabled heroes
+			{
+				D.Va
+				Echo
+			}
+		}
+
 		Team 2
 		{
 			Reinhardt
@@ -53,8 +65,8 @@ settings
 				Projectile Speed: 70%
 				Quick Melee: Off
 				Recall: Off
-				Ultimate Generation - Passive Pulse Bomb: 200%
-				Ultimate Generation Pulse Bomb: 500%
+				Ultimate Generation - Passive Pulse Bomb: 500%
+				Ultimate Generation Pulse Bomb: 200%
 			}
 
 			Wrecking Ball
@@ -79,15 +91,6 @@ settings
 			enabled heroes
 			{
 				Reinhardt
-			}
-		}
-
-		Team 1
-		{
-			disabled heroes
-			{
-				D.Va
-				Echo
 			}
 		}
 	}
@@ -515,8 +518,8 @@ rule("Boss Setup")
 			Null, Event Player.PizzaIndex == Custom String("Dormant") ? Null : Max(0, Event Player.PizzaTime[0] - Total Time Elapsed),
 			Right, 0, Event Player.PizzaIndex == Custom String("Dormant") ? Color(Red) : (Event Player.PizzaIndex == Custom String("Soon")
 			? Color(Gray) : Color(Orange)), Color(White), Color(White), Visible To String and Color, Default Visibility);
-		Create Effect(Is Alive(Event Player) && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams), Event Player) : Null,
-			Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+		Create Effect(Is Alive(Event Player) && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams),
+			Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
 		Set Jump Enabled(Event Player, False);
 		Event Player.ShockwaveRadius = -1;
 		Event Player.PizzaIndex = Custom String("Dormant");
@@ -1218,7 +1221,9 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 					* Event Player.DefaultHealth[3] * 0.400 / (Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
 			End;
 		End;
-		Event Player.HealthScale[1] = Max(Min(Sorted Array(Remove From Array(Mapped Array(Event Player.IntendedMaxHealth, Current Array Element / (Event Player.DefaultHealth[Current Array Index + 1] / 25)), 0), Current Array Element)[0], 10), 0.01);
+		Event Player.HealthScale[1] = Max(Min(Sorted Array(Remove From Array(Mapped Array(Event Player.IntendedMaxHealth,
+			Current Array Element / (Event Player.DefaultHealth[Current Array Index + 1] / 25)), 0), Current Array Element)[0], 10),
+			0.010);
 		Set Max Health(Event Player, Event Player.HealthScale[1] * 100);
 		Event Player.NormalExtraHealth = Mapped Array(Event Player.IntendedMaxHealth, Round To Integer(Current Array Element, Down)
 			* 25 - Event Player.DefaultHealth[Current Array Index + 1] * Event Player.HealthScale[1]);
@@ -1229,7 +1234,8 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Remove Health Pool From Player(Event Player.NormalExtraHealthPools[0]);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Remove From Array By Index, 0);
 		End;
-		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[0] / 9999, Down)), 1);
+		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[0] / 9999, Down)),
+			1);
 			Add Health Pool To Player(Event Player, Health, 9999, True, False);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Append To Array, Last Created Health Pool);
 		End;
@@ -1238,7 +1244,8 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Add Health Pool To Player(Event Player, Health, Last Of(Event Player.NormalExtraHealthPools), True, False);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Append To Array, Last Created Health Pool);
 		End;
-		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[1] / 9999, Down)), 1);
+		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[1] / 9999, Down)),
+			1);
 			Add Health Pool To Player(Event Player, Armor, 9999, True, False);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Append To Array, Last Created Health Pool);
 		End;
@@ -1247,7 +1254,8 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Add Health Pool To Player(Event Player, Armor, Last Of(Event Player.NormalExtraHealthPools), True, False);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Append To Array, Last Created Health Pool);
 		End;
-		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[2] / 9999, Down)), 1);
+		For Player Variable(Event Player, HealthPoolIndex, 0, Min(10, Round To Integer(Event Player.NormalExtraHealth[2] / 9999, Down)),
+			1);
 			Add Health Pool To Player(Event Player, Shields, 9999, True, False);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Append To Array, Last Created Health Pool);
 		End;
@@ -1283,8 +1291,9 @@ rule("On hit effects")
 				Victim.BarrierInfo[1] = Total Time Elapsed + 7;
 			End;
 			If(Array Contains(Victim.ItemStacks, Custom String("Egg")));
-				Heal(Victim, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Victim))], Victim.HealthScale[0] * Filtered Array(
-					Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Egg")
+				Heal(Victim, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Victim))],
+					Victim.HealthScale[0] * Filtered Array(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Egg")
 					&& Global.ItemStackOwners[Current Array Index] == Victim)[0] * 15 / Victim.HealingModifiers[0]);
 			End;
 			If(Array Contains(Victim.ItemStacks, Custom String("Recovery")));
@@ -2184,7 +2193,7 @@ rule("Buy subroutine")
 	actions
 	{
 		If(Event Player.Currency >= Global.ItemShopPrices[Event Player.BuyIndex] || (
-			Global.TestMode && (Event Player == Host Player) && Global.ItemShopPrices[Event Player.BuyIndex] == Custom String("∞")));
+			Global.TestMode && Event Player == Host Player && Global.ItemShopPrices[Event Player.BuyIndex] == Custom String("∞")));
 			Event Player.Currency -= Global.ItemShopPrices[Event Player.BuyIndex];
 			If(Array Contains(Global.Items, Global.ItemShops[Event Player.BuyIndex]));
 				Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Global.ItemShops[Event Player.BuyIndex], Event Player, 1));
@@ -2327,8 +2336,9 @@ rule("On Enter State: Cutscene (Boss)")
 		Clear Status(Event Player, Phased Out);
 		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
 		"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (1 + Global.DifficultyCoefficient)
-			* Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element)))) / Global.BossCount / 25;
+		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
+			1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
+			/ Global.BossCount / 25;
 		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
 		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
@@ -3079,7 +3089,8 @@ rule("TakeOff")
 		Start Holding Button(Event Player, Button(Crouch));
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Wait(1, Abort When False);
-		Event Player.State = Mapped Array(Event Player.State, String Contains(Current Array Element, Custom String("Takeoff")) ? Custom String("Full{0}", Current Array Element) : Current Array Element)[0];
+		Event Player.State = Mapped Array(Event Player.State, String Contains(Current Array Element, Custom String("Takeoff"))
+			? Custom String("Full{0}", Current Array Element) : Current Array Element)[0];
 		Abort If(!String Contains(Event Player.State, Custom String("Takeoff")));
 		Apply Impulse(Event Player, Up, 70, To World, Cancel Contrary Motion);
 		Wait(0.250, Ignore Condition);
@@ -4810,8 +4821,9 @@ rule("On Phase 3 Start (Boss)")
 		Event Player.CanNeedle = Array(False, False);
 		Call Subroutine(SetCoefficient);
 		"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (1 + Global.DifficultyCoefficient)
-			* Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element)))) / Global.BossCount / 25;
+		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
+			1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
+			/ Global.BossCount / 25;
 		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
 		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
