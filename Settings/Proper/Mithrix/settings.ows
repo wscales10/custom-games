@@ -4903,8 +4903,6 @@ rule("Try Spawn")
 	{
 		If(!Is True For Any(Global.AvailableBotSlots, X Component Of(Current Array Element) == 2));
 			Global.Director[5] = False;
-			Global.Director[1] = Random Real(4.500, 9);
-			Call Subroutine(SetCoefficient);
 		Else;
 			If(!Global.Director[5]);
 				If(Random Real(0, 1) < 0.200);
@@ -4915,25 +4913,28 @@ rule("Try Spawn")
 					Global.Director[2] = 2;
 				End;
 				Global.Director[3] = Array(80, 350, 550)[Global.Director[2]];
+				Global.Director[7] = 0;
 			End;
-			If(Global.Director[0] < Global.Director[3]);
+			If((Global.Director[0] < Global.Director[3]) || (Global.Director[0] >= 36 * Global.Director[3] && Global.Director[2] < 2) || Global.Director[7] > 5);
 				Global.Director[5] = False;
-				Global.Director[1] = Random Real(4.500, 9);
-				Call Subroutine(SetCoefficient);
-			Else If(Global.Director[0] >= 36 * Global.Director[3]);
-				Global.Director[5] = False;
-				Global.Director[1] = Random Real(0.100, 1);
 			Else;
 				Global.Director[5] = True;
+				Global.Director[0] -= Global.Director[3];
 				Global.Director[6] = Global.BossCount;
 				While(Global.Director[6] > 0);
 					Modify Global Variable(BotCreationQueue, Append To Array, Array(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer))
 						[Global.Director[2]], Team 2));
 					Global.Director[6] -= 1;
 				End;
-				Global.Director[0] -= Global.Director[3];
-				Global.Director[1] = Random Real(0.100, 1);
+				Global.Director[7] += 1;
 			End;
+		End;
+		
+		If(Global.Director[5]);
+			Global.Director[1] = Random Real(0.100, 1);
+		Else;
+			Global.Director[1] = Random Real(4.500, 9);
+			Call Subroutine(SetCoefficient);
 		End;
 	}
 }
