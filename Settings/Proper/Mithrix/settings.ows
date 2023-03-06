@@ -793,36 +793,30 @@ rule("Disable OSP")
 	}
 }
 
-rule("Crippled")
+rule("Start accelerating")
 {
 	event
 	{
 		Ongoing - Each Player;
-		Team 1;
+		All;
 		All;
 	}
 
 	conditions
 	{
-		Event Player.CrippleTime > 0;
+		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration > 0;
 	}
 
 	actions
 	{
-		Event Player.MoveSpeedDebuffs[2] = 50;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Event Player.ArmourModifiers[2] = -20;
-		Start Rule(UpdateArmour, Restart Rule);
-		Big Message(Event Player, Custom String("CRIPPLED"));
-		Wait Until(Event Player.CrippleTime == 0, 9999);
-		Event Player.MoveSpeedDebuffs[2] = 0;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Event Player.ArmourModifiers[2] = 0;
-		Start Rule(UpdateArmour, Restart Rule);
+		Start Accelerating(Event Player, Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(
+			Horizontal Angle From Direction(Position Of(Event Player)), 0), Magnitude Of(
+			Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(Horizontal Angle From Direction(
+			Position Of(Event Player)), 0)), 60, To World, Direction Rate and Max Speed);
 	}
 }
 
-rule("Slowed")
+rule("Stop accelerating")
 {
 	event
 	{
@@ -833,21 +827,16 @@ rule("Slowed")
 
 	conditions
 	{
-		Event Player.SlowTime > 0;
+		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration == 0;
 	}
 
 	actions
 	{
-		Event Player.MoveSpeedDebuffs[3] = 60;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Big Message(Event Player, Custom String("SLOWED"));
-		Wait Until(Event Player.SlowTime == 0, 9999);
-		Event Player.MoveSpeedDebuffs[3] = 0;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Stop Accelerating(Event Player);
 	}
 }
 
-rule("No Barrier")
+rule("Inwards")
 {
 	event
 	{
@@ -858,18 +847,23 @@ rule("No Barrier")
 
 	conditions
 	{
-		Event Player.BarrierInfo[1] != 0;
-		Event Player.BarrierInfo[1] > Total Time Elapsed;
+		Global.State == Custom String("BossFight");
+		Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 1 > Global.ArenaRadius;
 	}
 
 	actions
 	{
-		Event Player.ArmourModifiers[6] = 0;
-		Start Rule(UpdateArmour, Restart Rule);
+		Chase Player Variable At Rate(Event Player, WallAcceleration, (Is On Ground(Event Player) ? 400 : 0) + Max(0,
+			18 * Speed Of In Direction(Event Player, Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 81 * (
+			Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 1 - Global.ArenaRadius)),
+			1000000000, Destination and Rate);
+		Start Throttle In Direction(Event Player, Direction Towards(Event Player, Vector(0, 0, 0)), 2 * Max(0, Dot Product(World Vector Of(
+			Throttle Of(Event Player), Event Player, Rotation), Direction From Angles(Horizontal Angle From Direction(Position Of(
+			Event Player)), 0))), To World, Add to existing throttle, Direction and Magnitude);
 	}
 }
 
-rule("Barrier")
+rule("Not Inwards")
 {
 	event
 	{
@@ -880,394 +874,15 @@ rule("Barrier")
 
 	conditions
 	{
-		Event Player.BarrierInfo[0] == True;
-		Event Player.BarrierInfo[1] < Total Time Elapsed;
+		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up) + 1 > Global.ArenaRadius) == False;
 	}
 
 	actions
 	{
-		Event Player.ArmourModifiers[6] = 100 * Filtered Array(Global.ItemStackSizes,
-			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Barrier")
-			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0];
-		Start Rule(UpdateArmour, Restart Rule);
-	}
-}
-
-rule("No Barrier Health")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BarrierHealth == 0;
-	}
-
-	actions
-	{	If(Event Player.BarrierHealthDamageModification[1]);
-			Stop Damage Modification(Event Player.BarrierHealthDamageModification[0]);
-			Event Player.BarrierHealthDamageModification[1] = False;
-		End;
-	}
-}
-
-rule("Barrier Health")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BarrierHealth > 0;
-		Event Player.BarrierHealthDamageModification[1] == False;
-	}
-
-	actions
-	{
-		Start Damage Modification(Event Player, All Players(All Teams), 100 * Health(Event Player) / (Health(Event Player) + Event Player.BarrierHealth), Receivers Damagers and Damage Percent);
-		Event Player.BarrierHealthDamageModification[0] = Last Damage Modification Id;
-		Event Player.BarrierHealthDamageModification[1] = True;
-		Chase Player Variable At Rate(Event Player, BarrierHealth, 0, (Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - Event Player.BarrierHealth) / 30, Destination and Rate);
-	}
-}
-
-
-rule("Recover")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.RecoveryTime == 0;
-	}
-
-	actions
-	{
-		Abort If(!Array Contains(Event Player.MyItemStacks, Custom String("Recovery")));
-		Heal(Event Player, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))], (
-			Event Player.HealthScale[0] * 20 + (Max Health Of Type(Event Player, Health) + Max Health Of Type(Event Player, Armor)) * 0.050 * Filtered Array(Global.ItemStackSizes,
-			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Recovery")
-			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0]) / Event Player.HealingModifiers[0]);
-	}
-}
-
-rule("Debuff Shield on cooldown")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.DebuffShield[1] > 0;
-		Event Player.DebuffShield[0] == 0;
-	}
-
-	actions
-	{
-		Event Player.DebuffShield[2] = Total Time Elapsed + 5;
-	}
-}
-
-rule("Debuff Shield off cooldown")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.DebuffShield[2] > 0;
-		Total Time Elapsed > Event Player.DebuffShield[2];
-	}
-
-	actions
-	{
-		Event Player.DebuffShield[2] = 0;
-		Event Player.DebuffShield[0] = Event Player.DebuffShield[1];
-	}
-}
-
-rule("Debuff Shield increase barrier health")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.DebuffShield[3] > 0;
-	}
-
-	actions
-	{
-		Wait(1, Ignore Condition);
-		Event Player.DebuffShield[4] = Event Player.DebuffShield[3];
-		Event Player.DebuffShield[5] = Min(Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - 2 * Event Player.BarrierHealth, Event Player.DebuffShield[4] * 0.100 * (Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - Event Player.BarrierHealth));
-		Event Player.BarrierHealth += Event Player.DebuffShield[5];
-		Wait(0.100, Ignore Condition);
-		Event Player.DebuffShield[3] -= Event Player.DebuffShield[4];
-		Loop If Condition Is True;
-	}
-}
-
-rule("Player knocked down")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Has Status(Event Player, Knocked Down) == True;
-	}
-
-	actions
-	{
-		If(Team Of(Event Player) == Team 1);
-			Clear Status(Event Player, Knocked Down);
-		Else If(Event Player.DebuffShield[0] > 0);
-			Event Player.DebuffShield[0] -= 1;
-			Event Player.DebuffShield[3] += 1;
-			Clear Status(Event Player, Knocked Down);
-		End;
-	}
-}
-
-rule("Team 2 rooted")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		All;
-	}
-
-	conditions
-	{
-		Has Status(Event Player, Rooted) == True;
-	}
-
-	actions
-	{
-		Event Player.WispAcceleration = Vector(0, 0, 0);
-		If(Event Player.DebuffShield[0] > 0);
-			Event Player.DebuffShield[0] -= 1;
-			Event Player.DebuffShield[3] += 1;
-			Teleport(Event Player, World Vector Of(Normalize(Throttle Of(Event Player)) * 4, Event Player, Rotation and Translation));
-		End;
-	}
-}
-
-rule("Boss slept")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Has Status(Event Player, Asleep) == True;
-	}
-
-	actions
-	{
-		Wait(0.500, Ignore Condition);
-		If(Event Player.DebuffShield[0] > 0);
-			Event Player.DebuffShield[0] -= 1;
-			Event Player.DebuffShield[3] += 1;
-			Clear Status(Event Player, Asleep);
-		End;
-	}
-}
-
-rule("Boss frozen")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Has Status(Event Player, Frozen) == True;
-	}
-
-	actions
-	{
-		If(Event Player.DebuffShield[0] > 0);
-			Event Player.DebuffShield[0] -= 1;
-			Event Player.DebuffShield[3] += 1;
-			Clear Status(Event Player, Frozen);
-		End;
-	}
-}
-
-
-
-rule("Allow double jump if > 0.8 altitude & have double jumps")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		(Event Player.Role == Custom String("Boss") || Altitude Of(Event Player) > 0.800) == True;
-		Event Player.DoubleJumps[0] - Event Player.DoubleJumps[1] > 0;
-	}
-
-	actions
-	{
-		Event Player.DoubleJumps[3] = True;
-	}
-}
-
-rule("Disallow double jump")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.DoubleJumps[1] >= Event Player.DoubleJumps[0];
-	}
-
-	actions
-	{
-		Event Player.DoubleJumps[3] = False;
-	}
-}
-
-rule("Double jump?")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Button Held(Event Player, Button(Jump)) == True;
-	}
-
-	actions
-	{
-		Abort If(!Event Player.DoubleJumps[3] || Is Dead(Event Player) || Has Status(Event Player, Rooted) || Has Status(Event Player,
-			Stunned));
-		Event Player.DoubleJumps[2] += 1;
-		Abort If((Hero Of(Event Player) == Hero(Genji) && Event Player.DoubleJumps[2] == 1) || (Hero Of(Event Player) == Hero(Hanzo)
-			&& Mapped Array(Ability Cooldown(Event Player, Button(Jump)), Current Array Element == 0 || Current Array Element > 4.900)
-			[0]));
-		Event Player.DoubleJumps[1] += 1;
-		Apply Impulse(Event Player, Up, 10, To World, Cancel Contrary Motion);
-	}
-}
-
-rule("Bleeding")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BleedTime > 0;
-	}
-
-	actions
-	{
-		"20(%)/14"
-		Damage(Event Player, Global.NullPlayer[Index Of Array Value(Array(Team 2, Team 1), Team Of(Event Player))],
-			1.429 * Event Player.BleedInfo[0] * Event Player.BleedInfo[1]);
-		Wait(0.250, Abort When False);
-		Loop If Condition Is True;
-	}
-}
-
-rule("Not Bleeding")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BleedTime == 0;
-	}
-
-	actions
-	{
-		Event Player.BleedInfo = Array(0, 0);
-	}
-}
-
-rule("Not AP")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.APTime == 0;
-	}
-
-	actions
-	{
-		If(Event Player.ArmourPiercingStacks[0] == 5);
-			Event Player.ArmourModifiers[4] = 0;
-			Start Rule(UpdateArmour, Restart Rule);
-		End;
-		Event Player.ArmourPiercingStacks[0] = 0;
+		Stop Chasing Player Variable(Event Player, WallAcceleration);
+		Event Player.WallAcceleration = 0;
+		Stop Throttle In Direction(Event Player);
 	}
 }
 
@@ -1642,233 +1257,6 @@ rule("On hit effects")
 				End;
 			End;
 		End;
-	}
-}
-
-rule("Reprieve")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Array Contains(Event Player.MyItemStacks, Custom String("Reprieve")) == True;
-		Normalized Health(Event Player) < 0.250;
-		Is Alive(Event Player) == True;
-		Event Player.StealthTime[0] == 0;
-		Event Player.StealthTime[1] == 0;
-	}
-
-	actions
-	{
-		Event Player.StealthTime[0] = Total Time Elapsed + 5;
-		Event Player.StealthTime[1] = Event Player.StealthTime[0] + 30 * 0.500 ^ Max(0, Filtered Array(Global.ItemStackSizes,
-			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Reprieve")
-			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0] - 1);
-		Set Invisible(Event Player, All);
-		Event Player.MoveSpeedBuffs[4] = 40;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-	}
-}
-
-rule("Uncloak")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.StealthTime[0] != 0;
-		Total Time Elapsed > Event Player.StealthTime[0];
-	}
-
-	actions
-	{
-		Set Invisible(Event Player, None);
-		Event Player.MoveSpeedBuffs[4] = 0;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Event Player.StealthTime[0] = 0;
-	}
-}
-
-rule("Reprieve becomes available")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.StealthTime[1] != 0;
-		Total Time Elapsed > Event Player.StealthTime[1];
-	}
-
-	actions
-	{
-		Event Player.StealthTime[1] = 0;
-	}
-}
-
-rule("Start Big Explosion")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Alive(Event Player) == True;
-		Normalized Health(Event Player) < 0.250;
-		Array Contains(Event Player.MyItemStacks, Custom String("Big Explosion")) == True;
-		Event Player.BoomTime[0] == 0;
-		Event Player.BoomTime[1] == 0;
-	}
-
-	actions
-	{
-		Event Player.BoomTime[0] = Total Time Elapsed + 3;
-		Event Player.BoomTime[1] = Total Time Elapsed + 30 / (1 + Filtered Array(Global.ItemStackSizes,
-			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Reprieve")
-			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0]);
-	}
-}
-
-rule("Big Explosion")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BoomTime[0] != 0;
-		Total Time Elapsed > Event Player.BoomTime[0];
-	}
-
-	actions
-	{
-		Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Color(White), Eye Position(Event Player), 100);
-		Play Effect(All Players(All Teams), Bad Explosion, Color(White), Eye Position(Event Player), 30);
-		Damage(Players Within Radius(Eye Position(Event Player), 30, Opposite Team Of(Team Of(Event Player)), Surfaces And Enemy Barriers),
-			Event Player, 6000 / 14);
-		Event Player.BoomTime[0] = 0;
-	}
-}
-
-rule("Big explosion becomes available")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.BoomTime[1] != 0;
-		Total Time Elapsed > Event Player.BoomTime[1];
-	}
-
-	actions
-	{
-		Event Player.BoomTime[1] = 0;
-	}
-}
-
-rule("Destroy Flame Tornado")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.FlameTornado != Null;
-		Total Time Elapsed > Event Player.FlameTornadoExpirationTime;
-	}
-
-	actions
-	{
-		Destroy Effect(Event Player.FlameTornado);
-		Event Player.FlameTornadoPosition = Null;
-		Event Player.FlameTornado = Null;
-		Wait(0.016, Ignore Condition);
-		Event Player.FlameTornadoExpirationTime = Null;
-	}
-}
-
-rule("Flame Tornado Damage")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Event Player.FlameTornado != Null;
-	}
-
-	actions
-	{
-		Event Player.Victims = Filtered Array(Players Within Radius(Event Player.FlameTornadoPosition, 5, Opposite Team Of(Team Of(
-			Event Player)), Off), Event Player.Role != Custom String("Add") || Is On Ground(Current Array Element));
-		If(Event Player.Role == Custom String("Add"));
-			Set Status(Event Player.Victims, Event Player, Burning, 0.350);
-		End;
-		Damage(Event Player.Victims, Event Player.Role != Custom String("Add") ? Global.NullPlayer[Index Of Array Value(Array(Team 1,
-			Team 2), Team Of(Event Player))] : Event Player, Event Player.FlameTornadoDamage * 0.304);
-		Wait(0.304, Abort When False);
-		Loop If Condition Is True;
-	}
-}
-
-rule("Lightning Strike Loop")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Count Of(Global.LightningStrikes) > 0;
-		Total Time Elapsed > Global.LightningStrikes[0];
-	}
-
-	actions
-	{
-		Global.StrikeVictims = Filtered Array(All Living Players(Opposite Team Of(Team Of(Global.LightningStrikes[2]))), Distance Between(
-			Eye Position(Current Array Element), Global.LightningStrikes[1]) < 3);
-		Damage(Global.StrikeVictims, Global.LightningStrikes[2],
-			Global.LightningStrikes[3] / Global.LightningStrikes[2].BaseDamageMultiplier);
-		Apply Impulse(Global.StrikeVictims, Down, 70, To World, Cancel Contrary Motion);
-		Wait(0.080, Ignore Condition);
-		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 4, 1000);
-		Loop If Condition Is True;
 	}
 }
 
@@ -2323,6 +1711,760 @@ rule("Update Item Stack (Remove)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Debuff Shield"));
 			Global.ItemStackUpdateInfo[2].DebuffShield = Array(0, 0, 0);
 		End;
+	}
+}
+
+disabled rule("STATUS EFFECTS")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Cleanse some debuffs")
+{
+	event
+	{
+		Subroutine;
+		CleanseSomeDebuffs;
+	}
+
+	actions
+	{
+		Stop All Damage Over Time(Event Player);
+		Event Player.CrippleTime = 0;
+		Event Player.SlowTime = 0;
+	}
+}
+
+rule("Cleanse all debuffs")
+{
+	event
+	{
+		Subroutine;
+		CleanseAllDebuffs;
+	}
+
+	actions
+	{
+		Call Subroutine(CleanseSomeDebuffs);
+		Event Player.BleedTime = 0;
+		Event Player.APTime = 0;
+		Event Player.RecoveryTime = 0;
+		Event Player.ArmourPiercingStacks[1] = 0;
+		Event Player.ArmourModifiers[5] = 0;
+		Start Rule(UpdateArmour, Restart Rule);
+	}
+}
+
+rule("Crippled")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.CrippleTime > 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[2] = 50;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Event Player.ArmourModifiers[2] = -20;
+		Start Rule(UpdateArmour, Restart Rule);
+		Big Message(Event Player, Custom String("CRIPPLED"));
+		Wait Until(Event Player.CrippleTime == 0, 9999);
+		Event Player.MoveSpeedDebuffs[2] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Event Player.ArmourModifiers[2] = 0;
+		Start Rule(UpdateArmour, Restart Rule);
+	}
+}
+
+rule("Player knocked down")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Knocked Down) == True;
+	}
+
+	actions
+	{
+		If(Team Of(Event Player) == Team 1);
+			Clear Status(Event Player, Knocked Down);
+		Else If(Event Player.DebuffShield[0] > 0);
+			Event Player.DebuffShield[0] -= 1;
+			Event Player.DebuffShield[3] += 1;
+			Clear Status(Event Player, Knocked Down);
+		End;
+	}
+}
+
+rule("Team 2 rooted")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Rooted) == True;
+	}
+
+	actions
+	{
+		Event Player.WispAcceleration = Vector(0, 0, 0);
+		If(Event Player.DebuffShield[0] > 0);
+			Event Player.DebuffShield[0] -= 1;
+			Event Player.DebuffShield[3] += 1;
+			Teleport(Event Player, World Vector Of(Normalize(Throttle Of(Event Player)) * 4, Event Player, Rotation and Translation));
+		End;
+	}
+}
+
+rule("Boss slept")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Asleep) == True;
+	}
+
+	actions
+	{
+		Wait(0.500, Ignore Condition);
+		If(Event Player.DebuffShield[0] > 0);
+			Event Player.DebuffShield[0] -= 1;
+			Event Player.DebuffShield[3] += 1;
+			Clear Status(Event Player, Asleep);
+		End;
+	}
+}
+
+rule("Boss frozen")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Frozen) == True;
+	}
+
+	actions
+	{
+		If(Event Player.DebuffShield[0] > 0);
+			Event Player.DebuffShield[0] -= 1;
+			Event Player.DebuffShield[3] += 1;
+			Clear Status(Event Player, Frozen);
+		End;
+	}
+}
+
+disabled rule("ITEM EFFECTS")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("Slowed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SlowTime > 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[3] = 60;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Big Message(Event Player, Custom String("SLOWED"));
+		Wait Until(Event Player.SlowTime == 0, 9999);
+		Event Player.MoveSpeedDebuffs[3] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+	}
+}
+
+rule("No Barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BarrierInfo[1] != 0;
+		Event Player.BarrierInfo[1] > Total Time Elapsed;
+	}
+
+	actions
+	{
+		Event Player.ArmourModifiers[6] = 0;
+		Start Rule(UpdateArmour, Restart Rule);
+	}
+}
+
+rule("Barrier")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BarrierInfo[0] == True;
+		Event Player.BarrierInfo[1] < Total Time Elapsed;
+	}
+
+	actions
+	{
+		Event Player.ArmourModifiers[6] = 100 * Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Barrier")
+			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0];
+		Start Rule(UpdateArmour, Restart Rule);
+	}
+}
+
+rule("No Barrier Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BarrierHealth == 0;
+	}
+
+	actions
+	{	If(Event Player.BarrierHealthDamageModification[1]);
+			Stop Damage Modification(Event Player.BarrierHealthDamageModification[0]);
+			Event Player.BarrierHealthDamageModification[1] = False;
+		End;
+	}
+}
+
+rule("Barrier Health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BarrierHealth > 0;
+		Event Player.BarrierHealthDamageModification[1] == False;
+	}
+
+	actions
+	{
+		Start Damage Modification(Event Player, All Players(All Teams), 100 * Health(Event Player) / (Health(Event Player) + Event Player.BarrierHealth), Receivers Damagers and Damage Percent);
+		Event Player.BarrierHealthDamageModification[0] = Last Damage Modification Id;
+		Event Player.BarrierHealthDamageModification[1] = True;
+		Chase Player Variable At Rate(Event Player, BarrierHealth, 0, (Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - Event Player.BarrierHealth) / 30, Destination and Rate);
+	}
+}
+
+rule("Recover")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.RecoveryTime == 0;
+	}
+
+	actions
+	{
+		Abort If(!Array Contains(Event Player.MyItemStacks, Custom String("Recovery")));
+		Heal(Event Player, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))], (
+			Event Player.HealthScale[0] * 20 + (Max Health Of Type(Event Player, Health) + Max Health Of Type(Event Player, Armor)) * 0.050 * Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Recovery")
+			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0]) / Event Player.HealingModifiers[0]);
+	}
+}
+
+rule("Debuff Shield on cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DebuffShield[1] > 0;
+		Event Player.DebuffShield[0] == 0;
+	}
+
+	actions
+	{
+		Event Player.DebuffShield[2] = Total Time Elapsed + 5;
+	}
+}
+
+rule("Debuff Shield off cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DebuffShield[2] > 0;
+		Total Time Elapsed > Event Player.DebuffShield[2];
+	}
+
+	actions
+	{
+		Event Player.DebuffShield[2] = 0;
+		Event Player.DebuffShield[0] = Event Player.DebuffShield[1];
+	}
+}
+
+rule("Debuff Shield increase barrier health")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DebuffShield[3] > 0;
+	}
+
+	actions
+	{
+		Wait(1, Ignore Condition);
+		Event Player.DebuffShield[4] = Event Player.DebuffShield[3];
+		Event Player.DebuffShield[5] = Min(Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - 2 * Event Player.BarrierHealth, Event Player.DebuffShield[4] * 0.100 * (Max Health(Event Player) - Max Health Of Type(Event Player, Armor) * 0.300 - Event Player.BarrierHealth));
+		Event Player.BarrierHealth += Event Player.DebuffShield[5];
+		Wait(0.100, Ignore Condition);
+		Event Player.DebuffShield[3] -= Event Player.DebuffShield[4];
+		Loop If Condition Is True;
+	}
+}
+
+rule("Allow double jump if > 0.8 altitude & have double jumps")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Role == Custom String("Boss") || Altitude Of(Event Player) > 0.800) == True;
+		Event Player.DoubleJumps[0] - Event Player.DoubleJumps[1] > 0;
+	}
+
+	actions
+	{
+		Event Player.DoubleJumps[3] = True;
+	}
+}
+
+rule("Disallow double jump")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.DoubleJumps[1] >= Event Player.DoubleJumps[0];
+	}
+
+	actions
+	{
+		Event Player.DoubleJumps[3] = False;
+	}
+}
+
+rule("Double jump?")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.DoubleJumps[3] || Is Dead(Event Player) || Has Status(Event Player, Rooted) || Has Status(Event Player,
+			Stunned));
+		Event Player.DoubleJumps[2] += 1;
+		Abort If((Hero Of(Event Player) == Hero(Genji) && Event Player.DoubleJumps[2] == 1) || (Hero Of(Event Player) == Hero(Hanzo)
+			&& Mapped Array(Ability Cooldown(Event Player, Button(Jump)), Current Array Element == 0 || Current Array Element > 4.900)
+			[0]));
+		Event Player.DoubleJumps[1] += 1;
+		Apply Impulse(Event Player, Up, 10, To World, Cancel Contrary Motion);
+	}
+}
+
+rule("Bleeding")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BleedTime > 0;
+	}
+
+	actions
+	{
+		"20(%)/14"
+		Damage(Event Player, Global.NullPlayer[Index Of Array Value(Array(Team 2, Team 1), Team Of(Event Player))],
+			1.429 * Event Player.BleedInfo[0] * Event Player.BleedInfo[1]);
+		Wait(0.250, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Not Bleeding")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BleedTime == 0;
+	}
+
+	actions
+	{
+		Event Player.BleedInfo = Array(0, 0);
+	}
+}
+
+rule("Not AP")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.APTime == 0;
+	}
+
+	actions
+	{
+		If(Event Player.ArmourPiercingStacks[0] == 5);
+			Event Player.ArmourModifiers[4] = 0;
+			Start Rule(UpdateArmour, Restart Rule);
+		End;
+		Event Player.ArmourPiercingStacks[0] = 0;
+	}
+}
+
+rule("Reprieve")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Array Contains(Event Player.MyItemStacks, Custom String("Reprieve")) == True;
+		Normalized Health(Event Player) < 0.250;
+		Is Alive(Event Player) == True;
+		Event Player.StealthTime[0] == 0;
+		Event Player.StealthTime[1] == 0;
+	}
+
+	actions
+	{
+		Event Player.StealthTime[0] = Total Time Elapsed + 5;
+		Event Player.StealthTime[1] = Event Player.StealthTime[0] + 30 * 0.500 ^ Max(0, Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Reprieve")
+			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0] - 1);
+		Set Invisible(Event Player, All);
+		Event Player.MoveSpeedBuffs[4] = 40;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+	}
+}
+
+rule("Uncloak")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StealthTime[0] != 0;
+		Total Time Elapsed > Event Player.StealthTime[0];
+	}
+
+	actions
+	{
+		Set Invisible(Event Player, None);
+		Event Player.MoveSpeedBuffs[4] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Event Player.StealthTime[0] = 0;
+	}
+}
+
+rule("Reprieve becomes available")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StealthTime[1] != 0;
+		Total Time Elapsed > Event Player.StealthTime[1];
+	}
+
+	actions
+	{
+		Event Player.StealthTime[1] = 0;
+	}
+}
+
+rule("Start Big Explosion")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Normalized Health(Event Player) < 0.250;
+		Array Contains(Event Player.MyItemStacks, Custom String("Big Explosion")) == True;
+		Event Player.BoomTime[0] == 0;
+		Event Player.BoomTime[1] == 0;
+	}
+
+	actions
+	{
+		Event Player.BoomTime[0] = Total Time Elapsed + 3;
+		Event Player.BoomTime[1] = Total Time Elapsed + 30 / (1 + Filtered Array(Global.ItemStackSizes,
+			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Reprieve")
+			&& Global.ItemStackOwners[Current Array Index] == Event Player)[0]);
+	}
+}
+
+rule("Big Explosion")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BoomTime[0] != 0;
+		Total Time Elapsed > Event Player.BoomTime[0];
+	}
+
+	actions
+	{
+		Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Color(White), Eye Position(Event Player), 100);
+		Play Effect(All Players(All Teams), Bad Explosion, Color(White), Eye Position(Event Player), 30);
+		Damage(Players Within Radius(Eye Position(Event Player), 30, Opposite Team Of(Team Of(Event Player)), Surfaces And Enemy Barriers),
+			Event Player, 6000 / 14);
+		Event Player.BoomTime[0] = 0;
+	}
+}
+
+rule("Big explosion becomes available")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.BoomTime[1] != 0;
+		Total Time Elapsed > Event Player.BoomTime[1];
+	}
+
+	actions
+	{
+		Event Player.BoomTime[1] = 0;
+	}
+}
+
+rule("Destroy Flame Tornado")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.FlameTornado != Null;
+		Total Time Elapsed > Event Player.FlameTornadoExpirationTime;
+	}
+
+	actions
+	{
+		Destroy Effect(Event Player.FlameTornado);
+		Event Player.FlameTornadoPosition = Null;
+		Event Player.FlameTornado = Null;
+		Wait(0.016, Ignore Condition);
+		Event Player.FlameTornadoExpirationTime = Null;
+	}
+}
+
+rule("Flame Tornado Damage")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.FlameTornado != Null;
+	}
+
+	actions
+	{
+		Event Player.Victims = Filtered Array(Players Within Radius(Event Player.FlameTornadoPosition, 5, Opposite Team Of(Team Of(
+			Event Player)), Off), Event Player.Role != Custom String("Add") || Is On Ground(Current Array Element));
+		If(Event Player.Role == Custom String("Add"));
+			Set Status(Event Player.Victims, Event Player, Burning, 0.350);
+		End;
+		Damage(Event Player.Victims, Event Player.Role != Custom String("Add") ? Global.NullPlayer[Index Of Array Value(Array(Team 1,
+			Team 2), Team Of(Event Player))] : Event Player, Event Player.FlameTornadoDamage * 0.304);
+		Wait(0.304, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Lightning Strike Loop")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Global.LightningStrikes) > 0;
+		Total Time Elapsed > Global.LightningStrikes[0];
+	}
+
+	actions
+	{
+		Global.StrikeVictims = Filtered Array(All Living Players(Opposite Team Of(Team Of(Global.LightningStrikes[2]))), Distance Between(
+			Eye Position(Current Array Element), Global.LightningStrikes[1]) < 3);
+		Damage(Global.StrikeVictims, Global.LightningStrikes[2],
+			Global.LightningStrikes[3] / Global.LightningStrikes[2].BaseDamageMultiplier);
+		Apply Impulse(Global.StrikeVictims, Down, 70, To World, Cancel Contrary Motion);
+		Wait(0.080, Ignore Condition);
+		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 4, 1000);
+		Loop If Condition Is True;
 	}
 }
 
@@ -3244,6 +3386,25 @@ rule("On Enter State: Landing")
 		Call Subroutine(ChooseState);
 		Abort If(Event Player.PizzaIndex != Custom String("Soon"));
 		Event Player.PizzaTime[0] = Total Time Elapsed + Random Real(5, 8.500);
+	}
+}
+
+rule("Choose State (Closing In / Becoming Idle)")
+{
+	event
+	{
+		Subroutine;
+		ChooseState;
+	}
+
+	actions
+	{
+		If(Event Player.PizzaIndex == Custom String("Dormant") && Is True For Any(All Living Players(Team 1), Distance Between(
+			Event Player, Current Array Element) < 2));
+			Event Player.State = Custom String("BecomingIdle");
+		Else;
+			Event Player.State = Custom String("ClosingIn");
+		End;
 	}
 }
 
@@ -4996,99 +5157,6 @@ rule("Wisp stop moving forward/backward")
 	}
 }
 
-rule("Start accelerating")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration > 0;
-	}
-
-	actions
-	{
-		Start Accelerating(Event Player, Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(
-			Horizontal Angle From Direction(Position Of(Event Player)), 0), Magnitude Of(
-			Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(Horizontal Angle From Direction(
-			Position Of(Event Player)), 0)), 60, To World, Direction Rate and Max Speed);
-	}
-}
-
-rule("Stop accelerating")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration == 0;
-	}
-
-	actions
-	{
-		Stop Accelerating(Event Player);
-	}
-}
-
-rule("Inwards")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Global.State == Custom String("BossFight");
-		Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 1 > Global.ArenaRadius;
-	}
-
-	actions
-	{
-		Chase Player Variable At Rate(Event Player, WallAcceleration, (Is On Ground(Event Player) ? 400 : 0) + Max(0,
-			18 * Speed Of In Direction(Event Player, Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 81 * (
-			Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 1 - Global.ArenaRadius)),
-			1000000000, Destination and Rate);
-		Start Throttle In Direction(Event Player, Direction Towards(Event Player, Vector(0, 0, 0)), 2 * Max(0, Dot Product(World Vector Of(
-			Throttle Of(Event Player), Event Player, Rotation), Direction From Angles(Horizontal Angle From Direction(Position Of(
-			Event Player)), 0))), To World, Add to existing throttle, Direction and Magnitude);
-	}
-}
-
-rule("Not Inwards")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
-			* Up) + 1 > Global.ArenaRadius) == False;
-	}
-
-	actions
-	{
-		Stop Chasing Player Variable(Event Player, WallAcceleration);
-		Event Player.WallAcceleration = 0;
-		Stop Throttle In Direction(Event Player);
-	}
-}
-
 rule("Wisp stop accelerating")
 {
 	event
@@ -5106,6 +5174,72 @@ rule("Wisp stop accelerating")
 	actions
 	{
 		Event Player.WispAcceleration = Vector(0, 0, 0);
+	}
+}
+
+rule("On enter Phase 2 (Boss)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Global.Phase == 2;
+		(Event Player.Target && Is Alive(Event Player.Target)) == False;
+	}
+
+	actions
+	{
+		Wait(2, Abort When False);
+		Event Player.Target = Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String(
+			"Add")));
+	}
+}
+
+rule("Boss spectate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Global.Phase == 2;
+		Event Player.Target != Null;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Eye Position(Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation), Eye Position(
+			Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation) + 5 * Facing Direction Of(Event Player.Target),
+			60);
+	}
+}
+
+rule("Stop Phase 2 camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		(Global.Phase == 2 && Event Player.Target) == False;
+	}
+
+	actions
+	{
+		Stop Camera(Event Player);
 	}
 }
 
@@ -5968,127 +6102,6 @@ rule("All Heroes Gone")
 		If(Current Game Mode == Game Mode(Skirmish));
 			Declare Team Victory(Team 2);
 		End;
-	}
-}
-
-rule("Choose State (Closing In / Becoming Idle)")
-{
-	event
-	{
-		Subroutine;
-		ChooseState;
-	}
-
-	actions
-	{
-		If(Event Player.PizzaIndex == Custom String("Dormant") && Is True For Any(All Living Players(Team 1), Distance Between(
-			Event Player, Current Array Element) < 2));
-			Event Player.State = Custom String("BecomingIdle");
-		Else;
-			Event Player.State = Custom String("ClosingIn");
-		End;
-	}
-}
-
-rule("Cleanse some debuffs")
-{
-	event
-	{
-		Subroutine;
-		CleanseSomeDebuffs;
-	}
-
-	actions
-	{
-		Stop All Damage Over Time(Event Player);
-		Event Player.CrippleTime = 0;
-		Event Player.SlowTime = 0;
-	}
-}
-
-rule("Cleanse all debuffs")
-{
-	event
-	{
-		Subroutine;
-		CleanseAllDebuffs;
-	}
-
-	actions
-	{
-		Call Subroutine(CleanseSomeDebuffs);
-		Event Player.BleedTime = 0;
-		Event Player.APTime = 0;
-		Event Player.RecoveryTime = 0;
-		Event Player.ArmourPiercingStacks[1] = 0;
-		Event Player.ArmourModifiers[5] = 0;
-		Start Rule(UpdateArmour, Restart Rule);
-	}
-}
-
-rule("On enter Phase 2 (Boss)")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Global.Phase == 2;
-		(Event Player.Target && Is Alive(Event Player.Target)) == False;
-	}
-
-	actions
-	{
-		Wait(2, Abort When False);
-		Event Player.Target = Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String(
-			"Add")));
-	}
-}
-
-rule("Boss spectate")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Global.Phase == 2;
-		Event Player.Target != Null;
-	}
-
-	actions
-	{
-		Start Camera(Event Player, Eye Position(Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation), Eye Position(
-			Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation) + 5 * Facing Direction Of(Event Player.Target),
-			60);
-	}
-}
-
-rule("Stop Phase 2 camera")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		(Global.Phase == 2 && Event Player.Target) == False;
-	}
-
-	actions
-	{
-		Stop Camera(Event Player);
 	}
 }
 
