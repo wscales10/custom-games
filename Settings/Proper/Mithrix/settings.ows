@@ -4691,6 +4691,7 @@ rule("Add. Setup")
 				Event Player.Name = Random Value In Array(Global.BallNames);
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
+			Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Color(White), Position Of(Event Player), 100);
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Zenyatta));
 			Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
@@ -4951,7 +4952,7 @@ rule("Golem fast")
 
 	actions
 	{
-		Event Player.BaseMoveSpeedModifier = 170;
+		Event Player.BaseMoveSpeedModifier = 260;
 		Event Player.ShouldUpdateMoveSpeed = True;
 		Start Throttle In Direction(Event Player, Mapped Array(Throttle Of(Event Player), Magnitude Of(Current Array Element)
 			== 0 ? Forward : Current Array Element), 1, To Player, Replace existing throttle, None);
@@ -5780,7 +5781,7 @@ rule("Boss spectate")
 			Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation) + 5 * Facing Direction Of(Event Player.Target),
 			60);
 		Start Camera(Event Player, Eye Position(Event Player.Target) - Facing Direction Of(Event Player.Target), Eye Position(
-			Event Player.Target) + 5 * Facing Direction Of(Event Player.Target), 60);
+			Event Player.Target) + 5 * Facing Direction Of(Event Player.Target), 25);
 	}
 }
 
