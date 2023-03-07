@@ -239,7 +239,7 @@ variables
 		42: CanTakeOff
 		43: CanUseOrbs
 		44: SwingCooldown
-		45: DashTime
+		45: DashCooldown
 		46: SlamCooldown
 		47: NeedleCooldown
 		48: TakeoffCooldown
@@ -484,6 +484,7 @@ rule("Boss Setup")
 		Chase Player Variable At Rate(Event Player, SwingCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, SlamCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, NeedleCooldown, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Reinhardt), Button(
 			Primary Fire)), Custom String("[{0}]", Input Binding String(Button(Primary Fire))),
 			Event Player.SwingCooldown ? Round To Integer(Event Player.SwingCooldown, Up) : Custom String(" "),
@@ -495,8 +496,8 @@ rule("Boss Setup")
 			Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Tracer), Button(
 			Ability 1)), Event Player.State == Custom String("ClosingIn") ? Custom String("←/↓/→") : Custom String("[{0}]",
-			Input Binding String(Button(Jump))), Mapped Array(Event Player.DashTime[0] - Total Time Elapsed, Custom String("{0} • {1}", (Current Array Element > 0) ? Round To Integer(
-			Current Array Element, Up) : Custom String(" "), Event Player.CanDash[1])), Right, 0, Event Player.CanDash[0] ? (Event Player.DashTime[0] > Total Time Elapsed ? Color(
+			Input Binding String(Button(Jump))), Custom String("{0} • {1}", (Event Player.DashCooldown > 0) ? Round To Integer(
+			Event Player.DashCooldown, Up) : Custom String(" "), Event Player.CanDash[1]), Right, 0, Event Player.CanDash[0] ? (Event Player.DashCooldown > 0 || Event Player.State == Custom String("Dashing") ? Color(
 			Orange) : Color(Gray)) : Color(Red), Color(White), Color(White), Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Reinhardt), Button(
 			Ultimate)), Custom String("[{0}]", Input Binding String(Button(Ultimate))),
@@ -520,6 +521,16 @@ rule("Boss Setup")
 			Null, Event Player.PizzaIndex == Custom String("Dormant") ? Null : Max(0, Event Player.PizzaTime[0] - Total Time Elapsed),
 			Right, 0, Event Player.PizzaIndex == Custom String("Dormant") ? Color(Red) : (Event Player.PizzaIndex == Custom String("Soon")
 			? Color(Gray) : Color(Orange)), Color(White), Color(White), Visible To String and Color, Default Visibility);
+		Create HUD Text(Event Player.Target == Null ? Null : Event Player, Hero Icon String(Hero Of(Event Player.Target)),
+			Event Player.Target.Name, Is Dead(Event Player.Target) ? Icon String(X) : Custom String("{0}{1}", Mapped Array(Custom String("■■■■■■■■■■■■■■"), String Slice(
+			Current Array Element, 0, Round To Integer(Normalized Health(Event Player.Target) * String Length(Current Array Element), Up))), Mapped Array(Custom String("□□□□□□□□□□□□□□"), String Slice(
+			Current Array Element, 0, Round To Integer((1 - Normalized Health(Event Player.Target)) * String Length(Current Array Element), Down)))), Left,
+			3.100, Color(White), Color(White), Health Of Type(Event Player, Shields) > 0 ? (Normalized Health(Event Player.Target) > 0.900 ? Color(Blue) : Custom Color(46, 172, 246, 255)) : Normalized Health(Event Player.Target) > 0.900 ? Color(Green) : Color(Lime Green),
+			Visible To String and Color, Default Visibility);
+		Create HUD Text(Event Player.Target == Null || Hero Of(Event Player.Target) == Hero(Wrecking Ball) ? Null : Event Player, Hero Of(Event Player.Target) == Hero(Tracer) ? (Ultimate Charge Percent(Event Player.Target) == 100 ? Ability Icon String(Hero(Tracer), Button(Ultimate)) : String("{0}%", Ultimate Charge Percent(Event Player.Target))) : Event Player.Target.DashCooldown == 0 ? Ability Icon String(Hero(Sojourn), Button(Ability 1)) : Round To Integer(Event Player.Target.DashCooldown, Up),
+			Custom String("[{0}]", Input Binding String(Hero Of(Event Player.Target) == Hero(Tracer) ? Button(Ultimate) : Button(Ability 1))), Null, Left,
+			3.200, Color(White), Color(White), Color(White),
+			Visible To String and Color, Default Visibility);
 		Create Effect(Is Alive(Event Player) && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams),
 			Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
 		Set Jump Enabled(Event Player, False);
@@ -614,7 +625,7 @@ rule("Player Setup")
 				Event Player.ArmourPiercingStacks[0]) : Custom String(" "), Event Player.ArmourPiercingStacks[1] ? Custom String("Ø×{0}",
 				Event Player.ArmourPiercingStacks[1]) : Custom String(" ")))), Left, 2.100, Color(White), Color(White), Color(White),
 				Visible To and String, Default Visibility);
-			Create HUD Text(Remove From Array(All Players(Team Of(Event Player)), Event Player), Hero Icon String(Hero Of(Event Player)),
+			Create HUD Text((Event Player.Role == Custom String("Boss") && Global.Phase == 2) ? Null : Remove From Array(All Players(Team Of(Event Player)), Event Player), Hero Icon String(Hero Of(Event Player)),
 				Event Player, Is Dead(Event Player) ? Icon String(X) : Custom String("{0}{1}", Mapped Array(Custom String("■■■■■■■■■■■■■■"), String Slice(
 				Current Array Element, 0, Round To Integer((Health(Event Player) + Event Player.BarrierHealth) / (2 * Max Health(Event Player)) * String Length(Current Array Element), Up))), Mapped Array(Custom String("□□□□□□□□□□□□□□"), String Slice(
 				Current Array Element, 0, Round To Integer((1 - (Health(Event Player) + Event Player.BarrierHealth) / (2 * Max Health(Event Player))) * String Length(Current Array Element), Down)))), Left,
@@ -789,6 +800,7 @@ rule("Disable OSP")
 
 	actions
 	{
+		Wait(0.100, Abort When False);
 		Clear Status(Event Player, Unkillable);
 	}
 }
@@ -882,7 +894,6 @@ rule("Not Inwards")
 	{
 		Stop Chasing Player Variable(Event Player, WallAcceleration);
 		Event Player.WallAcceleration = 0;
-		Stop Throttle In Direction(Event Player);
 	}
 }
 
@@ -1150,7 +1161,7 @@ rule("On hit effects")
 		Else If(Attacker.Master[0] == Victim);
 			Log To Inspector(Custom String("{0} is also the victim", Attacker.Master[0]));
 		Else;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Slow")));
+			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Slow")) && !(Victim.Role == Custom String("Boss") && Victim.State == Custom String("Dashing")));
 				If(Victim.DebuffShield[0] > 0);
 					Victim.DebuffShield[0] -= 1;
 					Victim.DebuffShield[3] += 1;
@@ -1200,11 +1211,13 @@ rule("On hit effects")
 					Attacker.Master[0].BlastCooldown = 10;
 					Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Victim, 100);
 					Play Effect(All Players(All Teams), Echo Sticky Bomb Explosion Effect, Color(White), Victim, 1);
-					If(Victim.DebuffShield[0] > 0);
-						Victim.DebuffShield[0] -= 1;
-						Victim.DebuffShield[3] += 1;
-					Else;
-						Modify Player Variable(Victim, SlowTime, Max, 3);
+					If(!(Victim.Role == Custom String("Boss") && Victim.State == Custom String("Dashing")));
+						If(Victim.DebuffShield[0] > 0);
+							Victim.DebuffShield[0] -= 1;
+							Victim.DebuffShield[3] += 1;
+						Else;
+							Modify Player Variable(Victim, SlowTime, Max, 3);
+						End;
 					End;
 					Damage(Victim, Global.NullPlayer[Index Of Array Value(Array(Team 2, Team 1), Team Of(Victim))], 2.500 * Filtered Array(
 						Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Ice Blast")
@@ -1242,7 +1255,8 @@ rule("On hit effects")
 				Modify Global Variable(LightningStrikes, Append To Array, Array(Total Time Elapsed + 0.250, Eye Position(Victim),
 					Attacker.Master[0], 5 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lightning")
-					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage));
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage, Min(1, Event Damage / (
+				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36)));
 			End;
 			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Armour Reduction")));
 				If(Victim.DebuffShield[0] > 0);
@@ -2461,9 +2475,9 @@ rule("Lightning Strike Loop")
 			Eye Position(Current Array Element), Global.LightningStrikes[1]) < 3);
 		Damage(Global.StrikeVictims, Global.LightningStrikes[2],
 			Global.LightningStrikes[3] / Global.LightningStrikes[2].BaseDamageMultiplier);
-		Apply Impulse(Global.StrikeVictims, Down, 70, To World, Cancel Contrary Motion);
+		Apply Impulse(Global.StrikeVictims, Down, 70 * Global.LightningStrikes[4], To World, Cancel Contrary Motion);
 		Wait(0.080, Ignore Condition);
-		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 4, 1000);
+		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 5, 1000);
 		Loop If Condition Is True;
 	}
 }
@@ -3399,7 +3413,7 @@ rule("Choose State (Closing In / Becoming Idle)")
 
 	actions
 	{
-		If(Event Player.PizzaIndex == Custom String("Dormant") && Is True For Any(All Living Players(Team 1), Distance Between(
+		If(Is True For Any(All Living Players(Team 1), Distance Between(
 			Event Player, Current Array Element) < 2));
 			Event Player.State = Custom String("BecomingIdle");
 		Else;
@@ -3863,6 +3877,36 @@ rule("On Enter State: Slamming")
 	}
 }
 
+rule("Augmented slam")
+{
+	event
+	{
+		Player Dealt Damage;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Ability == Button(Ultimate);
+	}
+
+	actions
+	{
+		If(Event Was Critical Hit);
+			Damage(Victim, Attacker, 340);
+		End;
+		Abort If(Global.Phase < 3);
+		Damage(Victim, Attacker, 35);
+		If(Victim.DebuffShield[0] > 0);
+			Victim.DebuffShield[0] -= 1;
+			Victim.DebuffShield[3] += 1;
+		Else;
+			Modify Player Variable(Victim, CrippleTime, Max, 3);
+		End;
+	}
+}
+
 disabled rule("DASH")
 {
 	event
@@ -3914,27 +3958,6 @@ rule("Disable Dash")
 	}
 }
 
-rule("Enable Dash")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Event Player.DashTime[0] > 0;
-		Total Time Elapsed > Event Player.DashTime[0];
-	}
-
-	actions
-	{
-		Event Player.DashTime[0] = 0;
-	}
-}
-
 rule("Replenish all dashes")
 {
 	event
@@ -3946,8 +3969,8 @@ rule("Replenish all dashes")
 
 	conditions
 	{
-		Event Player.DashTime[1] > 0;
-		Total Time Elapsed > Event Player.DashTime[1];
+		Event Player.CanDash[2] > 0;
+		Total Time Elapsed > Event Player.CanDash[2];
 	}
 
 	actions
@@ -3969,7 +3992,7 @@ rule("Enter State: Dashing (with jump button)")
 	{
 		Event Player.CanDash[0] == True;
 		Event Player.CanDash[1] > 0;
-		Event Player.DashTime[0] == 0;
+		Event Player.DashCooldown == 0;
 		Is Button Held(Event Player, Button(Jump)) == True;
 	}
 
@@ -3991,7 +4014,7 @@ rule("Enter State: Dashing (with sideways movement)")
 	conditions
 	{
 		Event Player.CanDash[1] > 0;
-		Event Player.DashTime[0] == 0;
+		Event Player.DashCooldown == 0;
 		Absolute Value(X Component Of(Throttle Of(Event Player))) > 0.005;
 	}
 
@@ -4019,11 +4042,11 @@ rule("On Enter State: Dashing")
 	actions
 	{
 		Event Player.CanDash[1] -= 1;
-		Event Player.DashTime[1] = Total Time Elapsed + 3.400;
+		Event Player.CanDash[2] = Total Time Elapsed + 3.400;
 		If(Event Player.CanDash[1] == 0);
-			Event Player.DashTime[0] = Event Player.DashTime[1];
+			Event Player.DashCooldown = 3.400;
 		Else;
-			Event Player.DashTime[0] = Total Time Elapsed + 2;
+			Event Player.DashCooldown = 2;
 		End;
 		Call Subroutine(CleanseSomeDebuffs);
 		Disable Movement Collision With Players(Event Player);
@@ -4169,6 +4192,10 @@ rule("Start Holding Primary Fire")
 		Event Player.NeedleCooldown = 6;
 		Set Ammo(Event Player.Bots[0], 0, Max Ammo(Event Player.Bots[0], 0));
 		Start Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		If(Global.TestMode);
+			Log To Inspector(Custom String("Start holding button"));
+			Small Message(Event Player, Custom String("Start holding button"));
+		End;
 	}
 }
 
@@ -4188,7 +4215,11 @@ rule("Stop Holding Primary Fire")
 
 	actions
 	{
-		Stop Holding Button(Event Player.Bots, Button(Primary Fire));
+		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		If(Global.TestMode);
+			Log To Inspector(Custom String("Out of ammo"));
+			Small Message(Event Player, Custom String("Out of ammo"));
+		End;
 	}
 }
 
@@ -4209,6 +4240,10 @@ rule("Stop Holding Primary Fire")
 	actions
 	{
 		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		If(Global.TestMode);
+			Log To Inspector(Custom String("Not holding button"));
+			Small Message(Event Player, Custom String("Not holding button"));
+		End;
 	}
 }
 
@@ -4229,6 +4264,10 @@ rule("Stop Holding Primary Fire")
 	actions
 	{
 		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		If(Global.TestMode);
+			Log To Inspector(Custom String("Shoot disabled"));
+			Small Message(Event Player, Custom String("Shoot disabled"));
+		End;
 	}
 }
 
@@ -4265,6 +4304,7 @@ rule("On Enter Phase: 2 (Global)")
 			Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Wrecking Ball), Team 2));
 			Wait(0.016, Abort When False);
 		End;
+		Start Heal Over Time(Global.Bosses, Null, 16, 10000); 
 	}
 }
 
@@ -4338,7 +4378,10 @@ rule("AiStep")
 			End;
 			If(Global.Add.State == Custom String("Idle"));
 				Call Subroutine(TryShoot);
-			Else If(Global.Add.State == Custom String("Shoot"));
+			disabled Else If(Global.Add.State == Custom String("Shoot"));
+			End;
+			If(Hero Of(Global.Add) == Hero(Zenyatta) && Global.Add.State == Custom String("Idle"));
+				Press Button(Global.Add, Button(Ability 1));
 			End;
 		Else;
 			If(Global.Add.State == Custom String("Rise"));
@@ -4599,6 +4642,7 @@ rule("Add. Setup")
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Zenyatta));
+			Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
 			"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
 			Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1615 + 485 * (Event Player.Level - 1)) / Global.BossCount / 25;
 			Event Player.BaseDamageMultiplier = (35 + 7 * (Event Player.Level - 1)) * 0.600 / 48;
@@ -4707,7 +4751,6 @@ rule("Exploder jump")
 
 	conditions
 	{
-		Event Player.Master[1] == Null;
 		Event Player.Target != Null;
 		Is On Ground(Event Player) == True;
 		Is In Alternate Form(Event Player) == True;
@@ -4787,13 +4830,12 @@ rule("Golem slow")
 
 	conditions
 	{
-		Event Player.Master[1] == Null;
-		Event Player.State == Custom String("Shoot");
 		Is Firing Secondary(Event Player) == True;
 	}
 
 	actions
 	{
+		Event Player.State = Custom String("Shoot");
 		Event Player.BaseMoveSpeedModifier = 60;
 		Event Player.ShouldUpdateMoveSpeed = True;
 	}
@@ -4810,8 +4852,7 @@ rule("Golem normal speed")
 
 	conditions
 	{
-		Event Player.Master[1] == Null;
-		Event Player.State == Custom String("Shoot");
+		Event Player.State != Custom String("Dashing");
 		Is Firing Secondary(Event Player) == False;
 	}
 
@@ -4819,6 +4860,26 @@ rule("Golem normal speed")
 	{
 		Event Player.BaseMoveSpeedModifier = 100;
 		Event Player.ShouldUpdateMoveSpeed = True;
+	}
+}
+
+rule("Golem dash cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Zenyatta;
+	}
+
+	conditions
+	{
+		Event Player.State != Custom String("Dashing");
+	}
+
+	actions
+	{
+		Event Player.DashCooldown = 2;
 	}
 }
 
@@ -4833,14 +4894,41 @@ rule("Golem fast")
 
 	conditions
 	{
-		Event Player.Master[1] == Null;
-		Event Player.State == Custom String("Idle");
+		Event Player.State == Custom String("Dashing");
 	}
 
 	actions
 	{
 		Event Player.BaseMoveSpeedModifier = 170;
 		Event Player.ShouldUpdateMoveSpeed = True;
+		Start Throttle In Direction(Event Player, Mapped Array(Throttle Of(Event Player), Magnitude Of(Current Array Element) == 0 ? Forward : Current Array Element), 1, To Player, Replace Existing Throttle, None);
+		Wait(1.200, Abort When False);
+		Event Player.State = Custom String("Idle");
+	}
+}
+
+rule("Golem dash")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Zenyatta;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+		Is Firing Secondary(Event Player) == False;
+		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up) + 1 > Global.ArenaRadius) == False;
+		Event Player.State != Custom String("Dashing");
+		Event Player.DashCooldown == 0;
+	}
+
+	actions
+	{
+		Event Player.State = Custom String("Dashing");
 	}
 }
 
@@ -5189,14 +5277,429 @@ rule("On enter Phase 2 (Boss)")
 	conditions
 	{
 		Global.Phase == 2;
-		(Event Player.Target && Is Alive(Event Player.Target)) == False;
+		(Event Player.Target && Is Alive(Event Player.Target) && !Is Button Held(Event Player, Button(Interact))) == False;
 	}
 
 	actions
 	{
-		Wait(2, Abort When False);
-		Event Player.Target = Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String(
-			"Add")));
+		Wait(1.800, Abort When False);
+		Event Player.Target.Master[1] = Null;
+		Event Player.Target = Null;
+		While(Event Player.Target == Null && Global.Phase == 2);
+			Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String(
+				"Add") && Current Array Element.Master[1] == Null)).Master[1] = Event Player;
+			Event Player.Target = Filtered Array(All Players(Team 2), Current Array Element.Master[1] == Event Player)[0];
+			Wait(0.200, Ignore Condition);
+		End;
+		If(Event Player.Target == Null);
+			Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
+		Else;
+			Stop Forcing Throttle(Event Player);
+			Stop Forcing Throttle(Event Player.Target);
+			If(!Is Button Held(Event Player, Button(Primary Fire)));
+				Stop Holding Button(Event Player.Target, Button(Primary Fire));
+			End;
+			If(!Is Button Held(Event Player, Button(Secondary Fire)));
+				Stop Holding Button(Event Player.Target, Button(Secondary Fire));
+			End;
+			If(!Is Button Held(Event Player, Button(Ability 1)));
+				Stop Holding Button(Event Player.Target, Button(Ability 1));
+			End;
+			If(!Is Button Held(Event Player, Button(Ultimate)));
+				Stop Holding Button(Event Player.Target, Button(Ultimate));
+			End;
+			If(!Is Button Held(Event Player, Button(Jump)) && Hero Of(Event Player.Target) != Hero(Wrecking Ball));
+				Stop Holding Button(Event Player.Target, Button(Jump));
+			End;
+			If(!Is Button Held(Event Player, Button(Crouch)));
+				Stop Holding Button(Event Player.Target, Button(Crouch));
+			End;
+			If(!Is Button Held(Event Player, Button(Reload)));
+				Stop Holding Button(Event Player.Target, Button(Reload));
+			End;
+		End;
+	}
+}
+
+rule("Add Start Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Master[1] != Null;
+		Has Status(Event Player, Stunned) == False;
+	}
+
+	actions
+	{
+		Start Facing(Event Player, Facing Direction Of(Event Player.Master[1]), 1000, To World, Direction and Turn Rate);
+	}
+}
+
+rule("Add Start Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Master[1] != Null;
+		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up) + 1 > Global.ArenaRadius) == False;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, Throttle Of(Event Player.Master[1]), Magnitude Of(Throttle Of(Event Player.Master[1])), To Player, Replace Existing Throttle, Direction and Magnitude);
+	}
+}
+
+rule("Add Stop Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Master[1] == Null;
+		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up) + 1 > Global.ArenaRadius) == False;
+		Event Player.State != Custom String("Dashing");
+	}
+
+	actions
+	{
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+rule("Add Stop Facing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Master[1] == Null || Has Status(Event Player, Stunned)) == True;
+	}
+
+	actions
+	{
+		Stop Facing(Event Player);
+	}
+}
+
+rule("Add Start Holding Primary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Primary Fire));
+	}
+}
+
+rule("Add Stop Holding Primary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Primary Fire)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Primary Fire));
+	}
+}
+
+rule("Add Start Holding Secondary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Secondary Fire));
+	}
+}
+
+rule("Add Stop Holding Secondary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Secondary Fire)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Secondary Fire));
+	}
+}
+
+rule("Add Start Holding Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Ability 1));
+	}
+}
+
+rule("Add Stop Holding Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Ability 1)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Ability 1));
+	}
+}
+
+rule("Add Start Holding Ultimate button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Ultimate));
+	}
+}
+
+rule("Add Stop Holding Ultimate button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Ultimate)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Ultimate));
+	}
+}
+
+rule("Add Start Holding Jump button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Hero Of(Event Player.Target) != Hero(Wrecking Ball);
+		Is Button Held(Event Player, Button(Jump)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Jump));
+	}
+}
+
+rule("Add Stop Holding Jump button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Hero Of(Event Player.Target) != Hero(Wrecking Ball);
+		Is Button Held(Event Player, Button(Jump)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Jump));
+	}
+}
+
+rule("Add Start Holding Crouch button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Crouch));
+	}
+}
+
+rule("Add Stop Holding Crouch button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Crouch)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Crouch));
+	}
+}
+
+rule("Add Start Holding Reload button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Start Holding Button(Event Player.Target, Button(Reload));
+	}
+}
+
+rule("Add Stop Holding Reload button")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.Target != Null;
+		Is Button Held(Event Player, Button(Reload)) == False;
+	}
+
+	actions
+	{
+		Stop Holding Button(Event Player.Target, Button(Reload));
 	}
 }
 
@@ -5217,8 +5720,11 @@ rule("Boss spectate")
 
 	actions
 	{
-		Start Camera(Event Player, Eye Position(Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation), Eye Position(
+		disabled Start Camera(Event Player, Eye Position(Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation), Eye Position(
 			Event Player.Target) + World Vector Of(Right, Event Player.Target, Rotation) + 5 * Facing Direction Of(Event Player.Target),
+			60);
+		Start Camera(Event Player, Eye Position(Event Player.Target) - Facing Direction Of(Event Player.Target), Eye Position(
+			Event Player.Target) + 5 * Facing Direction Of(Event Player.Target),
 			60);
 	}
 }
@@ -5267,6 +5773,8 @@ rule("On Phase 3 Start (Boss)")
 
 	actions
 	{
+		Stop All Heal Over Time(Event Player);
+		Event Player.Target = Null;
 		Event Player.HasLostThisPhase = False;
 		Event Player.CanTakeOff = False;
 		Event Player.BaseMoveSpeedModifier = 100;
@@ -5459,12 +5967,13 @@ rule("On Enter State: Pizza")
 			Play Effect(All Players(All Teams), Ashe Dynamite Explosion Sound, Color(White), Eye Position(Event Player), 100);
 			Play Effect(All Players(All Teams), Brigitte Repair Pack Impact Sound, Color(White), Eye Position(Event Player), 100);
 			Damage(Event Player.Victims, Event Player, 382.500);
+			Apply Impulse(Event Player.Victims, Up, 8, To World, Incorporate Contrary Motion);
 			Event Player.State = Custom String("PizzaDamage");
 			Wait(0.100, Ignore Condition);
 			Modify Player Variable(Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] <= 0), CrippleTime, Max, 3);
 			Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] > 0).DebuffShield[3] += 1;
 			Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] > 0).DebuffShield[0] -= 1;
-			Wait(0.100, Ignore Condition);
+			Wait(0.100, Abort When False);
 			Event Player.State = Custom String("PizzaWait");
 			Wait(1.200, Abort When False);
 		End;
@@ -5524,32 +6033,6 @@ rule("Flame Pillar Damage")
 	}
 }
 
-rule("Slam cripples")
-{
-	event
-	{
-		Player Dealt Damage;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Global.Phase == 3;
-		Event Ability == Button(Ultimate);
-	}
-
-	actions
-	{
-		If(Victim.DebuffShield[0] > 0);
-			Victim.DebuffShield[0] -= 1;
-			Victim.DebuffShield[3] += 1;
-		Else;
-			Modify Player Variable(Victim, CrippleTime, Max, 3);
-		End;
-	}
-}
-
 disabled rule("PHASE 4")
 {
 	event
@@ -5598,7 +6081,7 @@ rule("On Enter Phase: 4 (Boss)")
 	{
 		Event Player.HasLostThisPhase = False;
 		Event Player.CanTakeOff = False;
-		Event Player.BaseMoveSpeedModifier = 50;
+		Event Player.BaseMoveSpeedModifier = 55;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Event Player.CanNeedle = Array(True, False);
 		Clear Status(Event Player, Unkillable);
@@ -5938,6 +6421,11 @@ rule("Player Died")
 		All;
 	}
 
+	conditions
+	{
+		Event Player.IsDead == False;
+	}
+	
 	actions
 	{
 		Event Player.BarrierHealth = 0;
