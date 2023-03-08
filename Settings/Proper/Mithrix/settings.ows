@@ -103,8 +103,9 @@ settings
 
 	workshop
 	{
+		Enable Dialogue: On
 		Difficulty: 3
-		Player Level: 20
+		Player Level: 23
 		Test Mode: On
 	}
 
@@ -203,6 +204,9 @@ variables
 		77: EarlyHeroDeathDialogue
 		78: LateHeroDeathDialogue
 		79: BossDeathDialogue
+		80: ChainLightningEffects
+		81: ChainLightningIndex
+		82: ChainLightningInfo
 
 	player:
 		0: Master
@@ -355,6 +359,8 @@ rule("Global setup")
 		Global.ArenaRadius = 80;
 		Global.StagesCompleted = 5;
 		Global.LightningStrikes = Empty Array;
+		Global.ChainLightningInfo = Empty Array;
+		Global.ChainLightningEffects = Empty Array;
 		Global.BotCreationQueue = Empty Array;
 		Global.AvailableBotSlots = Append To Array(Vector(1, 23, 0), Mapped Array(Array(5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
 			19, 20, 21, 22, 23), Vector(2, Current Array Element, 0)));
@@ -368,18 +374,18 @@ rule("Global setup")
 			Custom String("Flame Blast"), Custom String("Lifesteal"), Custom String("Stun Chance"), Custom String("Recovery"),
 			Custom String("Double Jump"), Custom String("Armour Reduction"), Custom String("Egg"), Custom String("Reprieve"),
 			Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"), Custom String("Shields"), Custom String(
-			"Barrier"), Custom String("Debuff Shield"));
+			"Barrier"), Custom String("Debuff Shield"), Custom String("Chain Lightning"));
 		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
 			Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"),
 			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt),
-			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"));
-		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3);
+			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"));
+		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2);
 		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
 			Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,
 			255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,
 			53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,
 			185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165,
-			239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255));
+			239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255));
 		Global.Items = Sorted Array(Global.Items, Global.ItemRarities[Current Array Index]);
 		Global.ItemSymbols = Sorted Array(Global.ItemSymbols, Global.ItemRarities[Current Array Index]);
 		Global.ItemColours = Sorted Array(Global.ItemColours, Global.ItemRarities[Current Array Index]);
@@ -629,7 +635,7 @@ rule("Boss Setup")
 			Event Player.Target.DashCooldown, Up)), Custom String("[{0}]", Input Binding String(Hero Of(Event Player.Target) == Hero(
 			Tracer) ? Button(Ultimate) : Button(Ability 1))), Null, Left, 3.200, (Hero Of(Event Player.Target) == Hero(Tracer) ? Is Using Ultimate(Event Player.Target) : Event Player.Target.State == Custom STring("Dashing")) ? Color(Orange) : Color(White), Color(White), Color(White),
 			Visible To String and Color, Default Visibility);
-		Create Effect(Is Alive(Event Player) && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams),
+		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams),
 			Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
 		Set Jump Enabled(Event Player, False);
 		Event Player.ShockwaveRadius = -1;
@@ -738,6 +744,7 @@ rule("Player Setup")
 		Disable Kill Feed(Event Player);
 		Event Player.DefaultHealth = Array(Max Health(Event Player), Max Health Of Type(Event Player, Health), Max Health Of Type(
 			Event Player, Armor), Max Health Of Type(Event Player, Shields));
+		Event Player.ShouldUpdateArmour = True;
 		If(Event Player.Role == Custom String("Add"));
 			Set Crouch Enabled(Event Player, False);
 		End;
@@ -1440,6 +1447,18 @@ rule("On hit effects")
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lightning")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage, Min(1, Event Damage / (
 					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36)));
+			End;
+			If(!Array Contains(Global.ChainLightningInfo, Attacker.Master[0]) && Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
+				"Chain Lightning")) && Random Real(0, 1) < 0.250 * Min(1, Event Damage / (
+				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36));
+				Modify Global Variable(ChainLightningInfo, Append To Array, Array(Attacker.Master[0], Victim, Event Damage * 0.600));
+				Modify Global Variable(ChainLightningInfo, Append To Array, Array Slice(Randomized Array(Filtered Array(Players Within Radius(Victim, 6 + 2 * (Filtered Array(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Chain Lightning")
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1), Team Of(Victim), Surfaces), Current Array Element != Victim && Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out) && Array Contains(Array(Custom String("Hero"), Custom String("Boss"), Custom String("Add")), Current Array Element.Role))), 0, 3 + 2 * (Filtered Array(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Chain Lightning")
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1)));
+				Modify Global Variable(ChainLightningInfo, Append To Array, Custom String("0%END"));
+				Log To Inspector(Custom String("Chain Lightning"));
 			End;
 			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Armour Reduction")));
 				If(Victim.DebuffShield[0] > 0);
@@ -2675,6 +2694,55 @@ rule("Lightning Strike Loop")
 		Loop If Condition Is True;
 	}
 }
+
+rule("Chain Lightning Loop 1")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Array Contains(Global.ChainLightningInfo, Custom String("0%END")) == True;
+	}
+
+	actions
+	{
+		Global.ChainLightningIndex = 3;
+		While(Global.ChainLightningInfo[Global.ChainLightningIndex] != Custom String("0%END"));
+			Create Beam Effect(All Players(All Teams), Winston Tesla Cannon Beam, Eye Position(Evaluate Once(Global.ChainLightningInfo[1])), Eye Position(Evaluate Once(Global.ChainLightningInfo[Global.ChainLightningIndex])), Team Of(Global.ChainLightningInfo[0]) == Team 1 ? Color(Team 1) : Color(Team 2), Visible To Position and Radius);
+			Modify Global Variable(ChainLightningEffects, Append To Array, Array(Total Time Elapsed + 0.160, Global.ChainLightningInfo[0], Global.ChainLightningInfo[2], Global.ChainLightningInfo[Global.ChainLightningIndex], Last Created Entity));
+			Global.ChainLightningIndex += 1;
+		End;
+		Global.ChainLightningInfo = Array Slice(Global.ChainLightningInfo, Global.ChainLightningIndex + 1, 1000);
+		Wait(0.016, Ignore Condition);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Chain Lightning Loop 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Count Of(Global.ChainLightningEffects) > 4;
+		Total Time Elapsed > Global.ChainLightningEffects[0];
+	}
+
+	actions
+	{
+		Damage(Global.ChainLightningEffects[3], Global.ChainLightningEffects[1], Global.ChainLightningEffects[2]);
+		Destroy Effect(Global.ChainLightningEffects[4]);
+		Global.ChainLightningEffects = Array Slice(Global.ChainLightningEffects, 5, 1000);
+		Loop If Condition Is True;
+	}
+}
+
 
 disabled rule("PHASE 0")
 {
@@ -4600,7 +4668,9 @@ rule("AiStep")
 		Else;
 			If(Global.Add.State == Custom String("Rise"));
 				If(Y Component Of(Position Of(Global.Add)) > 15);
-					Global.Add.Master[2] = True;
+					If(!Global.TestMode || Array Contains(Global.Bosses, Host Player));
+						Global.Add.Master[2] = True;
+					End;
 					Global.Add.State = Custom String("Idle");
 				Else;
 					Abort;
@@ -4854,7 +4924,9 @@ rule("Add. Setup")
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
 			Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Color(White), Position Of(Event Player), 100);
-			Event Player.Master[2] = True;
+			If(!Global.TestMode || Array Contains(Global.Bosses, Host Player));
+				Global.Add.Master[2] = True;
+			End;
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Zenyatta));
 			Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
@@ -4877,7 +4949,9 @@ rule("Add. Setup")
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
 			Play Effect(All Players(All Teams), Pharah Barrage Explosion Sound, Color(White), Position Of(Event Player), 100);
-			Event Player.Master[2] = True;
+			If(!Global.TestMode || Array Contains(Global.Bosses, Host Player));
+				Global.Add.Master[2] = True;
+			End;
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Tracer));
 			Call Subroutine(UpdateStats);
@@ -6780,7 +6854,7 @@ rule("All Bosses Gone")
 		Global.State = Custom String("PlayerVictory");
 		Global.Phase = Custom String("X");
 		If(Current Game Mode == Game Mode(Skirmish));
-			Wait(3, Ignore Condition);
+			Wait(2, Ignore Condition);
 			Declare Team Victory(Team 1);
 		End;
 	}
@@ -6802,7 +6876,7 @@ rule("All Heroes Gone")
 	actions
 	{
 		If(Current Game Mode == Game Mode(Skirmish));
-			Wait(3, Ignore Condition);
+			Wait(2, Ignore Condition);
 			Declare Team Victory(Team 2);
 		End;
 	}
