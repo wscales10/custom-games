@@ -198,6 +198,11 @@ variables
 		72: AiIndex
 		73: Adds
 		74: Add
+		75: Dialogue
+		76: UsedDialogue
+		77: EarlyHeroDeathDialogue
+		78: LateHeroDeathDialogue
+		79: BossDeathDialogue
 
 	player:
 		0: Master
@@ -294,6 +299,8 @@ variables
 		91: BarrierHealth
 		92: BarrierHealthDamageModification
 		93: NeedleAmmo
+		94: NoBlastReason
+		95: CachedHealth
 }
 
 subroutines
@@ -332,6 +339,8 @@ subroutines
 	32: LoseTarget
 	33: ChooseVThrottle
 	34: PlayerSetup
+	35: DialogueStep
+	36: CalculateStats
 }
 
 rule("Global setup")
@@ -415,6 +424,10 @@ rule("Global setup")
 			Visible To Position Radius and Color);
 		Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Sigma), Team 2));
 		Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Soldier: 76), Team 1));
+		Global.EarlyHeroDeathDialogue = Array(Custom String("Return to dirt."), Custom String("Submit, vermin."), Custom String("Die, vermin."), Custom String("Die, weakling."), Custom String("Become memories."));
+		Global.LateHeroDeathDialogue = Array(Custom String("DIE."), Custom String("WEAK."), Custom String("USELESS."), Custom String("AS I THOUGHT…"), Custom String("VERMIN."));
+		Global.BossDeathDialogue = Array(Custom String("NO… NOT NOW…"), Custom String("WHY… WHY NOW…?"), Custom String("NO… NO…!"), Custom String("BROTHER… HELP ME…!"), Custom String("THIS PLANE GROWS DARK… BROTHER… I CANNOT SEE YOU… WHERE ARE YOU…?"), Custom String("BROTHER… PERHAPS… WE WILL GET IT RIGHT… NEXT TIME…"));
+		Global.UsedDialogue = Empty Array;
 		Global.State = Custom String("Buy");
 	}
 }
@@ -432,6 +445,77 @@ rule("Settings")
 		Global.TestMode = Workshop Setting Toggle(Custom String("Developer"), Custom String("Test Mode"), False, 0);
 		Global.DifficultyValue = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Difficulty"), 2, 1, 3, 0);
 		Global.OverallPlayerLevel = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Player Level"), 8, 1, 99, 0);
+		Global.Dialogue = Array(Workshop Setting Toggle(Custom String("Customization"), Custom String("Enable Dialogue"), False, 0), 5, Null, Null, Null);
+	}
+}
+
+rule("Dialogue")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+	
+	conditions
+	{
+		Count Of(Global.Dialogue) > 1 + Global.Dialogue[1];
+	}
+
+	actions
+	{
+		Call Subroutine(DialogueStep);
+		Wait(0.200, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Dialogue Step")
+{
+	event
+	{
+		Subroutine;
+		DialogueStep;
+	}
+
+	actions
+	{
+		Global.Dialogue[2] = Global.Dialogue[Global.Dialogue[1]];
+		If(Global.Dialogue[2] == Null);
+			Global.Dialogue[2] = Random Value In Array(Filtered Array(Global.Bosses, Is Alive(Current Array Element) && Current Array Element.State != Custom String("Absent")));
+		End;
+		If(Global.Dialogue[2].Name != Null && Array Contains(All Players(All Teams), Global.Dialogue[2]));
+			Global.Dialogue[3] = Global.Dialogue[Global.Dialogue[1] + 1];
+			If(Global.Dialogue[3] == Custom String("BossSpawn"));
+				Global.Dialogue[4] = Random Value In Array(Array(Custom String("Pray."), Custom String("Beg."), Custom String("Die."), Custom String("Be slaughtered.")));
+			Else If(Global.Dialogue[3] == Custom String("EarlyHeroDeath"));
+				Global.Dialogue[4] = Random Value In Array(Remove From Array(Global.EarlyHeroDeathDialogue, Global.UsedDialogue));
+				If(Global.Dialogue[4] == Null);
+					Modify Global Variable(UsedDialogue, Remove From Array By Value, Global.EarlyHeroDeathDialogue);
+					Global.Dialogue[4] = Random Value In Array(Global.EarlyHeroDeathDialogue);
+				End;
+			Else If(Global.Dialogue[3] == Custom String("LateHeroDeath"));
+				Global.Dialogue[4] = Random Value In Array(Remove From Array(Global.LateHeroDeathDialogue, Global.UsedDialogue));
+				If(Global.Dialogue[4] == Null);
+					Modify Global Variable(UsedDialogue, Remove From Array By Value, Global.LateHeroDeathDialogue);
+					Global.Dialogue[4] = Random Value In Array(Global.LateHeroDeathDialogue);
+				End;
+			Else If(Global.Dialogue[3] == Custom String("BossDeath"));
+				Global.Dialogue[4] = Random Value In Array(Remove From Array(Global.BossDeathDialogue, Global.UsedDialogue));
+				If(Global.Dialogue[4] == Null);
+					Modify Global Variable(UsedDialogue, Remove From Array By Value, Global.BossDeathDialogue);
+					Global.Dialogue[4] = Random Value In Array(Global.BossDeathDialogue);
+				End;
+			End;				
+			If(Global.Dialogue[4] != Null);
+				Small Message(All Players(All Teams), Custom String("[{0}]: {1}", Global.Dialogue[2].Name, Global.Dialogue[4]));
+				Modify Global Variable(UsedDialogue, Append To Array, Global.Dialogue[4]);
+			End;
+		End;
+		If(Count Of(Global.Dialogue) > 998);
+			Global.Dialogue = Append To Array(Array Slice(Global.Dialogue, 0, 4), Array Slice(Global.Dialogue, 7, 1000));
+		Else;
+			Global.Dialogue[1] += 2;
+		End;
 	}
 }
 
@@ -452,7 +536,6 @@ rule("Identify Boss")
 	actions
 	{
 		Log To Inspector(Custom String("boss joined"));
-		Event Player.Level = Global.OverallBossLevel;
 		Event Player.Role = Custom String("Boss");
 		Event Player.Master[0] = Event Player;
 		Start Rule(PlayerSetup, Do Nothing);
@@ -469,6 +552,7 @@ rule("Boss Setup")
 
 	actions
 	{
+		Event Player.Name = Custom String("{0}", Event Player);
 		Create HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Null, Null, Custom String("{0} {1}", Custom String("{0} {1} {2}",
 			Custom String("{0} {1} {2}", Event Player.BlastCooldown ? Custom String("{0}×{1}", Icon String(Asterisk), Round To Integer(
 			Event Player.BlastCooldown, Up)) : Custom String(" "),
@@ -483,9 +567,9 @@ rule("Boss Setup")
 			Event Player.ArmourPiercingStacks[0]) : Custom String(" "), Event Player.ArmourPiercingStacks[1] ? Custom String("Ø×{0}",
 			Event Player.ArmourPiercingStacks[1]) : Custom String(" ")))), Null, Top, Slot Of(Event Player), Color(White), Color(White),
 			Color(White), Visible To and String, Default Visibility);
-		Create Progress Bar HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Empty Array, 100 * Normalized Health(Event Player),
-			String("{0} / {1}", Max(1, Round To Integer(Health(Event Player) + Event Player.BarrierHealth, To Nearest)), Round To Integer(
-			Max Health(Event Player), To Nearest)), Top, Slot Of(Event Player) + 0.100, Color(Red), Color(White), Visible To and Values,
+		Create Progress Bar HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Empty Array, 100 * (Event Player.CachedHealth[1] ? Event Player.CachedHealth[2] : Health(Event Player) + Event Player.BarrierHealth) / (Event Player.CachedHealth[1] ? Event Player.CachedHealth[3] : Max Health(Event Player)),
+			String("{0} / {1}", Max(1, Round To Integer((Event Player.CachedHealth[1] ? Event Player.CachedHealth[2] : Health(Event Player)) + Event Player.BarrierHealth, To Nearest)), Round To Integer(
+			(Event Player.CachedHealth[1] ? Event Player.CachedHealth[3] : Max Health(Event Player)), To Nearest)), Top, Slot Of(Event Player) + 0.100, Color(Red), Color(White), Visible To and Values,
 			Default Visibility);
 		Create HUD Text(Event Player.ShowBossBar ? All Players(Team 1) : Null, Null, Null, Event Player, Top, Slot Of(Event Player)
 			+ 0.200, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
@@ -655,9 +739,7 @@ rule("Player Setup")
 		Event Player.DefaultHealth = Array(Max Health(Event Player), Max Health Of Type(Event Player, Health), Max Health Of Type(
 			Event Player, Armor), Max Health Of Type(Event Player, Shields));
 		If(Event Player.Role == Custom String("Add"));
-			Event Player.Level = Global.OverallBossLevel;
 			Set Crouch Enabled(Event Player, False);
-			Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		End;
 		Event Player.State = Custom String("IndividualSetup");
 		If(Event Player.Role == Custom String("Boss"));
@@ -722,15 +804,10 @@ rule("Team 1 Setup")
 	{
 		Event Player.BaseMoveSpeedModifier = 100;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Event Player.Level = Global.OverallPlayerLevel;
-		Event Player.Currency = 150 * Round To Integer(Event Player.Level, To Nearest);
 		Chase Player Variable At Rate(Event Player, CrippleTime, 0, 1, None);
 		disabled Modify Global Variable(ItemDistributionQueue, Append To Array, Array(Random Value In Array(Global.Items), Event Player, 10));
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * Event Player.DefaultHealth[0] * (90 / 150) * (1 + 0.300 * (
-			Event Player.Level - 1)) / 25;
-		Event Player.BaseDamageMultiplier = (1 + 0.200 * (Event Player.Level - 1)) / 2.400;
-		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
+		Event Player.Currency = 150 * Round To Integer(Event Player.Level, To Nearest);
 		Create Effect(Event Player.CrippleTime > 0 && Event Player.StealthTime[0] == 0 ? All Players(All Teams) : Null, Good Aura, Color(
 			Sky Blue), Eye Position(Event Player), 1, Visible To Position and Radius);
 		If(Global.DifficultyValue == 1);
@@ -750,7 +827,7 @@ rule("Team 1 Setup")
 			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Global.ItemShops[Sorted Array(Mapped Array(
 			Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
-			Global.ItemShopPositions[Current Array Element]))[0]], Null, Custom String("£{0}", Global.ItemShopPrices[Sorted Array(
+			Global.ItemShopPositions[Current Array Element]))[0]], Custom String("[{0}] Buy", Input Binding String(Button(Interact))), Custom String("£{0}", Global.ItemShopPrices[Sorted Array(
 			Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
 			Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(White), Color(White),
@@ -1057,6 +1134,67 @@ rule("Update Healing")
 	}
 }
 
+rule("Calculate Max HP")
+{
+	event
+	{
+		Subroutine;
+		CalculateStats;
+	}
+	
+	actions
+	{
+		If(Event Player.Role == Custom String("Hero"));
+			Event Player.Level = Round To Integer(Global.OverallPlayerLevel, Down);
+			Event Player.TotalHPUnits = Event Player.HealthScale[0] * Event Player.DefaultHealth[0] * (90 / 150) * (1 + 0.300 * (
+			Event Player.Level - 1)) / 25;
+			Event Player.BaseDamageMultiplier = (1 + 0.200 * (Event Player.Level - 1)) / 2.400;
+			Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+		Else If(Event Player.Role == Custom String("Boss"));
+			Call Subroutine(SetCoefficient);
+			Event Player.Level = Round To Integer(Global.OverallBossLevel, Down);
+			If(Global.Phase < 2);
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
+					1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
+					/ Global.BossCount / 25;
+				Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
+				Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+			Else If(Global.Phase == 3);
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
+					1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
+					/ Global.BossCount / 25;
+				Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
+				Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+			Else If(Global.Phase == 4);
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1400 + 420 * (Event Player.Level - 1)) / Global.BossCount / 25;
+				Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
+				Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+			End;
+		Else If(Event Player.Role == Custom String("Add"));
+			Event Player.Level = Round To Integer(Global.OverallBossLevel, Down);
+			Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+			If(Hero Of(Event Player) == Hero(Wrecking Ball));
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (180 + 54 * (Event Player.Level - 1)) / Global.BossCount / 25;
+				"50% damage at level 17 (expected BossLevel for phase 2 on hard difficulty)"
+				Event Player.BaseDamageMultiplier = 0.500 / (17 + 4) / 2.200 * (11 + 2.200 * (Event Player.Level - 1));
+			Else If(Hero Of(Event Player) == Hero(Zenyatta));
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1615 + 485 * (Event Player.Level - 1)) / Global.BossCount / 25;
+				Event Player.BaseDamageMultiplier = (35 + 7 * (Event Player.Level - 1)) * 0.600 / 48;
+			Else If(Hero Of(Event Player) == Hero(Tracer));
+				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
+				Event Player.TotalHPUnits = Event Player.HealthScale[0] * (850 + 255 * (Event Player.Level - 1)) / Global.BossCount / 25;
+				"40% damage at level 17 (expected BossLevel for phase 2 on hard difficulty)"
+				Event Player.BaseDamageMultiplier = 0.400 / (17 + 4) / 3 * (15 + 3 * (Event Player.Level - 1));
+			End;
+		End;
+	}
+}
+
 rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamageMultiplier and BaseRegen)")
 {
 	event
@@ -1067,7 +1205,13 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 
 	actions
 	{
+		Call Subroutine(CalculateStats);
 		If(Event Player.Role == Custom String("Boss"));
+			If(Event Player.CachedHealth[0]);
+				Event Player.CachedHealth[2] = Health(Event Player);
+				Event Player.CachedHealth[3] = Max Health(Event Player);
+				Event Player.CachedHealth[1] = True;
+			End;
 			Event Player.IntendedMaxHealth = Mapped Array(Array(0.533, 0.467), Event Player.TotalHPUnits * Current Array Element);
 			Set Damage Dealt(Event Player.Bots[0], Event Player.BaseDamageMultiplier * 113.300);
 		Else;
@@ -1086,6 +1230,9 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 					Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
 				Event Player.IntendedMaxHealth[2] = (Event Player.TotalHPUnits - Event Player.IntendedMaxHealth[1] / 0.700)
 					* Event Player.DefaultHealth[3] * 0.400 / (Event Player.DefaultHealth[0] - Event Player.DefaultHealth[2]);
+				If(Hero Of(Event Player) == Hero(Wrecking Ball));
+					Set Max Ammo(Event Player, 0, Round To Integer(Event Player.Level, To Nearest) + 3);
+				End;
 			End;
 		End;
 		Event Player.IntendedMaxHealth = Mapped Array(Event Player.IntendedMaxHealth, Round To Integer(Current Array Element, Up));
@@ -1097,7 +1244,7 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Current Array Element * 25 - Event Player.DefaultHealth[Current Array Index + 1] * Event Player.HealthScale[1]);
 		Set Damage Dealt(Event Player, Event Player.BaseDamageMultiplier * 100);
 		Call Subroutine(UpdateHealing);
-		Call Subroutine(CleanseAllDebuffs);
+		Wait(0.250, Ignore Condition);
 		While(Count Of(Event Player.NormalExtraHealthPools) > 0);
 			Remove Health Pool From Player(Event Player.NormalExtraHealthPools[0]);
 			Modify Player Variable(Event Player, NormalExtraHealthPools, Remove From Array By Index, 0);
@@ -1133,6 +1280,18 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 		End;
 		Wait(0.250, Ignore Condition);
 		Modify Player Variable(Event Player, NormalExtraHealth, Remove From Array By Index, 3);
+		If(Event Player.CachedHealth[0]);
+			Event Player.CachedHealth[4] = Has Status(Event Player, Phased Out);
+			Clear Status(Event Player, Phased Out);
+			Event Player.CachedHealth[5] = Max Health(Event Player) - (Event Player.CachedHealth[3] - Event Player.CachedHealth[2]);
+			Log To Inspector(Custom String("{0}: {1} -> {2}", Event Player, Custom String("{0} / {1}", Event Player.CachedHealth[2], Event Player.CachedHealth[3]), Custom String("{0} / {1}", Event Player.CachedHealth[5], Max Health(Event Player))));
+			Set Player Health(Event Player, Event Player.CachedHealth[5]);
+			If(Event Player.CachedHealth[4]);
+				Set Status(Event Player, Null, Phased Out, 9999);
+			End;
+			Event Player.CachedHealth[1] = False;
+			Event Player.CachedHealth[0] = False;
+		End;
 	}
 }
 
@@ -1254,6 +1413,8 @@ rule("On hit effects")
 					Attacker.Master[0].FlameTornado = Last Created Entity;
 					Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Color(White), Attacker.Master[0].FlameTornadoPosition, 100);
 				End;
+			Else If(Global.TestMode);
+				Attacker.Master[0].NoBlastReason = Array(Event Damage, Victim.DamageReceivedNewAmount, Attacker.Master[0].BaseDamageMultiplier, Attacker.Master[0].BlastCooldown);
 			End;
 			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Lifesteal")));
 				Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker.Master[0]))],
@@ -1320,15 +1481,18 @@ rule("Create Queued Bots")
 
 	actions
 	{
-		If((Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) && Team Of(Global.BotCreationQueue[1]) == Team 1) || (
-			Global.BotCreationQueue[1] == Team 1));
-			Create Dummy Bot(Global.BotCreationQueue[0], Team 1, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
-				X Component Of(Current Array Element) == 1))), Vector(300, 0, 0), Forward);
-		Else;
-			Create Dummy Bot(Global.BotCreationQueue[0], Team 2, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
-				X Component Of(Current Array Element) == 2))), Vector(-300, 0, 0), Forward);
+		"Don't spawn adds after phase 3"
+		If(Global.Phase == 2 || Global.Phase == 3 || !Array Contains(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)), Global.BotCreationQueue[0]));
+			If((Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) && Team Of(Global.BotCreationQueue[1]) == Team 1) || (
+				Global.BotCreationQueue[1] == Team 1));
+				Create Dummy Bot(Global.BotCreationQueue[0], Team 1, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
+					X Component Of(Current Array Element) == 1))), Vector(300, 0, 0), Forward);
+			Else;
+				Create Dummy Bot(Global.BotCreationQueue[0], Team 2, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
+					X Component Of(Current Array Element) == 2))), Vector(-300, 0, 0), Forward);
+			End;
+			Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		End;
-		Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		Global.BotCreationQueue = Array Slice(Global.BotCreationQueue, 2, 1000);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
@@ -2629,7 +2793,7 @@ rule("Random Buy")
 	{
 		Global.TestMode == True;
 		Global.State == Custom String("Buy");
-		Is Button Held(Host Player, Button(Interact)) == True;
+		(!Array Contains(All Players(Team 1), Host Player) || Is Button Held(Host Player, Button(Interact))) == True;
 		Event Player.Role == Custom String("Hero");
 		Has Spawned(Event Player) == True;
 	}
@@ -2747,7 +2911,6 @@ rule("On Enter State: OnTheWay")
 		Global.BossCount = Count Of(Global.Bosses);
 		Global.PlayerFactor = 1 + 0.300 * (Global.PlayerCount - 1);
 		Global.TimeFactor = 0.051 * Global.DifficultyValue * Global.PlayerCount ^ 0.200;
-		Call Subroutine(SetCoefficient);
 		Wait(2, Ignore Condition);
 		Global.State = Custom String("Cutscene");
 	}
@@ -2769,11 +2932,13 @@ rule("On Enter State: Cutscene (Global)")
 	{
 		Wait(2.850, Ignore Condition);
 		Global.Bosses.State = Custom String("Cutscene");
-		Call Subroutine(SetCoefficient);
 		Destroy Effect(Global.BossSpawnEffect);
 		Wait Until(Is True For All(Global.Bosses, Current Array Element.State == Custom String("Ready")), 99999);
 		Global.State = Custom String("BossFight");
 		Global.Phase = 1;
+		If(Global.Dialogue[0]);
+			Modify Global Variable(Dialogue, Append To Array, Array(Null, Custom String("BossSpawn")));
+		End;
 	}
 }
 
@@ -2798,12 +2963,6 @@ rule("On Enter State: Cutscene (Boss)")
 		Stop Forcing Player Position(Event Player);
 		Clear Status(Event Player, Phased Out);
 		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
-		"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
-			1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
-			/ Global.BossCount / 25;
-		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
-		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		Call Subroutine(UpdateStats);
 		Set Invisible(Event Player, None);
 		Start Holding Button(Event Player, Button(Crouch));
@@ -2828,6 +2987,7 @@ rule("On Enter State: Cutscene (Team 1)")
 	conditions
 	{
 		Global.State == Custom String("Cutscene");
+		Event Player.Role == Custom String("Hero");
 	}
 
 	actions
@@ -3376,6 +3536,7 @@ rule("On Enter State: FinishingFullTakeoff")
 
 	actions
 	{
+		Event Player.BleedTime = 0;
 		If(Global.Phase == 3);
 			Stop Chasing Player Variable(Event Player, TakeoffCooldown);
 		End;
@@ -3383,6 +3544,8 @@ rule("On Enter State: FinishingFullTakeoff")
 		If(Global.Phase == 3);
 			Event Player.PizzaIndex = Custom String("Soon");
 		End;
+		Event Player.CachedHealth[0] = True;
+		Call Subroutine(UpdateStats);
 		Wait(3, Abort When False);
 		Event Player.State = Custom String("Landing");
 	}
@@ -4437,6 +4600,7 @@ rule("AiStep")
 		Else;
 			If(Global.Add.State == Custom String("Rise"));
 				If(Y Component Of(Position Of(Global.Add)) > 15);
+					Global.Add.Master[2] = True;
 					Global.Add.State = Custom String("Idle");
 				Else;
 					Abort;
@@ -4537,7 +4701,8 @@ rule("TryShoot")
 		Abort If(Distance Between(Global.Add, Global.Add.Target) > (Hero Of(Global.Add) == Hero(Wrecking Ball) ? 18 : 25));
 		Abort If(Distance Between(Global.Add, Global.Add.Target) < 15 && Ultimate Charge Percent(Global.Add) == 100);
 		Abort If(Hero Of(Global.Add) == Hero(Tracer) && !Is In View Angle(Global.Add, Eye Position(Global.Add.Target), 35));
-		Abort If(Hero Of(Global.Add) == Hero(Wrecking Ball) && Ammo(Event Player, 0) < Max Ammo(Event Player, 0));
+		Abort If(Hero Of(Global.Add) == Hero(Wrecking Ball) && Ammo(Global.Add, 0) < Max Ammo(Global.Add, 0));
+		Abort If(Hero Of(Global.Add) == Hero(Wrecking Ball) && !Is In View Angle(Global.Add, Eye Position(Global.Add.Target), 40));
 		Global.Add.State = Custom String("Shoot");
 		If(Hero Of(Global.Add) == Hero(Wrecking Ball));
 			Start Holding Button(Global.Add, Button(Primary Fire));
@@ -4616,8 +4781,10 @@ rule("Add. move forward")
 
 	actions
 	{
-		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 1);
+		Start Forcing Throttle(Event Player, 1, 1, 0, 0, Hero Of(Event Player) == Hero(Wrecking Ball) ? 0 : Random Real(0, 1), 1);
 		disabled Log To Inspector(Custom String("start moving forward"));
+		Wait(4, Abort When False);
+		Loop If Condition Is True;
 	}
 }
 
@@ -4667,10 +4834,6 @@ rule("Add. Setup")
 		If(Hero Of(Event Player) == Hero(Wrecking Ball));
 			"160 dps at level 17 (expected BossLevel for phase 2 on hard difficulty)"
 			Event Player.FlameTornadoDamage = 160 / 0.500;
-			"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-			Event Player.TotalHPUnits = Event Player.HealthScale[0] * (180 + 54 * (Event Player.Level - 1)) / Global.BossCount / 25;
-			"50% damage at level 17 (expected BossLevel for phase 2 on hard difficulty)"
-			Event Player.BaseDamageMultiplier = 0.500 / (17 + 4) / 2.200 * (11 + 2.200 * (Event Player.Level - 1));
 			Call Subroutine(UpdateStats);
 			Event Player.BaseMoveSpeedModifier = 55;
 			Event Player.ShouldUpdateMoveSpeed = True;
@@ -4684,7 +4847,6 @@ rule("Add. Setup")
 					179), 0) : Random Real(0, Global.ArenaRadius - 10) * Direction From Angles(Random Integer(-179, 179), 0)), Min(
 					Global.ArenaRadius - 1, Magnitude Of(Current Array Element)) * Normalize(Current Array Element))[0]);
 			End;
-			Set Max Ammo(Event Player, 0, Round To Integer(Event Player.Level, To Nearest) + 3);
 			Event Player.Name = Random Value In Array(Remove From Array(Global.BallNames, Mapped Array(All Players(Team 2),
 				Current Array Element.Name)));
 			If(Event Player.Name == Null);
@@ -4692,12 +4854,10 @@ rule("Add. Setup")
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
 			Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Color(White), Position Of(Event Player), 100);
+			Event Player.Master[2] = True;
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Zenyatta));
 			Chase Player Variable At Rate(Event Player, DashCooldown, 0, 1, None);
-			"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-			Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1615 + 485 * (Event Player.Level - 1)) / Global.BossCount / 25;
-			Event Player.BaseDamageMultiplier = (35 + 7 * (Event Player.Level - 1)) * 0.600 / 48;
 			Call Subroutine(UpdateStats);
 			Start Scaling Player(Event Player, 1.150, False);
 			If(Global.Phase == 2);
@@ -4717,12 +4877,9 @@ rule("Add. Setup")
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Name);
 			Play Effect(All Players(All Teams), Pharah Barrage Explosion Sound, Color(White), Position Of(Event Player), 100);
+			Event Player.Master[2] = True;
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Tracer));
-			"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-			Event Player.TotalHPUnits = Event Player.HealthScale[0] * (850 + 255 * (Event Player.Level - 1)) / Global.BossCount / 25;
-			"40% damage at level 17 (expected BossLevel for phase 2 on hard difficulty)"
-			Event Player.BaseDamageMultiplier = 0.400 / (17 + 4) / 3 * (15 + 3 * (Event Player.Level - 1));
 			Call Subroutine(UpdateStats);
 			Set Jump Enabled(Event Player, False);
 			Start Scaling Player(Event Player, 1.150, False);
@@ -5269,7 +5426,7 @@ rule("Wisp move backward")
 
 	actions
 	{
-		Start Forcing Throttle(Event Player, 0, 0, 1, 1, 0, 1);
+		Start Forcing Throttle(Event Player, 0, 0, 1, 1, Random Real(0, 1), 1);
 		disabled Log To Inspector(Custom String("wisp move back"));
 	}
 }
@@ -5342,7 +5499,7 @@ rule("On enter Phase 2 (Boss)")
 		Event Player.Target = Null;
 		While(Event Player.Target == Null && Global.Phase == 2);
 			Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.Role == Custom String("Add")
-				&& Current Array Element.Master[1] == Null)).Master[1] = Event Player;
+				&& Current Array Element.Master[1] == Null && Current Array Element.Master[2])).Master[1] = Event Player;
 			Event Player.Target = Filtered Array(All Players(Team 2), Current Array Element.Master[1] == Event Player)[0];
 			Wait(0.200, Ignore Condition);
 		End;
@@ -5421,12 +5578,12 @@ rule("Add Start Throttle")
 	}
 }
 
-rule("Add Stop Throttle")
+rule("Stop Throttle in direction")
 {
 	event
 	{
 		Ongoing - Each Player;
-		Team 2;
+		All;
 		All;
 	}
 
@@ -5837,13 +5994,7 @@ rule("On Phase 3 Start (Boss)")
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Stop Chasing Player Variable(Event Player, TakeoffCooldown);
 		Event Player.CanNeedle = Array(False, False);
-		Call Subroutine(SetCoefficient);
-		"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1000 + 300 * (Event Player.Level - 1)) * (
-			1 + Global.DifficultyCoefficient) * Square Root(Count Of(Filtered Array(Global.Heroes, Is Alive(Current Array Element))))
-			/ Global.BossCount / 25;
-		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
-		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+		Call Subroutine(CleanseAllDebuffs);
 		Call Subroutine(UpdateStats);
 		Wait(3, Abort When False);
 		Event Player.ShowBossBar = True;
@@ -6112,7 +6263,6 @@ rule("On Enter Phase: 4 (Global)")
 
 	actions
 	{
-		Call Subroutine(SetCoefficient);
 		Wait(0.500, Ignore Condition);
 		Kill(Filtered Array(All Players(Team 2), Current Array Element.Role == Custom String("Add")), Global.NullPlayer[0]);
 		disabled Wait(5, Ignore Condition);
@@ -6146,10 +6296,7 @@ rule("On Enter Phase: 4 (Boss)")
 		"Add Armour Boost"
 		Event Player.ArmourModifiers[1] = 200;
 		Start Rule(UpdateArmour, Restart Rule);
-		"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
-		Event Player.TotalHPUnits = Event Player.HealthScale[0] * (1400 + 420 * (Event Player.Level - 1)) / Global.BossCount / 25;
-		Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
-		Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
+		Call Subroutine(CleanseAllDebuffs);
 		Call Subroutine(UpdateStats);
 		Set Invisible(Event Player, None);
 		Event Player.PizzaIndex = Custom String("Dormant");
@@ -6491,6 +6638,12 @@ rule("Player Died")
 		Event Player.WispAcceleration = Vector(0, 0, 0);
 		If(Event Player.Role == Custom String("Add"));
 			Call Subroutine(LoseTarget);
+		Else If(Event Player.Role == Custom String("Hero") && Global.Dialogue[0]);
+			If(Global.Phase == 1 || Global.Phase == 3);
+				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss") ? Attacker.Master[0] : Null, Custom String("EarlyHeroDeath")));
+			Else If(Global.Phase == 4);
+				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss") ? Attacker.Master[0] : Null, Custom String("LateHeroDeath")));
+			End;
 		End;
 		If(Array Contains(Event Player.MyItemStacks, Custom String("Extra Life")));
 			If(Team Of(Event Player) != Team 2);
@@ -6560,6 +6713,9 @@ rule("Boss Died")
 		Event Player.ShowBossBar = False;
 		Event Player.HasLostThisPhase = True;
 		Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Color(White), Event Player, 100);
+		If(Global.Dialogue[0]);
+			Modify Global Variable(Dialogue, Append To Array, Array(Event Player, Custom String("BossDeath")));
+		End;
 	}
 }
 
@@ -6624,6 +6780,7 @@ rule("All Bosses Gone")
 		Global.State = Custom String("PlayerVictory");
 		Global.Phase = Custom String("X");
 		If(Current Game Mode == Game Mode(Skirmish));
+			Wait(3, Ignore Condition);
 			Declare Team Victory(Team 1);
 		End;
 	}
@@ -6645,6 +6802,7 @@ rule("All Heroes Gone")
 	actions
 	{
 		If(Current Game Mode == Game Mode(Skirmish));
+			Wait(3, Ignore Condition);
 			Declare Team Victory(Team 2);
 		End;
 	}
