@@ -103,8 +103,8 @@ settings
 
 	workshop
 	{
-		Enable Dialogue: On
 		Difficulty: 3
+		Enable Dialogue: On
 		Player Level: 23
 		Test Mode: On
 	}
@@ -312,6 +312,7 @@ variables
 		95: CachedHealth
 		96: UltCharges
 		97: Hero
+		98: Crit
 }
 
 subroutines
@@ -353,6 +354,7 @@ subroutines
 	35: DialogueStep
 	36: CalculateStats
 	37: CapMaxHealth
+	38: UpdateCrit
 }
 
 rule("Global setup")
@@ -395,23 +397,37 @@ rule("Global setup")
 		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
 			Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"),
 			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt),
-			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"), Custom String("Ult"));
+			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"),
+			Custom String("Ult"));
 		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2, 2);
 		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
 			Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,
 			255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,
 			53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,
 			185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165,
-			239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255), Custom Color(82, 83, 71, 255));
+			239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255),
+			Custom Color(82, 83, 71, 255));
 		Global.Items = Sorted Array(Global.Items, Global.ItemRarities[Current Array Index]);
 		Global.ItemSymbols = Sorted Array(Global.ItemSymbols, Global.ItemRarities[Current Array Index]);
 		Global.ItemColours = Sorted Array(Global.ItemColours, Global.ItemRarities[Current Array Index]);
 		Global.ItemRarities = Sorted Array(Global.ItemRarities, Current Array Element);
 		Global.ItemDistributionQueue = Empty Array;
 		Global.ItemStackOriginalOwners = Empty Array;
-		Global.Buttons = Array(Button(Ability 1), Button(Ability 2), Button(Crouch), Button(Melee), Button(Primary Fire), Button(Secondary Fire), Button(Ultimate));
-		Global.AllHeroes = Array(Hero(Ana), Hero(Ashe), Hero(Baptiste), Hero(Bastion), Hero(Brigitte), Hero(Cassidy), Hero(D.Va), Hero(Doomfist), Hero(Echo), Hero(Genji), Hero(Hanzo), Hero(Junker Queen), Hero(Junkrat), Hero(Kiriko), Hero(Lúcio), Hero(Mei), Hero(Mercy), Hero(Moira), Hero(Orisa), Hero(Pharah), Hero(Ramattra), Hero(Reaper), Hero(Reinhardt), Hero(Roadhog), Hero(Sigma), Hero(Sojourn), Hero(Soldier: 76), Hero(Sombra), Hero(Symmetra), Hero(Torbjörn), Hero(Tracer), Hero(Widowmaker), Hero(Winston), Hero(Wrecking Ball), Hero(Zarya), Hero(Zenyatta));
-		Global.ProcCoefs = Array(-1, 1, 1, 0, 1, 0.85, 0, 0, 0.5, -1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0.65, 0, 0, 0, 0, 0, 1, -1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, -1, 0, 1, 1, 0.75, 1, 1, 0.65, 0, 1, 0.7, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0.5, 0, 1, 0.8, -1, 0, 1, -1, 0, 1, 0.75, 0.8, 1, 1, 1, 0, 1, 1, 0, 0.85, 0, -1, 0, -1, 1, -1, -1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0.35, 1, 0.1, 0, 0, 0, 1, 1, 0, 0, 0, 0.15, 0, 1, 0, 0.5, 0.5, 0, 0.65, 0, 1, 0.65, 1, 1, 0, 1, 0, 1, 1, 0, 0.1, 1, 0.1, 0, 1, 0.35, 0, 0.15, 0, 0, 0, 1, 1, 0, 0.95, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0.6, 0, 1, 0, 1, 1, 0, 1, 0, 0.2, 0, 1, 0.5, 1, 1, 0, 0, 0, 1, 0.7, 1, 0.7, 0, 0, 0, 1, 0.35, 0, 1, 0, 0, 0, 1, 0.5, 1, 0, 0, 0, 0, 1, 1, 1, 0.1, 0, 0, 0, 1, 0.15, 0, 1, 0, 0.1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0.6, 1, 1, 0, 0, 1, 1, 0.3, 1, 1, 0, 0, 0, 1, 0.5, 1, 0.1, 0, 0, 0, 1, 1, 0.8, 0);
+		Global.Buttons = Array(Button(Ability 1), Button(Ability 2), Button(Crouch), Button(Melee), Button(Primary Fire), Button(
+			Secondary Fire), Button(Ultimate));
+		Global.AllHeroes = Array(Hero(Ana), Hero(Ashe), Hero(Baptiste), Hero(Bastion), Hero(Brigitte), Hero(Cassidy), Hero(D.Va), Hero(
+			Doomfist), Hero(Echo), Hero(Genji), Hero(Hanzo), Hero(Junker Queen), Hero(Junkrat), Hero(Kiriko), Hero(Lúcio), Hero(Mei), Hero(
+			Mercy), Hero(Moira), Hero(Orisa), Hero(Pharah), Hero(Ramattra), Hero(Reaper), Hero(Reinhardt), Hero(Roadhog), Hero(Sigma),
+			Hero(Sojourn), Hero(Soldier: 76), Hero(Sombra), Hero(Symmetra), Hero(Torbjörn), Hero(Tracer), Hero(Widowmaker), Hero(Winston),
+			Hero(Wrecking Ball), Hero(Zarya), Hero(Zenyatta));
+		Global.ProcCoefs = Array(-1, 1, 1, 0, 1, 0.850, 0, 0, 0.500, -1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0.650, 0, 0, 0, 0, 0, 1, -1, 1, 1, 1,
+			0, 0, 1, 1, 0, 0, 0, -1, 0, 1, 1, 0.750, 1, 1, 0.650, 0, 1, 0.700, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0.500, 0, 1, 0.800, -1, 0, 1,
+			-1, 0, 1, 0.750, 0.800, 1, 1, 1, 0, 1, 1, 0, 0.850, 0, -1, 0, -1, 1, -1, -1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
+			1, 1, 1, 0, 0, 0, 0, 1, 0.350, 1, 0.100, 0, 0, 0, 1, 1, 0, 0, 0, 0.150, 0, 1, 0, 0.500, 0.500, 0, 0.650, 0, 1, 0.650, 1, 1, 0,
+			1, 0, 1, 1, 0, 0.100, 1, 0.100, 0, 1, 0.350, 0, 0.150, 0, 0, 0, 1, 1, 0, 0.950, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0.600,
+			0, 1, 0, 1, 1, 0, 1, 0, 0.200, 0, 1, 0.500, 1, 1, 0, 0, 0, 1, 0.700, 1, 0.700, 0, 0, 0, 1, 0.350, 0, 1, 0, 0, 0, 1, 0.500, 1,
+			0, 0, 0, 0, 1, 1, 1, 0.100, 0, 0, 0, 1, 0.150, 0, 1, 0, 0.100, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0.600, 1, 1, 0, 0, 1, 1, 0.300, 1, 1,
+			0, 0, 0, 1, 0.500, 1, 0.100, 0, 0, 0, 1, 1, 0.800, 0);
 		Global.FlamePillarPositions = Empty Array;
 		Global.FlamePillarExpirationTimes = Empty Array;
 		Global.FlamePillars = Empty Array;
@@ -434,8 +450,8 @@ rule("Global setup")
 		If(Global.TestMode);
 			disabled Create HUD Text(All Players(All Teams), Global.State, Custom String("Global State"), Global.Phase, Left, 0, Color(White), Color(
 				White), Color(White), Visible To and String, Default Visibility);
-			Create HUD Text(All Players(All Teams), Server Load Average, Null, Is Using Ultimate(Host Player), Left, 0, Color(White), Color(White), Color(White),
-				Visible To and String, Default Visibility);
+			Create HUD Text(All Players(All Teams), Server Load Average, Null, Is Using Ultimate(Host Player), Left, 0, Color(White), Color(
+				White), Color(White), Visible To and String, Default Visibility);
 		End;
 		Global.BallNames = Array(Custom String("Interference"), Custom String("Locomotion"), Custom String("Destruction"));
 		Global.TracerNames = Array(Custom String("Soul"), Custom String("Design"), Custom String("Wonder"), Custom String("Speed"),
@@ -450,9 +466,13 @@ rule("Global setup")
 			Visible To Position Radius and Color);
 		Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Sigma), Team 2));
 		Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Soldier: 76), Team 1));
-		Global.EarlyHeroDeathDialogue = Array(Custom String("Return to dirt."), Custom String("Submit, vermin."), Custom String("Die, vermin."), Custom String("Die, weakling."), Custom String("Become memories."));
-		Global.LateHeroDeathDialogue = Array(Custom String("DIE."), Custom String("WEAK."), Custom String("USELESS."), Custom String("AS I THOUGHT…"), Custom String("VERMIN."));
-		Global.BossDeathDialogue = Array(Custom String("NO… NOT NOW…"), Custom String("WHY… WHY NOW…?"), Custom String("NO… NO…!"), Custom String("BROTHER… HELP ME…!"), Custom String("THIS PLANE GROWS DARK… BROTHER… I CANNOT SEE YOU… WHERE ARE YOU…?"), Custom String("BROTHER… PERHAPS… WE WILL GET IT RIGHT… NEXT TIME…"));
+		Global.EarlyHeroDeathDialogue = Array(Custom String("Return to dirt."), Custom String("Submit, vermin."), Custom String(
+			"Die, vermin."), Custom String("Die, weakling."), Custom String("Become memories."));
+		Global.LateHeroDeathDialogue = Array(Custom String("DIE."), Custom String("WEAK."), Custom String("USELESS."), Custom String(
+			"AS I THOUGHT…"), Custom String("VERMIN."));
+		Global.BossDeathDialogue = Array(Custom String("NO… NOT NOW…"), Custom String("WHY… WHY NOW…?"), Custom String("NO… NO…!"),
+			Custom String("BROTHER… HELP ME…!"), Custom String("THIS PLANE GROWS DARK… BROTHER… I CANNOT SEE YOU… WHERE ARE YOU…?"),
+			Custom String("BROTHER… PERHAPS… WE WILL GET IT RIGHT… NEXT TIME…"));
 		Global.UsedDialogue = Empty Array;
 		Global.State = Custom String("Buy");
 	}
@@ -469,10 +489,12 @@ rule("Settings")
 	actions
 	{
 		Global.TestMode = Workshop Setting Toggle(Custom String("Developer"), Custom String("Test Mode"), False, 0);
-		Global.MusicMode = Workshop Setting Combo(Custom String("Customization"), Custom String("Music Mode"), 1, Array(Custom String("Overwatch"), Custom String("Scuffed"), Custom String("Broadcast")), 0);
+		Global.MusicMode = Workshop Setting Combo(Custom String("Customization"), Custom String("Music Mode"), 1, Array(Custom String(
+			"Overwatch"), Custom String("Scuffed"), Custom String("Broadcast")), 0);
 		Global.DifficultyValue = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Difficulty"), 2, 1, 3, 0);
 		Global.OverallPlayerLevel = Workshop Setting Integer(Custom String("Difficulty"), Custom String("Player Level"), 8, 1, 99, 0);
-		Global.Dialogue = Array(Workshop Setting Toggle(Custom String("Customization"), Custom String("Enable Dialogue"), False, 0), 5, Null, Null, Null);
+		Global.Dialogue = Array(Workshop Setting Toggle(Custom String("Customization"), Custom String("Enable Dialogue"), False, 0), 5,
+			Null, Null, Null);
 	}
 }
 
@@ -482,7 +504,7 @@ rule("Dialogue")
 	{
 		Ongoing - Global;
 	}
-	
+
 	conditions
 	{
 		Count Of(Global.Dialogue) > 1 + Global.Dialogue[1];
@@ -508,12 +530,14 @@ rule("Dialogue Step")
 	{
 		Global.Dialogue[2] = Global.Dialogue[Global.Dialogue[1]];
 		If(Global.Dialogue[2] == Null);
-			Global.Dialogue[2] = Random Value In Array(Filtered Array(Global.Bosses, Is Alive(Current Array Element) && Current Array Element.State != Custom String("Absent")));
+			Global.Dialogue[2] = Random Value In Array(Filtered Array(Global.Bosses, Is Alive(Current Array Element)
+				&& Current Array Element.State != Custom String("Absent")));
 		End;
 		If(Global.Dialogue[2].Name != Null && Array Contains(All Players(All Teams), Global.Dialogue[2]));
 			Global.Dialogue[3] = Global.Dialogue[Global.Dialogue[1] + 1];
 			If(Global.Dialogue[3] == Custom String("BossSpawn"));
-				Global.Dialogue[4] = Random Value In Array(Array(Custom String("Pray."), Custom String("Beg."), Custom String("Die."), Custom String("Be slaughtered.")));
+				Global.Dialogue[4] = Random Value In Array(Array(Custom String("Pray."), Custom String("Beg."), Custom String("Die."),
+					Custom String("Be slaughtered.")));
 			Else If(Global.Dialogue[3] == Custom String("EarlyHeroDeath"));
 				Global.Dialogue[4] = Random Value In Array(Remove From Array(Global.EarlyHeroDeathDialogue, Global.UsedDialogue));
 				If(Global.Dialogue[4] == Null);
@@ -539,7 +563,8 @@ rule("Dialogue Step")
 					Small Message(All Players(Team 2), Custom String("[{0}]: {1}", Global.Dialogue[2].Name, Global.Dialogue[4]));
 				Else If(Global.Dialogue[3] == Custom String("EarlyHeroDeath") || Global.Dialogue[3] == Custom String("LateHeroDeath"));
 					Big Message(All Dead Players(Team 1), Global.Dialogue[4]);
-					Small Message(Remove From Array(All Players(All Teams), All Dead Players(Team 1)), Custom String("[{0}]: {1}", Global.Dialogue[2].Name, Global.Dialogue[4]));
+					Small Message(Remove From Array(All Players(All Teams), All Dead Players(Team 1)), Custom String("[{0}]: {1}",
+						Global.Dialogue[2].Name, Global.Dialogue[4]));
 				Else;
 					Small Message(All Players(All Teams), Custom String("[{0}]: {1}", Global.Dialogue[2].Name, Global.Dialogue[4]));
 				End;
@@ -617,10 +642,10 @@ rule("Boss Setup")
 			: Custom String(" "), Right, 0, Event Player.CanTakeOff ? Color(Orange) : Color(Red), Color(White), Color(White),
 			String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(0, 1, 3, 4), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Ramattra), Button(
-			Primary Fire)), Custom String("[{0}]", Input Binding String(Button(Secondary Fire))), 
-			Event Player.NeedleCooldown > 0 ? Custom String("…") : Round To Integer(
-			Event Player.NeedleAmmo, Up), Right, 0, Event Player.CanNeedle[1] ? (Event Player.NeedleCooldown > 0 ? Color(Orange) : Color(
-			Gray)) : Color(Red), Color(White), Color(White), Visible To String and Color, Default Visibility);
+			Primary Fire)), Custom String("[{0}]", Input Binding String(Button(Secondary Fire))),
+			Event Player.NeedleCooldown > 0 ? Custom String("…") : Round To Integer(Event Player.NeedleAmmo, Up), Right, 0,
+			Event Player.CanNeedle[1] ? (Event Player.NeedleCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(
+			White), Visible To String and Color, Default Visibility);
 		Create HUD Text(Array Contains(Array(4), Global.Phase) ? Event Player : Null, Ability Icon String(Hero(Echo), Button(
 			Secondary Fire)), Custom String("[{0}]", Input Binding String(Button(Ability 2))), Null, Right, 0, Event Player.CanUseOrbs ? (
 			Event Player.State == Custom String("Orbs") ? Color(Orange) : Color(Gray)) : Color(Red), Color(White), Color(White),
@@ -642,10 +667,12 @@ rule("Boss Setup")
 			Button(Ultimate)) : String("{0}%", Ultimate Charge Percent(Event Player.Target))) : (
 			Event Player.Target.DashCooldown == 0 ? Ability Icon String(Hero(Sojourn), Button(Ability 1)) : Round To Integer(
 			Event Player.Target.DashCooldown, Up)), Custom String("[{0}]", Input Binding String(Hero Of(Event Player.Target) == Hero(
-			Tracer) ? Button(Ultimate) : Button(Ability 1))), Null, Left, 3.200, (Hero Of(Event Player.Target) == Hero(Tracer) ? Is Using Ultimate(Event Player.Target) : Event Player.Target.State == Custom STring("Dashing")) ? Color(Orange) : Color(White), Color(White), Color(White),
-			Visible To String and Color, Default Visibility);
-		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3) ? Remove From Array(All Players(All Teams),
-			Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100, Visible To Position and Radius);
+			Tracer) ? Button(Ultimate) : Button(Ability 1))), Null, Left, 3.200, (Hero Of(Event Player.Target) == Hero(Tracer)
+			? Is Using Ultimate(Event Player.Target) : Event Player.Target.State == Custom String("Dashing")) ? Color(Orange) : Color(
+			White), Color(White), Color(White), Visible To String and Color, Default Visibility);
+		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3)
+			? Remove From Array(All Players(All Teams), Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100,
+			Visible To Position and Radius);
 		Set Jump Enabled(Event Player, False);
 		Event Player.ShockwaveRadius = -1;
 		Event Player.PizzaIndex = Custom String("Dormant");
@@ -707,6 +734,9 @@ rule("Player Setup")
 		"If I enable Echo I should allow this to change based on who she's duplicating"
 		Event Player.Hero[0] = Hero Of(Event Player);
 		Event Player.Hero[1] = Index Of Array Value(Global.AllHeroes, Event Player.Hero[0]);
+		Event Player.Crit[0] = !Array Contains(Array(Hero(Ana), Hero(Brigitte), Hero(Junkrat), Hero(Moira), Hero(Pharah), Hero(Sigma),
+			Hero(Symmetra), Hero(Winston), Hero(Zarya)), Event Player.Hero);
+		Call Subroutine(UpdateCrit);
 		If(Event Player.Role == Custom String("NullPlayer"));
 			Set Invisible(Event Player, All);
 			Set Status(Event Player, Null, Phased Out, 9999);
@@ -851,31 +881,41 @@ rule("Team 1 Setup")
 			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Global.ItemShops[Sorted Array(Mapped Array(
 			Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
-			Global.ItemShopPositions[Current Array Element]))[0]], Custom String("[{0}] Buy", Input Binding String(Button(Interact))), Custom String("£{0}", Global.ItemShopPrices[Sorted Array(
-			Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
-			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
-			Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(White), Color(White),
+			Global.ItemShopPositions[Current Array Element]))[0]], Custom String("[{0}] Buy", Input Binding String(Button(Interact))),
+			Custom String("£{0}", Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions, Current Array Index),
+			Distance Between(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(
+			Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0]]), Top, 1, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player.UltCharges[1] > 1 || Event Player.UltCharges[0] > 1 ? Event Player : Null, Ability Icon String(
+			Hero Of(Event Player), Button(Ultimate)), Mapped Array(Round To Integer(
+			Event Player.UltCharges[4] - Total Time Elapsed - 1.500, Up), Current Array Element <= 0 ? Custom String(" ")
+			: Current Array Element), Event Player.UltCharges[0], Right, 1.100, Color(White), Color(White), Color(White),
 			Visible To and String, Default Visibility);
-		Create HUD Text(Event Player.UltCharges[1] > 1 || Event Player.UltCharges[0] > 1 ? Event Player : Null, Ability Icon String(Hero Of(Event Player), Button(Ultimate)), Mapped Array(Round To Integer(Event Player.UltCharges[4] - Total Time Elapsed - 1.5, Up), Current Array Element <= 0 ? Custom String(" ") : Current Array Element), Event Player.UltCharges[0], Right, 1.100, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
-		Create HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Null, Null, Custom String("{0} {1}", Custom String("{0} {1} {2}",
-			Custom String("{0} {1} {2}", Event Player.Target[0].BlastCooldown ? Custom String("{0}×{1}", Icon String(Asterisk), Round To Integer(
-			Event Player.Target[0].BlastCooldown, Up)) : Custom String(" "),
-			Event Player.Target[0].BarrierInfo[0] && Event Player.Target[0].BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick) : Custom String(" "),
-			Event Player.Target[0].DebuffShield[0] > 0 ? Custom String("Θ×{0}", Event Player.Target[0].DebuffShield[0]) : Custom String(" ")),
-			Event Player.Target[0].RecoveryTime ? Icon String(Plus) : Custom String(" "), Event Player.Target[0].StealthTime[1] ? Custom String("{0}{1}",
-			Icon String(Eye), Event Player.Target[0].StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
+		Create HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Null, Null, Custom String("{0} {1}", Custom String(
+			"{0} {1} {2}", Custom String("{0} {1} {2}", Event Player.Target[0].BlastCooldown ? Custom String("{0}×{1}", Icon String(
+			Asterisk), Round To Integer(Event Player.Target[0].BlastCooldown, Up)) : Custom String(" "),
+			Event Player.Target[0].BarrierInfo[0] && Event Player.Target[0].BarrierInfo[1] < Total Time Elapsed ? Icon String(Ring Thick)
+			: Custom String(" "), Event Player.Target[0].DebuffShield[0] > 0 ? Custom String("Θ×{0}",
+			Event Player.Target[0].DebuffShield[0]) : Custom String(" ")), Event Player.Target[0].RecoveryTime ? Icon String(Plus)
+			: Custom String(" "), Event Player.Target[0].StealthTime[1] ? Custom String("{0}{1}", Icon String(Eye),
+			Event Player.Target[0].StealthTime[0] ? Custom String("") : Max(1, Round To Integer(
 			Event Player.Target[0].StealthTime[1] - Total Time Elapsed, Up))) : Custom String(" ")), Custom String("{0} {1} {2}",
-			Event Player.Target[0].CrippleTime ? Icon String(Skull) : Custom String(" "), Event Player.Target[0].SlowTime ? Icon String(Arrow: Down)
-			: Custom String(" "), Custom String("{0} {1} {2}", Event Player.Target[0].BleedInfo[0] ? Custom String("†×{0}",
-			Event Player.Target[0].BleedInfo[0]) : Custom String(" "), Event Player.Target[0].ArmourPiercingStacks[0] ? Custom String("Ѳ×{0}",
-			Event Player.Target[0].ArmourPiercingStacks[0]) : Custom String(" "), Event Player.Target[0].ArmourPiercingStacks[1] ? Custom String("Ø×{0}",
-			Event Player.Target[0].ArmourPiercingStacks[1]) : Custom String(" ")))), Null, Top, 1, Color(White), Color(White),
-			Color(White), Visible To and String, Default Visibility);
-		Create Progress Bar HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Empty Array, 100 * (Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[2] : Health(Event Player.Target[0]) + Event Player.Target[0].BarrierHealth) / (Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[3] : Max Health(Event Player.Target[0])),
-			String("{0} / {1}", Max(1, Round To Integer((Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[2] : Health(Event Player.Target[0])) + Event Player.Target[0].BarrierHealth, To Nearest)), Round To Integer(
-			(Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[3] : Max Health(Event Player.Target[0])), To Nearest)), Top, 1.100, Color(Red), Color(White), Visible To and Values,
-			Default Visibility);
-		Create HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Null, Null, Null, Event Player.Target[0], Top, 1.200, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+			Event Player.Target[0].CrippleTime ? Icon String(Skull) : Custom String(" "), Event Player.Target[0].SlowTime ? Icon String(
+			Arrow: Down) : Custom String(" "), Custom String("{0} {1} {2}", Event Player.Target[0].BleedInfo[0] ? Custom String("†×{0}",
+			Event Player.Target[0].BleedInfo[0]) : Custom String(" "), Event Player.Target[0].ArmourPiercingStacks[0] ? Custom String(
+			"Ѳ×{0}", Event Player.Target[0].ArmourPiercingStacks[0]) : Custom String(" "),
+			Event Player.Target[0].ArmourPiercingStacks[1] ? Custom String("Ø×{0}", Event Player.Target[0].ArmourPiercingStacks[1])
+			: Custom String(" ")))), Null, Top, 1, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+		Create Progress Bar HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Empty Array, 100 * (
+			Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[2] : Health(Event Player.Target[0])
+			+ Event Player.Target[0].BarrierHealth) / (
+			Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[3] : Max Health(Event Player.Target[0])), String(
+			"{0} / {1}", Max(1, Round To Integer((Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[2] : Health(
+			Event Player.Target[0])) + Event Player.Target[0].BarrierHealth, To Nearest)), Round To Integer(
+			Event Player.Target[0].CachedHealth[1] ? Event Player.Target[0].CachedHealth[3] : Max Health(Event Player.Target[0]),
+			To Nearest)), Top, 1.100, Color(Red), Color(White), Visible To and Values, Default Visibility);
+		Create HUD Text(Event Player.Target[0].ShowBossBar ? Event Player : Null, Null, Null, Event Player.Target[0], Top, 1.200, Color(
+			White), Color(White), Color(White), Visible To and String, Default Visibility);
 		Set Ultimate Ability Enabled(Event Player, False);
 		Event Player.State = Custom String("Ready");
 	}
@@ -1132,6 +1172,56 @@ rule("Update Armour")
 	}
 }
 
+rule("Update Crit (From Flag)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Crit[3] == True;
+	}
+
+	actions
+	{
+		Wait(0.050, Ignore Condition);
+		Event Player.Crit[3] = False;
+		Start Rule(UpdateCrit, Restart Rule);
+	}
+}
+
+rule("Update Crit")
+{
+	event
+	{
+		Subroutine;
+		UpdateCrit;
+	}
+
+	actions
+	{
+		Event Player.Crit[4] = Event Player.Crit[0] ? 0 : 1;
+		Event Player.Crit[5] = Event Player.Crit[0] ? 0 : 100;
+		Event Player.Crit[6] = 7;
+		While(Event Player.Crit[6] < Count Of(Event Player.Master[0].Crit));
+			If(Event Player.Crit[0]);
+				Event Player.Crit[5] += X Component Of(Event Player.Master[0].Crit[Event Player.Crit[6]]) + Y Component Of(
+					Event Player.Master[0].Crit[Event Player.Crit[6]]);
+			Else;
+				Event Player.Crit[4] += X Component Of(Event Player.Master[0].Crit[Event Player.Crit[6]]);
+				Event Player.Crit[5] += Y Component Of(Event Player.Master[0].Crit[Event Player.Crit[6]]);
+			End;
+			Event Player.Crit[6] += 1;
+		End;
+		Event Player.Crit[1] = Event Player.Crit[4] / 100;
+		Event Player.Crit[2] = Event Player.Crit[5] / 100;
+	}
+}
+
 rule("Update Healing (From Flag)")
 {
 	event
@@ -1186,7 +1276,7 @@ rule("Cap Maximum Health")
 		Subroutine;
 		CapMaxHealth;
 	}
-	
+
 	actions
 	{
 		Event Player.HealthScale[4] = Event Player.TotalHPUnits;
@@ -1203,13 +1293,13 @@ rule("Calculate Stats")
 		Subroutine;
 		CalculateStats;
 	}
-	
+
 	actions
 	{
 		If(Event Player.Role == Custom String("Hero"));
 			Event Player.Level = Round To Integer(Global.OverallPlayerLevel, Down);
 			Event Player.TotalHPUnits = Event Player.HealthScale[3] * Event Player.DefaultHealth[0] * (90 / 150) * (1 + 0.300 * (
-			Event Player.Level - 1)) / 25;
+				Event Player.Level - 1)) / 25;
 			Event Player.BaseDamageMultiplier = (1 + 0.200 * (Event Player.Level - 1)) / 2.400;
 			Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 		Else If(Event Player.Role == Custom String("Boss"));
@@ -1234,7 +1324,7 @@ rule("Calculate Stats")
 			Else If(Global.Phase == 4);
 				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
 				Event Player.TotalHPUnits = Event Player.HealthScale[3] * (1400 + 420 * (Event Player.Level - 1)) / Global.BossCount / 25;
-				CallSubroutine(CapMaxHealth);
+				Call Subroutine(CapMaxHealth);
 				Event Player.BaseDamageMultiplier = 2 * (16 + 3.200 * (Event Player.Level - 1)) * 0.600 / 85;
 				Event Player.BaseRegen = 15 / Event Player.HealthScale[0] * (5 + (Event Player.Level - 1)) / 24;
 			End;
@@ -1349,7 +1439,8 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			Event Player.CachedHealth[4] = Has Status(Event Player, Phased Out);
 			Clear Status(Event Player, Phased Out);
 			Event Player.CachedHealth[5] = Max Health(Event Player) - (Event Player.CachedHealth[3] - Event Player.CachedHealth[2]);
-			Log To Inspector(Custom String("{0}: {1} -> {2}", Event Player, Custom String("{0} / {1}", Event Player.CachedHealth[2], Event Player.CachedHealth[3]), Custom String("{0} / {1}", Event Player.CachedHealth[5], Max Health(Event Player))));
+			Log To Inspector(Custom String("{0}: {1} -> {2}", Event Player, Custom String("{0} / {1}", Event Player.CachedHealth[2],
+				Event Player.CachedHealth[3]), Custom String("{0} / {1}", Event Player.CachedHealth[5], Max Health(Event Player))));
 			Set Player Health(Event Player, Event Player.CachedHealth[5]);
 			If(Event Player.CachedHealth[4]);
 				Set Status(Event Player, Null, Phased Out, 9999);
@@ -1371,7 +1462,8 @@ rule("On hit effects")
 
 	actions
 	{
-		If(Attacker.Role == Custom String("Hero") && Victim.Role == Custom String("Boss") && Attacker.Target[0] != Victim && Total Time Elapsed > Attacker.Target[1]);
+		If(Attacker.Role == Custom String("Hero") && Victim.Role == Custom String("Boss")
+			&& Attacker.Target[0] != Victim && Total Time Elapsed > Attacker.Target[1]);
 			Attacker.Target = Array(Victim, Total Time Elapsed + 5);
 		End;
 		If(Attacker.Master[1] != Null);
@@ -1409,7 +1501,17 @@ rule("On hit effects")
 		Else If(Attacker.Master[0] == Victim);
 			Log To Inspector(Custom String("{0} is also the victim", Attacker.Master[0]));
 		Else;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(Attacker.Master[0]), Eye Position(Victim)) < 13);
+			"Crit and bonus close range damage"
+			If(Attacker.Crit[0] ? Event Was Critical Hit : Random Real(0, 1) < Attacker.Crit[1]);
+				Damage(Victim, Null, Event Damage * ((1 + Attacker.Crit[2] / (Attacker.Crit[0] ? (Attacker.Hero == Hero(Kiriko) ? 3 : (
+					Attacker.Hero == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero == Hero(Widowmaker)
+					&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1)) * (1 + (Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
+					"Close Range Damage")) && Distance Between(Eye Position(Attacker.Master[0]), Eye Position(Victim))
+					< 13 ? 0.200 * Filtered Array(Global.ItemStackSizes,
+					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] : 0)) - 1));
+			Else If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(
+					Attacker.Master[0]), Eye Position(Victim)) < 13);
 				Damage(Victim, Null, Event Damage * 0.200 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0]);
@@ -1427,16 +1529,20 @@ rule("On hit effects")
 			End;
 			If(Random Real(0, 1) < 0.100 * Filtered Array(Global.ItemStackSizes,
 				Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Bleed")
-				&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+				&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Mapped Array(Global.ProcCoefs[Mapped Array(
+				Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(
+				Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200,
+				Event Damage / (Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 				If(Victim.DebuffShield[0] > 0);
 					Victim.DebuffShield[0] -= 1;
 					Victim.DebuffShield[3] += 1;
 				Else;
-					Modify Player Variable(Victim, BleedTime, Max, 3 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
+					Modify Player Variable(Victim, BleedTime, Max, 3 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
+						Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)
+						[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+						Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+						Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 					Victim.BleedInfo[0] += 1;
 					Victim.BleedInfo[1] = Max(Attacker.Master[0].BaseDamageMultiplier, (Attacker.Master[0].BaseDamageMultiplier + Victim.BleedInfo[1])
 						/ 2);
@@ -1449,9 +1555,11 @@ rule("On hit effects")
 				Else;
 					If(Victim.ArmourPiercingStacks[0] < 4);
 						Victim.ArmourPiercingStacks[0] += 1;
-						Modify Player Variable(Victim, APTime, Max, 2 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
+						Modify Player Variable(Victim, APTime, Max, 2 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
+							Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)
+							[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+							Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+							Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 					Else;
 						Victim.ArmourPiercingStacks[0] += 1;
 						Victim.APTime = 8 * Filtered Array(Global.ItemStackSizes,
@@ -1490,45 +1598,63 @@ rule("On hit effects")
 					Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Color(White), Attacker.Master[0].FlameTornadoPosition, 100);
 				End;
 			Else If(Global.TestMode);
-				Attacker.Master[0].NoBlastReason = Array(Event Damage, Victim.DamageReceivedNewAmount, Attacker.Master[0].BaseDamageMultiplier, Attacker.Master[0].BlastCooldown);
+				Attacker.Master[0].NoBlastReason = Array(Event Damage, Victim.DamageReceivedNewAmount, Attacker.Master[0].BaseDamageMultiplier,
+					Attacker.Master[0].BlastCooldown);
 			End;
 			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Lifesteal")));
 				Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker.Master[0]))],
 					Attacker.Master[0].HealthScale[0] * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lifesteal")
-					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0] / Attacker.Master[0].HealingModifiers[0]);
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Mapped Array(Global.ProcCoefs[Mapped Array(
+					Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(
+					Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200,
+					Event Damage / (Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)
+					[0] / Attacker.Master[0].HealingModifiers[0]);
 			End;
 			If(Array Contains(Attacker.Master.MyItemStacks, Custom String("Stun Chance")));
 				If(Victim.Role != Custom String("Boss") && Random Real(0, 1) < (1 - 1 / (0.050 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Stun Chance")
-					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] + 1)) * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] + 1)) * Mapped Array(Global.ProcCoefs[Mapped Array(
+					Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(
+					Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200,
+					Event Damage / (Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 					Set Status(Victim, Attacker.Master[0], Stunned, 2);
 				End;
 			End;
 			If(!Array Contains(Global.LightningStrikes, Attacker.Master[0]) && Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
-				"Lightning")) && Random Real(0, 1) < 0.100 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+				"Lightning")) && Random Real(0, 1) < 0.100 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
+				Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)
+				[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 				Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Color(White), Eye Position(Victim), 100);
 				Modify Global Variable(LightningStrikes, Append To Array, Array(Total Time Elapsed + 0.250, Eye Position(Victim),
 					Attacker.Master[0], 5 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lightning")
-					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage, Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
-				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]));
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage, Mapped Array(
+					Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
+					Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+					Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
+					Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]));
 			End;
-			If(!Array Contains(Global.ChainLightningInfo, Attacker.Master[0]) && !Array Contains(Global.ChainLightningBans, Attacker.Master[0]) && Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
-				"Chain Lightning")) && Random Real(0, 1) < 0.250 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+			If(!Array Contains(Global.ChainLightningInfo, Attacker.Master[0]) && !Array Contains(Global.ChainLightningBans, Attacker.Master[0])
+				&& Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Chain Lightning")) && Random Real(0, 1)
+				< 0.250 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
+				Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+				Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 				Victim.DamageReceivedNewAmount * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]);
 				Modify Global Variable(ChainLightningInfo, Append To Array, Array(Attacker.Master[0], Victim, Event Damage * 0.600));
-				Modify Global Variable(ChainLightningInfo, Append To Array, Array Slice(Randomized Array(Filtered Array(Players Within Radius(Victim, 6 + 2.5 * (Filtered Array(Global.ItemStackSizes,
+				Modify Global Variable(ChainLightningInfo, Append To Array, Array Slice(Randomized Array(Filtered Array(Players Within Radius(
+					Victim, 6 + 2.500 * (Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Chain Lightning")
-					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1), Team Of(Victim), Surfaces), Current Array Element != Victim && Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out) && Array Contains(Array(Custom String("Hero"), Custom String("Boss"), Custom String("Add")), Current Array Element.Role))), 0, 3 + 2 * (Filtered Array(Global.ItemStackSizes,
+					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1), Team Of(Victim), Surfaces),
+					Current Array Element != Victim && Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out)
+					&& Array Contains(Array(Custom String("Hero"), Custom String("Boss"), Custom String("Add")), Current Array Element.Role))), 0,
+					3 + 2 * (Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Chain Lightning")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1)));
 				Modify Global Variable(ChainLightningInfo, Append To Array, Custom String("0%END"));
@@ -1576,7 +1702,8 @@ rule("Create Queued Bots")
 	actions
 	{
 		"Don't spawn adds after phase 3"
-		If(Global.Phase == 2 || Global.Phase == 3 || !Array Contains(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)), Global.BotCreationQueue[0]));
+		If(Global.Phase == 2 || Global.Phase == 3 || !Array Contains(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)),
+			Global.BotCreationQueue[0]));
 			If((Array Contains(All Players(All Teams), Global.BotCreationQueue[1]) && Team Of(Global.BotCreationQueue[1]) == Team 1) || (
 				Global.BotCreationQueue[1] == Team 1));
 				Create Dummy Bot(Global.BotCreationQueue[0], Team 1, Y Component Of(Last Of(Filtered Array(Global.AvailableBotSlots,
@@ -1621,6 +1748,8 @@ rule("Dummy Bot Setup")
 			Event Player), 0));
 		If(Array Contains(All Players(All Teams), Global.BotCreationQueue[1]));
 			Event Player.Master[0] = Global.BotCreationQueue[1];
+			Event Player.Crit[0] = !Array Contains(Array(Hero(Ana), Hero(Brigitte), Hero(Junkrat), Hero(Moira), Hero(Pharah), Hero(Sigma),
+				Hero(Symmetra), Hero(Winston), Hero(Zarya)), Event Player.Hero);
 		Else;
 			Event Player.Master[0] = Event Player;
 			Start Rule(PlayerSetup, Do Nothing);
@@ -1808,8 +1937,10 @@ rule("Create Item Stack Subroutine")
 		Global.ItemStackOwners[Global.NewItemStackIndex] = Global.ItemDistributionInfo[1];
 		Global.ItemStackNewOwners[Global.NewItemStackIndex] = Null;
 		Create HUD Text(Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)] == 0 ? Null : Global.ItemStackOwners[Evaluate Once(
-			Global.NewItemStackIndex)], Mapped Array(Evaluate Once(Global.ItemSymbols[Index Of Array Value(Global.Items, Global.ItemDistributionInfo[0])
-			]), Current Array Element == Custom String("Ult") ? Ability Icon String(Hero Of(Global.ItemStackOwners[Evaluate Once(Global.NewItemStackIndex)]), Button(Ultimate)) : Current Array Element), Custom String("×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, 4 + Evaluate Once(
+			Global.NewItemStackIndex)], Mapped Array(Evaluate Once(Global.ItemSymbols[Index Of Array Value(Global.Items,
+			Global.ItemDistributionInfo[0])]), Current Array Element == Custom String("Ult") ? Ability Icon String(Hero Of(
+			Global.ItemStackOwners[Evaluate Once(Global.NewItemStackIndex)]), Button(Ultimate)) : Current Array Element), Custom String(
+			"×{0}", Global.ItemStackSizes[Evaluate Once(Global.NewItemStackIndex)]), Null, Left, 4 + Evaluate Once(
 			Global.NewItemStackIndex + 1) / (Count Of(Global.ItemStacks) + 1), Global.ItemColours[Index Of Array Value(Global.Items,
 			Global.ItemDistributionInfo[0])], Color(White), Null, Visible To Sort Order and String, Default Visibility);
 		Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
@@ -1898,7 +2029,8 @@ rule("Update Item Stack (Add)")
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Barrier"));
 			Global.ItemStackUpdateInfo[2].BarrierInfo[0] = True;
 			Call Subroutine(UpdateItemStack_Modify);
-		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump"), Custom String("Ult Charge")), Global.ItemStackUpdateInfo[1]));
+		Else If(Array Contains(Array(Custom String("Speed"), Custom String("Double Jump"), Custom String("Ult Charge")),
+				Global.ItemStackUpdateInfo[1]));
 			Call Subroutine(UpdateItemStack_Modify);
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Ice Blast"));
 			Chase Player Variable At Rate(Global.ItemStackUpdateInfo[2], BlastCooldown, 0, 1, None);
@@ -1963,10 +2095,11 @@ rule("Update Item Stack (Modify)")
 			Global.ItemStackUpdateInfo[2].DebuffShield[1] += Global.ItemStackUpdateInfo[3];
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Ult Charge"));
 			Global.ItemStackUpdateInfo[2].UltCharges[1] += Global.ItemStackUpdateInfo[3];
-			Global.ItemStackUpdateInfo[2].UltCharges[5] = 1 - (1 - 0.15) ^ Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
+			Global.ItemStackUpdateInfo[2].UltCharges[5] = 1 - (1 - 0.150) ^ Global.ItemStackSizes[Global.ItemStackUpdateInfo[0]];
 			If(Global.ItemStackUpdateInfo[2].UltCharges[0] == 0);
 				If(Global.ItemStackUpdateInfo[2].UltCharges[5] != Null);
-					Set Ultimate Charge(Global.ItemStackUpdateInfo[2], 100 * Global.ItemStackUpdateInfo[2].UltCharges[5] + (1 - Global.ItemStackUpdateInfo[2].UltCharges[5]) * Ultimate Charge Percent(Global.ItemStackUpdateInfo[2]));
+					Set Ultimate Charge(Global.ItemStackUpdateInfo[2], 100 * Global.ItemStackUpdateInfo[2].UltCharges[5] + (
+						1 - Global.ItemStackUpdateInfo[2].UltCharges[5]) * Ultimate Charge Percent(Global.ItemStackUpdateInfo[2]));
 				End;
 			Else If(Global.ItemStackUpdateInfo[2].UltCharges[0] < Global.ItemStackUpdateInfo[2].UltCharges[1]);
 				If(Global.ItemStackUpdateInfo[2].UltCharges[3] != Null);
@@ -2795,9 +2928,12 @@ rule("Chain Lightning Loop 1")
 	{
 		Global.ChainLightningIndex = 3;
 		While(Global.ChainLightningInfo[Global.ChainLightningIndex] != Custom String("0%END"));
-			Create Beam Effect(All Players(All Teams), Winston Tesla Cannon Beam, Eye Position(Evaluate Once(Global.ChainLightningInfo[1])), Eye Position(Evaluate Once(Global.ChainLightningInfo[Global.ChainLightningIndex])), Team Of(Global.ChainLightningInfo[0]) == Team 1 ? Color(Team 1) : Color(Team 2), Visible To Position and Radius);
+			Create Beam Effect(All Players(All Teams), Winston Tesla Cannon Beam, Eye Position(Evaluate Once(Global.ChainLightningInfo[1])),
+				Eye Position(Evaluate Once(Global.ChainLightningInfo[Global.ChainLightningIndex])), Team Of(Global.ChainLightningInfo[0])
+				== Team 1 ? Color(Team 1) : Color(Team 2), Visible To Position and Radius);
 			"Damage Time, Attacker.Master[0], 0.8 * original damage, victim, effect"
-			Modify Global Variable(ChainLightningEffects, Append To Array, Array(Total Time Elapsed + 0.160, Global.ChainLightningInfo[0], Global.ChainLightningInfo[2], Global.ChainLightningInfo[Global.ChainLightningIndex], Last Created Entity));
+			Modify Global Variable(ChainLightningEffects, Append To Array, Array(Total Time Elapsed + 0.160, Global.ChainLightningInfo[0],
+				Global.ChainLightningInfo[2], Global.ChainLightningInfo[Global.ChainLightningIndex], Last Created Entity));
 			Global.ChainLightningIndex += 1;
 		End;
 		If(Global.ChainLightningIndex > 3);
@@ -2850,7 +2986,6 @@ rule("Chain Lightning Loop 3")
 		Loop If Condition Is True;
 	}
 }
-
 
 rule("Ult becomes charged")
 {
@@ -2926,9 +3061,11 @@ rule("Not Using Ultimate")
 				Set Ultimate Charge(Event Player, 100);
 				Log To Inspector(Custom String("Set ult charge to 100 because I have more than 0 ult charges"));
 			Else;
-				Set Ultimate Charge(Event Player, 100 * (1 - (1 - Event Player.UltCharges[5]) * (Event Player.UltCharges[4] - Total Time Elapsed) / Event Player.UltCharges[3]));
+				Set Ultimate Charge(Event Player, 100 * (1 - (1 - Event Player.UltCharges[5]) * (Event Player.UltCharges[4] - Total Time Elapsed)
+					/ Event Player.UltCharges[3]));
 				Log To Inspector(Custom String("Set ult charge to represent the cooldown"));
-				Log To Inspector(Custom String("{0} - {1}", Custom String("100 * (1 - (1 - {0}) * ({1}", Event Player.UltCharges[5], Event Player.UltCharges[4]), Custom String("{0}) / {1})", Total Time Elapsed, Event Player.UltCharges[3])));
+				Log To Inspector(Custom String("{0} - {1}", Custom String("100 * (1 - (1 - {0}) * ({1}", Event Player.UltCharges[5],
+					Event Player.UltCharges[4]), Custom String("{0}) / {1})", Total Time Elapsed, Event Player.UltCharges[3])));
 				Event Player.UltCharges[4] = Null;
 			End;
 		Else;
@@ -3014,11 +3151,13 @@ rule("On Enter State: Buy")
 		disabled Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
 			/ 2 - Current Array Index) * 3));
 		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
-			Create In-World Text(All Players(Team 1), Mapped Array(Evaluate Once(Mapped Array(Index Of Array Value(Global.Items, Global.ItemShops[Global.ItemShopIndex]),
-				Current Array Element == -1 ? Global.ItemShops[Global.ItemShopIndex] : Global.ItemSymbols[Current Array Element])), Current Array Element == Custom String("Ult") ? Custom String("[{0}]", Input Binding String(Button(Ultimate))) : Current Array Element),
-				Global.ItemShopPositions[Global.ItemShopIndex] + Up, 4, Do Not Clip, Visible To and String, Mapped Array(Index Of Array Value(
-				Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(White)
-				: Global.ItemColours[Current Array Element]), Default Visibility);
+			Create In-World Text(All Players(Team 1), Mapped Array(Evaluate Once(Mapped Array(Index Of Array Value(Global.Items,
+				Global.ItemShops[Global.ItemShopIndex]),
+				Current Array Element == -1 ? Global.ItemShops[Global.ItemShopIndex] : Global.ItemSymbols[Current Array Element])),
+				Current Array Element == Custom String("Ult") ? Custom String("[{0}]", Input Binding String(Button(Ultimate)))
+				: Current Array Element), Global.ItemShopPositions[Global.ItemShopIndex] + Up, 4, Do Not Clip, Visible To and String,
+				Mapped Array(Index Of Array Value(Global.Items, Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(
+				White) : Global.ItemColours[Current Array Element]), Default Visibility);
 			Global.ItemShopEffects1[Global.ItemShopIndex] = Last Text ID;
 			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))
 				[Global.ItemShopRarities[Global.ItemShopIndex] - 1], Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
@@ -3317,16 +3456,19 @@ rule("On Enter State: Cutscene (Team 1)")
 		Set Reload Enabled(Event Player, False);
 		Event Player.Target[0] = Global.Bosses[Slot Of(Event Player) % Count Of(Global.Bosses)];
 		Wait(0.050, Abort When False);
-		Start Camera(Event Player, Event Player.CameraPosition, World Vector Of(2 * Up, Event Player.Target[0], Rotation And Translation), 60);
+		Start Camera(Event Player, Event Player.CameraPosition, World Vector Of(2 * Up, Event Player.Target[0], Rotation And Translation),
+			60);
 		Start Rule(SoundCue, Restart Rule);
-		If(Distance Between(Event Player.Target[0], Event Player.CameraPosition)
-			< Distance Between(Event Player.Target[0], World Vector Of(Vector(0, 2, 35),
-			Event Player.Target[0], Rotation And Translation)));
-			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Event Player.Target[0], Rotation And Translation), 10, Destination and Rate);
+		If(Distance Between(Event Player.Target[0], Event Player.CameraPosition) < Distance Between(Event Player.Target[0],
+			World Vector Of(Vector(0, 2, 35), Event Player.Target[0], Rotation And Translation)));
+			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Event Player.Target[0],
+				Rotation And Translation), 10, Destination and Rate);
 		Else;
-			Chase Player Variable Over Time(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 35), Event Player.Target[0], Rotation And Translation), Global.MusicMode == 2 ? 2.500 : 1, Destination and Duration);
+			Chase Player Variable Over Time(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 35), Event Player.Target[0],
+				Rotation And Translation), Global.MusicMode == 2 ? 2.500 : 1, Destination and Duration);
 			Wait(1, Abort When False);
-			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Event Player.Target[0], Rotation And Translation), 15, Destination and Rate);
+			Chase Player Variable At Rate(Event Player, CameraPosition, World Vector Of(Vector(0, 2, 6), Event Player.Target[0],
+				Rotation And Translation), 15, Destination and Rate);
 		End;
 		Wait Until(Global.State != Custom String("Cutscene"), 9999);
 		Clear Status(Event Player, Rooted);
@@ -3628,7 +3770,8 @@ rule("Exit State: Closing In")
 	conditions
 	{
 		Event Player.State == Custom String("ClosingIn");
-		(Has Status(Event Player, Stunned) || Is True For Any(All Living Players(Team 1), Distance Between(Event Player, Current Array Element) < 2)) == True;
+		(Has Status(Event Player, Stunned) || Is True For Any(All Living Players(Team 1), Distance Between(Event Player,
+			Current Array Element) < 2)) == True;
 	}
 
 	actions
@@ -3917,7 +4060,8 @@ rule("Choose State (Closing In / Becoming Idle)")
 
 	actions
 	{
-		If(Has Status(Event Player, Stunned) || Is True For Any(All Living Players(Team 1), Distance Between(Event Player, Current Array Element) < 2));
+		If(Has Status(Event Player, Stunned) || Is True For Any(All Living Players(Team 1), Distance Between(Event Player,
+			Current Array Element) < 2));
 			Event Player.State = Custom String("BecomingIdle");
 		Else;
 			Event Player.State = Custom String("ClosingIn");
@@ -6962,9 +7106,11 @@ rule("Player Died")
 			Call Subroutine(LoseTarget);
 		Else If(Event Player.Role == Custom String("Hero") && Global.Dialogue[0]);
 			If(Global.Phase == 1 || Global.Phase == 3);
-				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss") ? Attacker.Master[0] : Null, Custom String("EarlyHeroDeath")));
+				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss")
+					? Attacker.Master[0] : Null, Custom String("EarlyHeroDeath")));
 			Else If(Global.Phase == 4);
-				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss") ? Attacker.Master[0] : Null, Custom String("LateHeroDeath")));
+				Modify Global Variable(Dialogue, Append To Array, Array(Attacker.Master[0].Role == Custom String("Boss")
+					? Attacker.Master[0] : Null, Custom String("LateHeroDeath")));
 			End;
 		End;
 		If(Array Contains(Event Player.MyItemStacks, Custom String("Extra Life")));
@@ -7100,7 +7246,6 @@ rule("All Bosses Gone")
 	actions
 	{
 		Global.State = Custom String("PlayerVictory");
-		
 		Global.Phase = Custom String("X");
 		If(Current Game Mode == Game Mode(Skirmish));
 			Wait(2, Ignore Condition);
