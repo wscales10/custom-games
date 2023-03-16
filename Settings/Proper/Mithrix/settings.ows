@@ -414,29 +414,29 @@ rule("Global setup")
 		Create Effect(All Players(All Teams), Bad Aura, Color(Black), Vector(0, 0, 0), 3.500, Visible To Position and Radius);
 		Global.BossSpawnEffect = Last Created Entity;
 		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2, 2, 1, 2, 3, 4, 2, 2);
-		Global.Items = Sorted Array(Array(Custom String("Max HP"), Custom String("Speed"), Custom String("Slow"), Custom String("Bleed"), Custom String(
+		Global.Items = Array(Custom String("Max HP"), Custom String("Speed"), Custom String("Slow"), Custom String("Bleed"), Custom String(
 			"Armour Piercing"), Custom String("Extra Life"), Custom String("Close Range Damage"), Custom String("Ice Blast"),
 			Custom String("Flame Blast"), Custom String("Lifesteal"), Custom String("Stun Chance"), Custom String("Recovery"),
 			Custom String("Double Jump"), Custom String("Armour Reduction"), Custom String("Egg"), Custom String("Reprieve"),
 			Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"), Custom String("Shields"), Custom String(
 			"Barrier"), Custom String("Debuff Shield"), Custom String("Chain Lightning"), Custom String("Ult Charge"), Custom String(
 			"Crit %"), Custom String("Heal on Crit"), Custom String("Extra Crit Damage"), Custom String("Insides"), Custom String(
-			"Debuff Focus"), Custom String("Retaliation")), Global.ItemRarities[Current Array Index]);
-		Global.ItemSymbols = Sorted Array(Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
+			"Debuff Focus"), Custom String("Retaliation"));
+		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"),
 			Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"),
 			Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt),
 			Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"),
 			Custom String("Ult"), Custom String("!%"), Custom String("!+"), Custom String("!!!"), Custom String("8"), Custom String("ǒ"),
-			Custom String("↑↓")), Global.ItemRarities[Current Array Index]);
-		Global.ItemColours = Sorted Array(Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
+			Custom String("↑↓"));
+		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255),
 			Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,
 			255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,
 			53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,
 			185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165,
 			239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255),
 			Custom Color(82, 83, 71, 255), Custom Color(100, 0, 0, 244), Custom Color(143, 131, 126, 255), Custom Color(255, 0, 0, 244),
-			Custom Color(123, 23, 45, 255), Custom Color(143, 91, 101, 255), Custom Color(161, 187, 208, 255)), Global.ItemRarities[Current Array Index]);
-		Global.ItemDescriptions = Sorted Array(Array(Custom String("Each stack increases maximum health.\n"), Custom String(
+			Custom Color(123, 23, 45, 255), Custom Color(143, 91, 101, 255), Custom Color(161, 187, 208, 255));
+		Global.ItemDescriptions = Array(Custom String("Each stack increases maximum health.\n"), Custom String(
 			"Each stack increases movement speed.\n"), Custom String("Slow enemies on hit for 2s\n(extra stacks increase the duration)."),
 			Custom String("Each stack grants 10% chance to bleed enemies on hit.\n"), Custom String(
 			"Hitting an enemy 5 times increases their damage taken for 8s\n(extra stacks increase the duration)."), Custom String(
@@ -457,13 +457,12 @@ rule("Global setup")
 			"Grants 5% critical hit damage / chance.\nCritical hits heal you (extra stacks heal more)."), Custom String(
 			"Each stack causes critical hits to deal 100% more damage.\n"), Custom String("yuck :/\n"), Custom String(
 			"Hitting an enemy with at least 4 debuffs increases their damage taken\n(for 7 seconds per stack)."), Custom String(
-			"25% chance to damage up to 5 nearby enemies each time you are hit\n(extra stacks increase the range and the number of targets).")), Global.ItemRarities[Current Array Index]);
-		Global.ItemCategories = Sorted Array(Array(Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0),
+			"25% chance to damage up to 5 nearby enemies each time you are hit\n(extra stacks increase the range and the number of targets)."));
+		Global.ItemCategories = Array(Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0),
 			Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 1, 0), Vector(0, 0, 1), Vector(
 			1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 1, 0), Vector(0, 0,
 			1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 1, 0), Vector(1, 0, 0), Vector(1, 0, 0),
-			Vector(1, 0, 0), Vector(1, 0, 0)), Global.ItemRarities[Current Array Index]);
-		Global.ItemRarities = Sorted Array(Global.ItemRarities, Current Array Element);
+			Vector(1, 0, 0), Vector(1, 0, 0));
 		Global.ItemDistributionQueue = Empty Array;
 		Global.ItemStackOriginalOwners = Empty Array;
 		Global.Buttons = Array(Button(Ability 1), Button(Ability 2), Button(Crouch), Button(Melee), Button(Primary Fire), Button(
@@ -1715,19 +1714,21 @@ rule("On hit effects")
 					- Victim.BarrierHealth, 0)) / Victim.HealthScale[2]);
 				Victim.BarrierHealth = Max(0, Victim.BarrierHealth - Event Damage * (1 + Victim.BarrierHealth / Health(Victim)));
 			End;
-			If(Array Contains(Victim.MyItemStacks, Custom String("Barrier")));
+			If(Victim.HasItem[20]);
 				Victim.BarrierInfo[1] = Total Time Elapsed + 7;
 			End;
-			If(Array Contains(Victim.MyItemStacks, Custom String("Egg")) && Random Real(0, 1) < 0.500);
+			"Egg"
+			If(Victim.HasItem[14] && Random Real(0, 1) < 0.500);
 				Heal(Victim, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Victim))],
 					Victim.HealthScale[0] * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Egg")
 					&& Global.ItemStackOwners[Current Array Index] == Victim)[0] * 15 * Victim.HealingModifiers[1]);
 			End;
-			If(Array Contains(Victim.MyItemStacks, Custom String("Recovery")));
+			If(Victim.HasItem[11]);
 				Victim.RecoveryTime = 2;
 			End;
-			If(Team Of(Victim) == Team 1 && Random Real(0, 1) < 0.250 && Array Contains(Victim.MyItemStacks, Custom String("Retaliation")));
+			"Retaliation"
+			If(Team Of(Victim) == Team 1 && Random Real(0, 1) < 0.250 && Victim.HasItem[29]);
 				Modify Global Variable(DamageBeamInfo, Append To Array, Array(Custom String("Retaliation"), Victim, 320 / 14, Victim));
 				Modify Global Variable(DamageBeamInfo, Append To Array, Array Slice(Randomized Array(Filtered Array(Players Within Radius(Victim,
 					7.500 + 13 * (Filtered Array(Global.ItemStackSizes,
@@ -1749,12 +1750,13 @@ rule("On hit effects")
 		Else If(Attacker.Master[0] == Victim);
 			Log To Inspector(Custom String("{0} is also the victim", Attacker.Master[0]));
 		Else;
+			"Debuff Focus"
 			If(Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
 				Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
 				Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)
-				[0] > 0 && Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Debuff Focus"))
+				[0] > 0 && Attacker.Master[0].HasItem[28]
 				&& Victim.DebuffFocusTime == 0 && Count Of(Filtered Array(Array(Victim.SlowTime > 0, Victim.BleedTime > 0, Has Status(Victim,
 				Hacked), Has Status(Victim, Frozen), Has Status(Victim, Asleep), Has Status(Victim, Knocked Down), Has Status(Victim, Rooted),
 				Victim.CrippleTime > 0, Victim.ArmourPiercingStacks[0] > 0, Victim.ArmourPiercingStacks[1] > 0), Current Array Element)) >= 4);
@@ -1775,15 +1777,15 @@ rule("On hit effects")
 				Attacker.Hero[0] == Hero(Sigma) && Event Ability == Button(Ultimate))) && Random Real(0, 1) < Attacker.Crit[1]);
 				Damage(Victim, Null, Event Damage * ((1 + Attacker.Crit[2] / (Attacker.Crit[0] ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (
 					Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker)
-					&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1)) * (1 + (Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
-					"Close Range Damage")) && Distance Between(Eye Position(Attacker.Master[0]), Eye Position(Victim))
+					&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1)) * (1 + (Attacker.Master[0].HasItem[6] && Distance Between(Eye Position(Attacker.Master[0]), Eye Position(Victim))
 					< 13 ? 0.200 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] : 0)) - 1) / Victim.DamageReceivedMultiplier[1]);
 				If(!Event Was Critical Hit);
 					Play Effect(Attacker.Master[0], Brigitte Repair Pack Armor Sound, Color(White), Eye Position(Attacker.Master[0]), 100);
 				End;
-				If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Heal on Crit")));
+				"Heal on Crit"
+				If(Attacker.Master[0].HasItem[25]);
 					Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker.Master[0]))],
 						Attacker.Master[0].HealthScale[0] * (4 + 4 * Filtered Array(Global.ItemStackSizes,
 						Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Heal on Crit")
@@ -1794,7 +1796,8 @@ rule("On hit effects")
 						: Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)
 						[0] * Attacker.Master[0].HealingModifiers[1]);
 				End;
-				If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Insides")) && Is Alive(Victim));
+				"Crit bleed"
+				If(Attacker.Master[0].HasItem[27] && Is Alive(Victim));
 					If(Victim.DebuffShield[0] > 0);
 						Victim.DebuffShield[0] -= 1;
 						Victim.DebuffShield[3] += 1;
@@ -1815,13 +1818,14 @@ rule("On hit effects")
 				disabled Modify Global Variable(Numbers, Append To Array, Array(Total Time Elapsed + 1.250, Event Damage * 1 + ((1 + Attacker.Crit[2] / (
 					Attacker.Crit[0] ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(
 					Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker) && Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1)) * (1 + (
-					Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(
+					Attacker.Master[0].HasItem[6] && Distance Between(Eye Position(
 					Attacker.Master[0]), Eye Position(Victim)) < 13 ? 0.200 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] : 0)) - 1), Attacker.Master[0], Victim, Vector(255, 0,
 					0)));
 			Else;
-				If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(
+				"Close range damage (not crit)"
+				If(Attacker.Master[0].HasItem[6] && Distance Between(Eye Position(
 					Attacker.Master[0]), Eye Position(Victim)) < 13);
 					Damage(Victim, Null, Event Damage * 0.200 * Filtered Array(Global.ItemStackSizes,
 						Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
@@ -1829,7 +1833,7 @@ rule("On hit effects")
 				End;
 				Call Subroutine(NormalBleed);
 			End;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Slow")) && !(Victim.IsBoss
+			If(Attacker.Master[0].HasItem[2] && !(Victim.IsBoss
 				&& Victim.State == Custom String("Dashing")));
 				If(Victim.DebuffShield[0] > 0);
 					Victim.DebuffShield[0] -= 1;
@@ -1840,7 +1844,8 @@ rule("On hit effects")
 						&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0]);
 				End;
 			End;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Armour Piercing")) && Victim.ArmourPiercingStacks[0] < 5);
+			"Armour Piercing"
+			If(Attacker.Master[0].HasItem[4] && Victim.ArmourPiercingStacks[0] < 5);
 				If(Victim.DebuffShield[0] > 0);
 					Victim.DebuffShield[0] -= 1;
 					Victim.DebuffShield[3] += 1;
@@ -1871,7 +1876,7 @@ rule("On hit effects")
 				Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0] > 0);
-				If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Ice Blast")));
+				If(Attacker.Master[0].HasItem[7]);
 					Attacker.Master[0].BlastCooldown = 10;
 					Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Victim, 100);
 					Play Effect(All Players(All Teams), Echo Sticky Bomb Explosion Effect, Color(White), Victim, 1);
@@ -1890,7 +1895,7 @@ rule("On hit effects")
 						Global.ItemStackSizes, Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Ice Blast")
 						&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] * Event Damage / Victim.DamageReceivedMultiplier[1]);
 				End;
-				If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Flame Blast")));
+				If(Attacker.Master[0].HasItem[8]);
 					Attacker.Master[0].BlastCooldown = 10;
 					Attacker.Master[0].FlameTornadoDamage = Event Damage / Victim.DamageReceivedMultiplier[1];
 					Attacker.Master[0].FlameTornadoPosition = Position Of(Victim);
@@ -1903,7 +1908,8 @@ rule("On hit effects")
 				Attacker.Master[0].NoBlastReason = Array(Event Damage, Victim.DamageReceivedMultiplier[1], Attacker.Master[0].BaseDamageMultiplier,
 					Attacker.Master[0].BlastCooldown);
 			End;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Lifesteal")));
+			"Lifesteal"
+			If(Attacker.Master[0].HasItem[9]);
 				Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker.Master[0]))],
 					Attacker.Master[0].HealthScale[0] * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Lifesteal")
@@ -1914,7 +1920,7 @@ rule("On hit effects")
 					: Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)
 					[0] * Attacker.Master[0].HealingModifiers[1]);
 			End;
-			If(Array Contains(Attacker.Master.MyItemStacks, Custom String("Stun Chance")));
+			If(Attacker.Master.HasItem[10]);
 				If(!Victim.IsBoss && Random Real(0, 1) < (1 - 1 / (0.050 * Filtered Array(Global.ItemStackSizes,
 					Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Stun Chance")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] + 1)) * Mapped Array(Global.ProcCoefs[Mapped Array(
@@ -1926,8 +1932,7 @@ rule("On hit effects")
 					Set Status(Victim, Attacker.Master[0], Stunned, 2);
 				End;
 			End;
-			If(!Array Contains(Global.LightningStrikes, Attacker.Master[0]) && Array Contains(Attacker.Master[0].MyItemStacks, Custom String(
-				"Lightning")) && Random Real(0, 1) < 0.100 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
+			If(!Global.LightningStrikes, Attacker.Master[0]) && Array Contains(Attacker.Master[0].HasItem[16] && Random Real(0, 1) < 0.100 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
 				Event Ability), Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)
 				[0] + 1], Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
@@ -1943,8 +1948,9 @@ rule("On hit effects")
 					Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) * 0.260 - 11.200) : Event Damage / (
 					Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier) / 36) : Current Array Element)[0]));
 			End;
+			"Chain Lightning"
 			If(!Array Contains(Global.DamageBeamInfo, Attacker.Master[0]) && !Array Contains(Global.ChainLightningBans, Attacker.Master[0])
-				&& Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Chain Lightning")) && Random Real(0, 1)
+				&& Attacker.Master[0].HasItem[22] && Random Real(0, 1)
 				< 0.250 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
 				Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
 				Current Array Element == -1 ? Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
@@ -1963,7 +1969,8 @@ rule("On hit effects")
 					&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] - 1)));
 				Modify Global Variable(DamageBeamInfo, Append To Array, Custom String("0%END"));
 			End;
-			If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Armour Reduction")));
+			"Armour Reduction"
+			If(Attacker.Master[0].HasItem[13]);
 				If(Victim.DebuffShield[0] > 0);
 					Victim.DebuffShield[0] -= 1;
 					Victim.DebuffShield[3] += 1;
@@ -2325,12 +2332,11 @@ rule("Update Item Stacks from Queue")
 		If(Global.ItemStackUpdateInfo[3] < 0 && !Is True For Any(Global.ItemStackSizes,
 			Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Global.ItemStackUpdateInfo[1] && Global.ItemStackOwners[Current Array Index] == Global.ItemStackUpdateInfo[2]));
 			Modify Player Variable(Global.ItemStackUpdateInfo[2], MyItemStacks, Remove From Array By Value, Global.ItemStackUpdateInfo[1]);
-			Set Player Variable At Index(Global.ItemStackUpdateInfo[2], HasItem, Index Of Array Value(Global.Items, Global.ItemStacks[Global.ItemStackUpdateInfos[0]]), False); 
+			Set Player Variable At Index(Global.ItemStackUpdateInfo[2], HasItem, Index Of Array Value(Global.Items, Global.ItemStackUpdateInfo[1]), False); 
 		End;
-		If(Global.ItemStackUpdateInfo[3] > 0 && !Array Contains(Global.ItemStackUpdateInfo[2].MyItemStacks,
-			Global.ItemStackUpdateInfo[1]));
+		If(Global.ItemStackUpdateInfo[3] > 0 && !Global.ItemStackUpdateInfo[2].HasItem[Index Of Array Value(Global.Items, Global.ItemStackUpdateInfo[1])]);
 			Modify Player Variable(Global.ItemStackUpdateInfo[2], MyItemStacks, Append To Array, Global.ItemStackUpdateInfo[1]);
-			Set Player Variable At Index(Global.ItemStackUpdateInfo[2], HasItem, Index Of Array Value(Global.Items, Global.ItemStacks[Global.ItemStackUpdateInfos[0]]), True);
+			Set Player Variable At Index(Global.ItemStackUpdateInfo[2], HasItem, Index Of Array Value(Global.Items, Global.ItemStackUpdateInfo[1]), True);
 		End;
 		If(Global.ItemStackUpdateInfos[1] == 0);
 			Call Subroutine(UpdateItemStack_Modify);
@@ -2889,7 +2895,7 @@ rule("Recover")
 
 	actions
 	{
-		Abort If(!Array Contains(Event Player.MyItemStacks, Custom String("Recovery")));
+		Abort If(!Event Player.HasItem[11]);
 		Heal(Event Player, Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))], Min(Max Health(Event Player) * (1 - Event Player.MaxHealthReduction[1]) - Health(Event Player), Min(Max Health Of Type(
 			Event Player, Health) + Max Health Of Type(Event Player, Armor) - (Health Of Type(Event Player, Health) + Health Of Type(
 			Event Player, Armor)), Event Player.HealthScale[0] * 20 + (Max Health Of Type(Event Player, Health) + Max Health Of Type(
@@ -3118,7 +3124,7 @@ rule("Reprieve")
 
 	conditions
 	{
-		Array Contains(Event Player.MyItemStacks, Custom String("Reprieve")) == True;
+		Event Player.HasItem[15] == True;
 		Normalized Health(Event Player) < 0.250;
 		Is Alive(Event Player) == True;
 		Event Player.StealthTime[0] == 0;
@@ -3300,7 +3306,7 @@ rule("Start Big Explosion")
 	{
 		Is Alive(Event Player) == True;
 		Normalized Health(Event Player) < 0.250;
-		Array Contains(Event Player.MyItemStacks, Custom String("Big Explosion")) == True;
+		Event Player.HasItem[17] == True;
 		Event Player.BoomTime[0] == 0;
 		Event Player.BoomTime[1] == 0;
 	}
@@ -7871,7 +7877,7 @@ rule("Player Died")
 					? Attacker.Master[0] : Null, Custom String("LateHeroDeath")));
 			End;
 		End;
-		If(Array Contains(Event Player.MyItemStacks, Custom String("Extra Life")));
+		If(Event Player.HasItem[5]);
 			If(Team Of(Event Player) != Team 2);
 				Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Filtered Array(Mapped Array(Global.ItemStackSizes,
 					Current Array Index),
