@@ -334,6 +334,7 @@ variables
 		107: IsMook
 		108: IsHero
 		109: MyItemStackSizes
+		110: IsSetup
 }
 
 subroutines
@@ -341,7 +342,7 @@ subroutines
 	1: Steal
 	2: Acquire
 	3: DistributeItem
-	4: HandleItemInstance
+	4: DetermineAcceleration
 	5: Dash
 	6: UpdateMoveSpeed
 	7: UpdateDamageReceived
@@ -389,6 +390,12 @@ rule("Global setup")
 
 	actions
 	{
+		If(Global.State);
+			Log To Inspector(Custom String("Running global setup"));
+		Else;
+			Log To Inspector(Custom String("Tried to run global setup rule again"));
+			Abort;
+		End;
 		Call Subroutine(Settings);
 		If(Global.MusicMode == 2);
 			Disable Built-In Game Mode Music;
@@ -499,7 +506,7 @@ rule("Global setup")
 		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 3, Color(White), Color(White), Color(White),
 			Visible To, Default Visibility);
 		If(Global.TestMode[0]);
-			Create HUD Text(All Players(All Teams), Server Load Average, Null, Is Using Ultimate(Host Player), Left, 0, Color(White), Color(
+			Create HUD Text(All Players(All Teams), Server Load Peak, Null, Server Load Average, Left, 0, Color(White), Color(
 				White), Color(White), Visible To and String, Default Visibility);
 		End;
 		Global.BallNames = Array(Custom String("Interference"), Custom String("Locomotion"), Custom String("Destruction"));
@@ -824,6 +831,7 @@ rule("Boss Setup")
 		Event Player.ItemStackReturnInfo = Empty Array;
 		Event Player.CanDash[1] = 2;
 		Event Player.State = Custom String("Waiting");
+		Event Player.IsSetup = True;
 	}
 }
 
@@ -863,6 +871,7 @@ rule("Player Setup")
 				Event Player.Ids[0] = Custom String("The Captain");
 			End;
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Ids[0]);
+			Event Player.IsSetup = True;
 			Abort;
 		Else;
 			Event Player.FallDamage[0] = (Workshop Setting Toggle(Custom String("Difficulty"), Custom String("Fall damage"), True, 2) ? 1 : 0) + (Global.Difficulty[2] >= 2 ? 1 : 0);
@@ -1062,6 +1071,7 @@ rule("Team 1 Setup")
 			Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
 		Set Ultimate Ability Enabled(Event Player, False);
 		Event Player.State = Custom String("Ready");
+		Event Player.IsSetup = True;
 	}
 }
 
@@ -1194,46 +1204,24 @@ rule("Enforce max health reduction")
 	}
 }
 
-rule("Start accelerating")
+rule("Determine Acceleration")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Subroutine;
+		DetermineAcceleration;
 	}
-
-	conditions
-	{
-		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration > 0;
-	}
-
+	
 	actions
 	{
-		Start Accelerating(Event Player, Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(
-			Horizontal Angle From Direction(Position Of(Event Player)), 0), Magnitude Of(
-			Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(Horizontal Angle From Direction(
-			Position Of(Event Player)), 0)), 60, To World, Direction Rate and Max Speed);
-	}
-}
-
-rule("Stop accelerating")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration == 0;
-	}
-
-	actions
-	{
-		Stop Accelerating(Event Player);
+		If(Magnitude Of(Event Player.WispAcceleration) + Event Player.WallAcceleration > 0);
+			Start Accelerating(Event Player, Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(
+				Horizontal Angle From Direction(Position Of(Event Player)), 0), Magnitude Of(
+				Event Player.WispAcceleration - Event Player.WallAcceleration * Direction From Angles(Horizontal Angle From Direction(
+				Position Of(Event Player)), 0)), 60, To World, Direction Rate and Max Speed);
+		Else;
+			Stop Accelerating(Event Player);
+		End;
 	}
 }
 
@@ -1248,6 +1236,7 @@ rule("Inwards")
 
 	conditions
 	{
+		Event Player.IsSetup == True;
 		Global.State == Custom String("BossFight");
 		Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) > Global.ArenaRadius;
 	}
@@ -1258,6 +1247,7 @@ rule("Inwards")
 			18 * Speed Of In Direction(Event Player, Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 81 * (
 			Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) + 1 - Global.ArenaRadius)),
 			1000000000, Destination and Rate);
+		Start Rule(DetermineAcceleration, Restart Rule);
 		Start Throttle In Direction(Event Player, Direction Towards(Event Player, Vector(0, 0, 0)), 2 * Max(0, Dot Product(World Vector Of(
 			Throttle Of(Event Player), Event Player, Rotation), Direction From Angles(Horizontal Angle From Direction(Position Of(
 			Event Player)), 0))), To World, Add to existing throttle, Direction and Magnitude);
@@ -1275,6 +1265,7 @@ rule("Not Inwards")
 
 	conditions
 	{
+		Event Player.IsSetup == True;
 		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 	}
@@ -1283,6 +1274,7 @@ rule("Not Inwards")
 	{
 		Stop Chasing Player Variable(Event Player, WallAcceleration);
 		Event Player.WallAcceleration = 0;
+		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
 
@@ -1302,7 +1294,7 @@ rule("Update Move Speed (From Flag)")
 
 	actions
 	{
-		Wait(0.050, Ignore Condition);
+		Wait(0.080, Ignore Condition);
 		Event Player.ShouldUpdateMoveSpeed = False;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 	}
@@ -1397,7 +1389,7 @@ rule("Update Crit (From Flag)")
 	actions
 	{
 		Event Player.Bots[0].Crit[3] = True;
-		Wait(0.050, Ignore Condition);
+		Wait(0.100, Ignore Condition);
 		Event Player.Crit[3] = False;
 		Start Rule(UpdateCrit, Restart Rule);
 	}
@@ -1448,7 +1440,7 @@ rule("Update Healing (From Flag)")
 
 	actions
 	{
-		Wait(0.050, Ignore Condition);
+		Wait(0.100, Ignore Condition);
 		Event Player.ShouldUpdateHealing = False;
 		Start Rule(UpdateHealing, Restart Rule);
 	}
@@ -2031,7 +2023,7 @@ rule("Create Queued Bots")
 			Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		End;
 		Global.BotCreationQueue = Array Slice(Global.BotCreationQueue, 2, 1000);
-		Wait(0.150, Ignore Condition);
+		Wait(0.200, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -2186,6 +2178,7 @@ rule("Distribute Item Subroutine")
 
 	actions
 	{
+		Wait Until(Count Of(Global.ItemStackUpdateInfos) < 2, 9999);
 		Global.NewItemStackIndex = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
 			Global.ItemStacks[Current Array Element] == Global.ItemDistributionInfo[0] && Global.ItemStackOwners[Current Array Element] == Global.ItemDistributionInfo[1]);
 		If(Count Of(Global.NewItemStackIndex) > 0);
@@ -2196,22 +2189,6 @@ rule("Distribute Item Subroutine")
 		Else;
 			Call Subroutine(CreateItemStack);
 			Global.ItemStackSizes[Global.NewItemStackIndex] += Global.ItemDistributionInfo[2];
-		End;
-	}
-}
-
-rule("Handle Item Instance")
-{
-	event
-	{
-		Subroutine;
-		HandleItemInstance;
-	}
-
-	actions
-	{
-		If(Global.ItemStackNewOwners[Global.ItemStackIndex]);
-			Call Subroutine(Acquire);
 		End;
 	}
 }
@@ -2619,6 +2596,7 @@ rule("Team 2 rooted")
 	actions
 	{
 		Event Player.WispAcceleration = Vector(0, 0, 0);
+		Start Rule(DetermineAcceleration, Restart Rule);
 		If(Event Player.DebuffShield[0] > 0);
 			Event Player.DebuffShield[0] -= 1;
 			Event Player.DebuffShield[3] += 1;
@@ -3753,7 +3731,7 @@ rule("Buy (with interact)")
 		Event Player.BuyIndex = Sorted Array(Mapped Array(Global.ItemShopPositions, Current Array Index), Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
 			Event Player, False), Global.ItemShopPositions[Current Array Element]))[0];
-		Call Subroutine(Buy);
+		Start Rule(Buy, Do Nothing);
 	}
 }
 
@@ -5481,6 +5459,7 @@ rule("Needler Bot")
 		Set Status(Event Player, Null, Phased Out, 9999);
 		Set Invisible(Event Player, All);
 		Start Facing(Event Player, Facing Direction Of(Event Player.Master[0]), 900, To World, Direction and Turn Rate);
+		Event Player.IsSetup = True;
 	}
 }
 
@@ -5664,10 +5643,7 @@ rule("AI Loop")
 
 	actions
 	{
-		Global.Adds = Filtered Array(All Living Players(Team 2),
-			Current Array Element.Master[0] && Current Array Element.IsMook
-			&& Current Array Element.Master[1] == Null && Current Array Element.State && Current Array Element.State != Custom String(
-			"IndividualSetup"));
+		Global.Adds = Filtered Array(All Living Players(Team 2), Current Array Element.IsMook && Current Array Element.Master[1] == Null && Current Array Element.IsSetup);
 		For Global Variable(AiIndex, 0, Count Of(Global.Adds), 1);
 			Global.Add = Global.Adds[Global.AiIndex];
 			Call Subroutine(AiStep);
@@ -6018,6 +5994,7 @@ rule("Add. Setup")
 			End;
 			Event Player.State = Custom String("Rise");
 		End;
+		Event Player.IsSetup = True;
 	}
 }
 
@@ -6450,6 +6427,7 @@ rule("Wisp descent")
 	actions
 	{
 		Event Player.WispAcceleration = Down * (Is Firing Primary(Event Player) ? 4 : 10);
+		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
 
@@ -6474,6 +6452,7 @@ rule("Wisp ascent")
 	actions
 	{
 		Event Player.WispAcceleration = Up * (Is Firing Primary(Event Player) ? 4 : 10);
+		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
 
@@ -6613,6 +6592,7 @@ rule("Wisp stop accelerating")
 	actions
 	{
 		Event Player.WispAcceleration = Vector(0, 0, 0);
+		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
 
@@ -7825,6 +7805,7 @@ rule("Player Died")
 		Event Player.BoomTime[0] = 0;
 		Call Subroutine(CleanseAllDebuffs);
 		Event Player.WispAcceleration = Vector(0, 0, 0);
+		Start Rule(DetermineAcceleration, Restart Rule);
 		If(Event Player.IsMook);
 			Call Subroutine(LoseTarget);
 		Else If(Event Player.IsHero && Global.Dialogue[0]);
