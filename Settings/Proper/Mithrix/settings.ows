@@ -379,6 +379,8 @@ subroutines
 	38: UpdateCrit
 	39: NormalBleed
 	40: CreateDamageBeam
+	41: OnSlow
+	42: SpaceDash
 }
 
 rule("Global setup")
@@ -391,10 +393,10 @@ rule("Global setup")
 	actions
 	{
 		If(Global.State);
-			Log To Inspector(Custom String("Running global setup"));
-		Else;
 			Log To Inspector(Custom String("Tried to run global setup rule again"));
 			Abort;
+		Else;
+			Log To Inspector(Custom String("Running global setup"));
 		End;
 		Call Subroutine(Settings);
 		If(Global.MusicMode == 2);
@@ -655,6 +657,8 @@ rule("Player Left Match")
 	actions
 	{
 		Global.Entities[0] = True;
+		Global.Heroes = Filtered Array(Global.Heroes, Array Contains(All Players(All Teams), Current Array Element));
+		Global.Bosses = Filtered Array(Global.Bosses, Array Contains(All Players(All Teams), Current Array Element));
 	}
 }
 
@@ -855,9 +859,7 @@ rule("Player Setup")
 		"If I enable Echo I should allow this to change based on who she's duplicating"
 		Event Player.Hero[0] = Hero Of(Event Player);
 		Event Player.Hero[1] = Index Of Array Value(Global.AllHeroes, Event Player.Hero[0]);
-		Event Player.Crit[0] = !Array Contains(Array(Hero(Ana), Hero(Brigitte), Hero(Junkrat), Hero(Moira), Hero(Pharah), Hero(Sigma),
-			Hero(Symmetra), Hero(Winston), Hero(Zarya)), Event Player.Hero[0]);
-		Call Subroutine(UpdateCrit);
+		Disable Kill Feed(Event Player);
 		If(Event Player.Role == Custom String("NullPlayer"));
 			Set Invisible(Event Player, All);
 			Set Status(Event Player, Null, Phased Out, 9999);
@@ -873,9 +875,11 @@ rule("Player Setup")
 			Start Forcing Dummy Bot Name(Event Player, Event Player.Ids[0]);
 			Event Player.IsSetup = True;
 			Abort;
-		Else;
-			Event Player.FallDamage[0] = (Workshop Setting Toggle(Custom String("Difficulty"), Custom String("Fall damage"), True, 2) ? 1 : 0) + (Global.Difficulty[2] >= 2 ? 1 : 0);
 		End;
+		Event Player.FallDamage[0] = (Workshop Setting Toggle(Custom String("Difficulty"), Custom String("Fall damage"), True, 2) ? 1 : 0) + (Global.Difficulty[2] >= 2 ? 1 : 0);
+		Event Player.Crit[0] = !Array Contains(Array(Hero(Ana), Hero(Brigitte), Hero(Junkrat), Hero(Moira), Hero(Pharah), Hero(Sigma),
+			Hero(Symmetra), Hero(Winston), Hero(Zarya)), Event Player.Hero[0]);
+		Call Subroutine(UpdateCrit);
 		Create Effect(Event Player.DebuffFocusTime > 0 && (Event Player.Visibility[0] || Event Player.Visibility[1]) ? All Players(
 			All Teams) : Null, Sigma Gravitic Flux Target Effect, Color(White), Event Player, 4.500, Visible To Position and Radius);
 		Modify Global Variable(Entities, Append To Array, Array(Event Player.Ids[1], 0, Last Created Entity));
@@ -885,7 +889,6 @@ rule("Player Setup")
 		Chase Player Variable At Rate(Event Player, DebuffFocusTime, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, BleedTime, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, APTime, 0, 1, None);
-		Event Player.WispAcceleration = Vector(0, 0, 0);
 		Event Player.HealthScale = Array(Null, Null, 1, Null, Null, Team Of(Event Player) == Team 2 ? 1 / (1 + 0.200 * (Global.OverallPlayerLevel - 1)) : 1);
 		Event Player.HealthScale[3] = 0.600 * Event Player.HealthScale[5];
 		If(Event Player.IsBoss || Event Player.IsHero);
@@ -922,12 +925,8 @@ rule("Player Setup")
 				Right, 2, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
 			Start Healing Modification(Event Player, All Players(All Teams), 100 * Event Player.HealingModifiers[0] / Event Player.HealthScale[2], Receivers Healers and Healing Percent);
 		End;
-		Disable Kill Feed(Event Player);
 		Event Player.DefaultHealth = Array(Max Health(Event Player), Max Health Of Type(Event Player, Health), Max Health Of Type(
 			Event Player, Armor), Max Health Of Type(Event Player, Shields));
-		If(Event Player.IsMook);
-			Set Crouch Enabled(Event Player, False);
-		End;
 		If(Global.Difficulty[2] >= 3 && Team Of(Event Player) == Team 2);
 			Event Player.MoveSpeedBuffs[5] = 40;
 			Event Player.ShouldUpdateMoveSpeed = True;
@@ -1818,6 +1817,7 @@ rule("On hit effects")
 					Victim.DebuffShield[3] += 1;
 				Else;
 					Modify Player Variable(Victim, SlowTime, Max, 2 * Attacker.Master[0].MyItemStackSizes[2]);
+					Start Rule(OnSlow, Do Nothing);
 				End;
 			End;
 			"Armour Piercing"
@@ -1860,6 +1860,7 @@ rule("On hit effects")
 							Victim.DebuffShield[3] += 1;
 						Else;
 							Modify Player Variable(Victim, SlowTime, Max, 3);
+							Start Rule(OnSlow, Do Nothing);
 						End;
 					End;
 					If(Is Alive(Victim));
@@ -2023,7 +2024,7 @@ rule("Create Queued Bots")
 			Wait Until(Global.BotCreationQueue[0] == Null, 99999);
 		End;
 		Global.BotCreationQueue = Array Slice(Global.BotCreationQueue, 2, 1000);
-		Wait(0.200, Ignore Condition);
+		Wait(0.250, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -2128,7 +2129,9 @@ rule("Handle Item Instances")
 
 	actions
 	{
-		Call Subroutine(HandleItemInstance);
+		If(Global.ItemStackNewOwners[Global.ItemStackIndex]);
+			Call Subroutine(Acquire);
+		End;
 		Global.ItemStackIndex = (Global.ItemStackIndex + 1) % Count Of(Global.ItemStacks);
 		Wait(0.100, Ignore Condition);
 		Loop If Condition Is True;
@@ -2688,16 +2691,10 @@ rule("Slowed")
 {
 	event
 	{
-		Ongoing - Each Player;
-		All;
-		All;
+		Subroutine;
+		OnSlow;
 	}
-
-	conditions
-	{
-		Event Player.SlowTime > 0;
-	}
-
+	
 	actions
 	{
 		Event Player.MoveSpeedDebuffs[3] = 60;
@@ -3852,23 +3849,6 @@ rule("Enter State: OnTheWay")
 	{
 		Wait(0.250, Abort When False);
 		Global.State = Custom String("OnTheWay");
-	}
-}
-
-rule("On Enter State: OnTheWay")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.State == Custom String("OnTheWay");
-	}
-
-	actions
-	{
 		Log To Inspector(Custom String("BroadcastState: OnTheWay"));
 		If(Global.MusicMode == 1);
 			Disable Built-In Game Mode Music;
@@ -3883,23 +3863,6 @@ rule("On Enter State: OnTheWay")
 		Wait(2, Ignore Condition);
 		Log To Inspector(Custom String("BroadcastState: Phase 1"));
 		Global.State = Custom String("Cutscene");
-	}
-}
-
-rule("On Enter State: Cutscene (Global)")
-{
-	event
-	{
-		Ongoing - Global;
-	}
-
-	conditions
-	{
-		Global.State == Custom String("Cutscene");
-	}
-
-	actions
-	{
 		Wait(Global.MusicMode == 2 ? 4.350 : 2.850, Ignore Condition);
 		Global.Bosses.State = Custom String("Cutscene");
 		Destroy Effect(Global.BossSpawnEffect);
@@ -4254,9 +4217,7 @@ rule("On Phase 1 Start")
 {
 	event
 	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
+		Ongoing - Global;
 	}
 
 	conditions
@@ -4266,16 +4227,16 @@ rule("On Phase 1 Start")
 
 	actions
 	{
-		Event Player.HasLostThisPhase = False;
-		Event Player.CanTakeOff = False;
-		Event Player.BaseMoveSpeedModifier = 100;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
-		Event Player.ShowBossInfo[0] = True;
-		Event Player.ShowBossInfo[1] = 1;
-		Stop Facing(Event Player);
+		Global.Bosses.HasLostThisPhase = False;
+		Global.Bosses.CanTakeOff = False;
+		Global.Bosses.BaseMoveSpeedModifier = 100;
+		Global.Bosses.ShouldUpdateMoveSpeed = True;
+		Global.Bosses.ShowBossInfo[0] = True;
+		Global.Bosses.ShowBossInfo[1] = 1;
+		Stop Facing(Global.Bosses);
 		Wait(1, Abort When False);
-		Chase Player Variable At Rate(Event Player, TakeoffCooldown, 0, 1, None);
-		Event Player.State = Custom String("ClosingIn");
+		Chase Player Variable At Rate(Global.Bosses, TakeoffCooldown, 0, 1, None);
+		Global.Bosses.State = Custom String("ClosingIn");
 	}
 }
 
@@ -5231,6 +5192,7 @@ rule("Enter State: Dashing (with jump button)")
 	actions
 	{
 		Event Player.State = Custom String("Dashing");
+		Start Rule(SpaceDash, Do Nothing);
 	}
 }
 
@@ -5254,6 +5216,7 @@ rule("Enter State: Dashing (with sideways movement)")
 	{
 		Abort If(!Event Player.CanDash[0] || Event Player.State != Custom String("ClosingIn"));
 		Event Player.State = Custom String("Dashing");
+		Start Rule(SpaceDash, Do Nothing);
 	}
 }
 
@@ -5261,16 +5224,10 @@ rule("On Enter State: Dashing")
 {
 	event
 	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
+		Subroutine;
+		SpaceDash;
 	}
-
-	conditions
-	{
-		Event Player.State == Custom String("Dashing");
-	}
-
+	
 	actions
 	{
 		Event Player.CanDash[1] -= 1;
@@ -5647,9 +5604,9 @@ rule("AI Loop")
 		For Global Variable(AiIndex, 0, Count Of(Global.Adds), 1);
 			Global.Add = Global.Adds[Global.AiIndex];
 			Call Subroutine(AiStep);
-			Wait(0.050, Ignore Condition);
+			Wait(0.080, Ignore Condition);
 		End;
-		Wait(0.200, Ignore Condition);
+		Wait(0.080, Ignore Condition);
 		Loop If Condition Is True;
 	}
 }
@@ -5921,6 +5878,8 @@ rule("Add. Setup")
 
 	actions
 	{
+		Set Crouch Enabled(Event Player, False);
+		Event Player.WispAcceleration = Vector(0, 0, 0);
 		If(Hero Of(Event Player) == Hero(Wrecking Ball));
 			"160 dps at level 17 (expected BossLevel for phase 2 on hard difficulty)"
 			Event Player.FlameTornadoDamage = 160 / 0.500;
@@ -6620,11 +6579,13 @@ rule("On enter Phase 2 (Boss)")
 			Random Value In Array(Filtered Array(All Living Players(Team 2), Current Array Element.IsMook
 				&& Current Array Element.Master[1] == Null && Current Array Element.Master[2])).Master[1] = Event Player;
 			Event Player.Target = Filtered Array(All Players(Team 2), Current Array Element.Master[1] == Event Player)[0];
-			Wait(0.250, Ignore Condition);
+			Wait(0.500, Ignore Condition);
 		End;
 		If(Event Player.Target == Null);
 			Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Else;
+			Start Camera(Event Player, Eye Position(Event Player.Target) - Facing Direction Of(Event Player.Target), Eye Position(
+				Event Player.Target) + 5 * Facing Direction Of(Event Player.Target), 25);
 			Stop Forcing Throttle(Event Player);
 			Stop Forcing Throttle(Event Player.Target);
 			If(!Is Button Held(Event Player, Button(Primary Fire)));
@@ -7037,28 +6998,6 @@ rule("Add Stop Holding Reload button")
 	}
 }
 
-rule("Boss spectate")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Global.Phase == 2;
-		Event Player.Target != Null;
-	}
-
-	actions
-	{
-		Start Camera(Event Player, Eye Position(Event Player.Target) - Facing Direction Of(Event Player.Target), Eye Position(
-			Event Player.Target) + 5 * Facing Direction Of(Event Player.Target), 25);
-	}
-}
-
 rule("Stop Phase 2 camera")
 {
 	event
@@ -7445,13 +7384,13 @@ rule("On Enter Phase: 4 (Boss)")
 		Event Player.HasLostThisPhase = False;
 		Event Player.CanTakeOff = False;
 		Event Player.BaseMoveSpeedModifier = 55;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
+		Event Player.ShouldUpdateMoveSpeed = True;
 		Event Player.CanNeedle = Array(True, False);
 		Clear Status(Event Player, Unkillable);
 		Teleport(Event Player, Vector(0, 0, 0));
 		"Add Armour Boost"
 		Event Player.ArmourModifiers[1] = 200;
-		Start Rule(UpdateDamageReceived, Restart Rule);
+		Event Player.ShouldUpdateDamageReceived = True;
 		Call Subroutine(CleanseAllDebuffs);
 		Call Subroutine(UpdateStats);
 		Set Invisible(Event Player, None);
@@ -7992,35 +7931,5 @@ rule("All Heroes Gone")
 			Wait(13, Ignore Condition);
 			Declare Team Victory(Team 2);
 		End;
-	}
-}
-
-rule("Hero Left")
-{
-	event
-	{
-		Player Left Match;
-		Team 1;
-		All;
-	}
-
-	actions
-	{
-		Global.Heroes = Filtered Array(Global.Heroes, Array Contains(All Players(All Teams), Current Array Element));
-	}
-}
-
-rule("Boss Left")
-{
-	event
-	{
-		Player Left Match;
-		Team 2;
-		All;
-	}
-
-	actions
-	{
-		Global.Bosses = Filtered Array(Global.Bosses, Array Contains(All Players(All Teams), Current Array Element));
 	}
 }
