@@ -42,7 +42,6 @@ settings
 			disabled heroes
 			{
 				D.Va
-				Echo
 			}
 		}
 
@@ -347,6 +346,7 @@ variables
 		116: NewBurnInfo
 		117: CauseOfDeath
 		118: DashVector
+		119: IsUsingUltimate
 }
 
 subroutines
@@ -773,7 +773,7 @@ rule("Boss Setup")
 			Event Player.Target.DashCooldown == 0 ? Ability Icon String(Hero(Sojourn), Button(Ability 1)) : Round To Integer(
 			Event Player.Target.DashCooldown, Up)), Custom String("[{0}]", Input Binding String(Hero Of(Event Player.Target) == Hero(
 			Tracer) ? Button(Ultimate) : Button(Ability 1))), Null, Left, 3.300, (Hero Of(Event Player.Target) == Hero(Tracer)
-			? Is Using Ultimate(Event Player.Target) : Event Player.Target.State == Custom String("Dashing")) ? Color(Orange) : Color(
+			? Event Player.Target.IsUsingUltimate : Event Player.Target.State == Custom String("Dashing")) ? Color(Orange) : Color(
 			White), Color(White), Color(White), Visible To String and Color, Default Visibility);
 		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3)
 			? Remove From Array(All Players(All Teams), Event Player) : Null, Moira Coalescence Sound, Color(White), Event Player, 100,
@@ -1078,6 +1078,52 @@ rule("Team 1 Setup")
 	}
 }
 
+rule("Is using ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+	
+	conditions
+	{
+		((Hero Of(Event Player) == Hero(Echo)) ? Is Duplicating (Event Player) : Is Using Ultimate(Event Player)) == True;
+	}
+	
+	actions
+	{
+		Event Player.IsUsingUltimate = True;
+		Wait Until(!((Hero Of(Event Player) == Hero(Echo)) ? Is Duplicating(Event Player) : Is Using Ultimate(Event Player)), 99999);
+		Event Player.IsUsingUltimate = False;
+	}
+}
+
+rule("Is Duplicating")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Echo;
+	}
+	
+	conditions
+	{
+		Is Duplicating(Event Player) == True;
+	}
+	
+	actions
+	{
+		Event Player.Hero[0] = Hero Being Duplicated(Event Player);
+		Event Player.Hero[1] = Index Of Array Value(Global.AllHeroes, Event Player.Hero[0]);
+		Wait Until(!Is Duplicating(Event Player), 99999);
+		Event Player.Hero[0] = Hero Of(Event Player);
+		Event Player.Hero[1] = Index Of Array Value(Global.AllHeroes, Event Player.Hero[0]);
+	}
+}
+
 rule("Team 1 Spawn")
 {
 	event
@@ -1254,6 +1300,7 @@ rule("Inwards")
 		Start Throttle In Direction(Event Player, Direction Towards(Event Player, Vector(0, 0, 0)), 2 * Max(0, Dot Product(World Vector Of(
 			Throttle Of(Event Player), Event Player, Rotation), Direction From Angles(Horizontal Angle From Direction(Position Of(
 			Event Player)), 0))), To World, Add to existing throttle, Direction and Magnitude);
+		Log To Inspector(Custom String("{0}: inwards", Event Player.Ids[0]));
 	}
 }
 
@@ -2431,7 +2478,7 @@ rule("Update Item Stack (Modify)")
 			If(Global.ItemStackUpdateInfo[2].UltCharges[0] == 0);
 				If(Global.ItemStackUpdateInfo[2].UltCharges[5] != Null);
 					Set Ultimate Charge(Global.ItemStackUpdateInfo[2], Min(99, 100 * Global.ItemStackUpdateInfo[2].UltCharges[5] + (
-						1 - Global.ItemStackUpdateInfo[2].UltCharges[5]) * Ultimate Charge Percent(Global.ItemStackUpdateInfo[2])));
+						1 - Global.ItemStackUpdateInfo[2].UltCharges[5]) * (Is Duplicating(Global.ItemStackUpdateInfo[2]) ? 0 : Ultimate Charge Percent(Global.ItemStackUpdateInfo[2]))));
 				End;
 			Else If(Global.ItemStackUpdateInfo[2].UltCharges[0] < Global.ItemStackUpdateInfo[2].UltCharges[1]);
 				If(Global.ItemStackUpdateInfo[2].UltCharges[3] != Null);
@@ -3198,8 +3245,7 @@ rule("Is Detected")
 
 	conditions
 	{
-		(Has Status(Event Player, Hacked) || Is True For Any(Players On Hero(Hero(Widowmaker), Opposite Team Of(Team Of(Event Player))), Is Using Ultimate(
-			Current Array Element)) || Total Time Elapsed < Event Player.Visibility[2]) == True;
+		(Has Status(Event Player, Hacked) || Is True For Any(Players On Hero(Hero(Widowmaker), Opposite Team Of(Team Of(Event Player))), Current Array Element.IsUsingUltimate) || Total Time Elapsed < Event Player.Visibility[2]) == True;
 	}
 
 	actions
@@ -3219,8 +3265,7 @@ rule("Is Not Detected")
 
 	conditions
 	{
-		(Has Status(Event Player, Hacked) || Is True For Any(Players On Hero(Hero(Widowmaker), Opposite Team Of(Team Of(Event Player))), Is Using Ultimate(
-			Current Array Element)) || Total Time Elapsed < Event Player.Visibility[2]) == False;
+		(Has Status(Event Player, Hacked) || Is True For Any(Players On Hero(Hero(Widowmaker), Opposite Team Of(Team Of(Event Player))), Current Array Element.IsUsingUltimate) || Total Time Elapsed < Event Player.Visibility[2]) == False;
 	}
 
 	actions
@@ -3595,6 +3640,7 @@ rule("Ult becomes charged")
 
 	actions
 	{
+		Abort If(Is Duplicating(Event Player));
 		If(Event Player.UltCharges[3] == Null);
 			Event Player.UltCharges[3] = Total Time Elapsed - Event Player.UltCharges[2];
 		End;
@@ -3618,7 +3664,7 @@ rule("Is using ultimate")
 
 	conditions
 	{
-		Is Using Ultimate(Event Player) == True;
+		Event Player.IsUsingUltimate == True;
 	}
 
 	actions
@@ -3641,7 +3687,7 @@ rule("Not Using Ultimate")
 	conditions
 	{
 		Event Player.UltCharges[2] != Null;
-		Is Using Ultimate(Event Player) == False;
+		Event Player.IsUsingUltimate == False;
 	}
 
 	actions
@@ -4894,6 +4940,7 @@ rule("On Enter State: FinishingFullTakeoff2")
 	{
 		Event Player.ShowBossInfo[0] = False;
 		Event Player.ShowBossInfo[1] = 0;
+		Event Player.CanTakeOff = False;
 		Event Player.TakeoffCooldown = 0;
 		Call Subroutine(CleanseAllDebuffs);
 		Event Player.State = Custom String("Absent");
@@ -5159,7 +5206,7 @@ rule("Enter State: Slamming")
 
 	conditions
 	{
-		Is Using Ultimate(Event Player) == True;
+		Event Player.IsUsingUltimate == True;
 	}
 
 	actions
@@ -5402,8 +5449,7 @@ rule("Is On Ground")
 		Event Player.DoubleJumps[2] = 0;
 		If(!Event Player.IsBoss);
 			Event Player.DoubleJumps[3] = False;
-		End;
-		If(Array Contains(Array(Custom String("Dashing"), Custom String("Swinging")), Event Player.State));
+		Else If(Array Contains(Array(Custom String("Dashing"), Custom String("Swinging")), Event Player.State));
 			Log To Inspector(Custom String("S: {0} T: {1}", Distance Between(Event Player, Event Player.DashStartPosition),
 				Total Time Elapsed - Event Player.DashStartTime));
 			Event Player.State = Custom String("BecomingIdle");
@@ -5829,46 +5875,51 @@ rule("Evaluate add horizontal throttle")
 
 	actions
 	{
-		Abort If(Global.Add.Target[1] == Null);
+		If(Global.Add.Target[1] == Null);
+			Global.Add.AI[2] = 0;
 		"Add move forward"
-		If(Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
+		Else If(Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
 			Z Component Of(Current Array Element)))) > 15 && Absolute Value(Horizontal Angle Towards(Global.Add, Global.Add.Target[1])) < 45);
-			If(Total Time Elapsed > Global.Add.AI[0]);
-				Start Forcing Throttle(Global.Add, 1, 1, 0, 0, Hero Of(Global.Add) == Hero(Wrecking Ball) ? 0 : Random Real(0, 1), 1);
-				Global.Add.AI[0] = Total Time Elapsed + 4;
-				Global.Add.AI[1] = 1;
-			End;
-			Abort;
+			Global.Add.AI[2] = Hero Of(Global.Add) == Hero(Wrecking Ball) ? 1 : 3;
 		"Tracer stop moving forward/backward"
 		Else If(Hero Of(Global.Add) == Hero(Tracer) && Absolute Value(Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(
 			Current Array Element), 0, Z Component Of(Current Array Element)))) - 10.500) < 2.500);
-			Stop Forcing Throttle(Global.Add);
-			Global.Add.AI[0] = 0;
-			Global.Add.AI[1] = 0;
+			Global.Add.AI[2] = 2;
 		"Tracer move backward"
 		Else If(Hero Of(Global.Add) == Hero(Tracer) && Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
 			Z Component Of(Current Array Element)))) < 6);
-			Start Forcing Throttle(Global.Add, 0, 0, 1, 1, Random Real(0, 1), 1);
-			Global.Add.AI[0] = 0;
-			Global.Add.AI[1] = -1;
+			Global.Add.AI[2] = 4;
 		"Zen stop moving forward"
 		Else If(Hero Of(Global.Add) == Hero(Zenyatta) && Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
 			Z Component Of(Current Array Element)))) < 11);
-			Stop Forcing Throttle(Global.Add);
-			Global.Add.AI[0] = 0;
-			Global.Add.AI[1] = 0;
+			Global.Add.AI[2] = 2;
 		"Ball stop moving forward"
 		Else If(Hero Of(Global.Add) == Hero(Wrecking Ball) && Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array 	
 			Element), 0, Z Component Of(Current Array Element)))) < 4.500);
-			Start Forcing Throttle(Global.Add, 0, 1, 0, 1, Random Real(0, 1), 1);
-			Global.Add.AI[0] = 0;
-			Global.Add.AI[1] = 0;
+			Global.Add.AI[2] = 2;
 		"Tracer stop moving forward until facing vaguely the right direction"
 		Else If(Hero Of(Global.Add) == Hero(Tracer) && Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
 			Z Component Of(Current Array Element)))) > 15 && Absolute Value(Horizontal Angle Towards(Global.Add, Global.Add.Target[1])) > 50);
-			Stop Forcing Throttle(Global.Add);
-			Global.Add.AI[0] = 0;
-			Global.Add.AI[1] = 0;
+			Global.Add.AI[2] = 5;
+		End;
+		If(Global.Add.AI[2] != Global.Add.AI[3] || Total Time Elapsed > Global.Add.AI[0]);
+			Global.Add.AI[3] = Global.Add.AI[2];
+			If(Global.Add.AI[3] == 1);
+				Global.Add.AI[4] = Forward;
+			Else If(Global.Add.AI[3] == 2);
+				Global.Add.AI[4] = Vector(Random Integer(-1,1),0,0);
+			Else If(Global.Add.AI[3] == 3);
+				Global.Add.AI[4] = Vector(Random Integer(-1,1),0,1);
+			Else If(Global.Add.AI[3] == 4);
+				Global.Add.AI[4] = Vector(Random Integer(-1,1),0,-1);
+			Else If(Global.Add.AI[3] == 5);
+				Global.Add.AI[4] = Vector(Mapped Array(Horizontal Angle Towards(Global.Add, Global.Add.Target[1]), Current Array Element > 0 ? 1 : Current Array Element ? -1 : 0)[0],0,0);
+			Else If(Global.Add.AI[3] == 6);
+				Global.Add.AI[4] = Vector(Mapped Array(Horizontal Angle Towards(Global.Add, Global.Add.Target[1]), Current Array Element > 0 ? -1 : Current Array Element ? 1 : 0)[0],0,0);
+			Else;
+				Global.Add.AI[4] = Vector(0,0,0);
+			End;
+			Global.Add.AI[0] = Total Time Elapsed + Random Real(0.500, 4);
 		End;
 		Log To Inspector(Custom String("{0}: {1}m {2} deg", Global.Add.Ids[0], Magnitude Of(Mapped Array(Vector Towards(Eye Position(Global.Add), Global.Add.Target[1]), Vector(X Component Of(Current Array Element), 0,
 			Z Component Of(Current Array Element)))), Absolute Value(Horizontal Angle Towards(Global.Add, Global.Add.Target[1]))));
@@ -5932,7 +5983,6 @@ rule("Add. has no target")
 	{
 		(Event Player != Null ? Event Player : Global.Add).Target = Null;
 		Stop Facing(Event Player != Null ? Event Player : Global.Add);
-		Stop Forcing Throttle(Event Player != Null ? Event Player : Global.Add);
 		(Event Player != Null ? Event Player : Global.Add).State = Custom String("Idle");
 	}
 }
@@ -6271,6 +6321,7 @@ rule("Golem fast")
 		Event Player.ShouldUpdateMoveSpeed = True;
 		Start Throttle In Direction(Event Player, Mapped Array(Throttle Of(Event Player), Magnitude Of(Current Array Element)
 			== 0 ? Forward : Current Array Element), 1, To Player, Replace existing throttle, None);
+		Log To Inspector(Custom String("{0}: dash throttle", Event Player.Ids[0]));
 		Wait(1.200, Abort When False);
 		Event Player.State = Custom String("Idle");
 	}
@@ -6561,7 +6612,7 @@ rule("Wisp on enter state: ult")
 		Start Holding Button(Event Player, Button(Ultimate));
 		Wait Until(Ultimate Charge Percent(Event Player) < 75, 5);
 		Stop Holding Button(Event Player, Button(Ultimate));
-		Wait Until(!Is Using Ultimate(Event Player), 5);
+		Wait Until(!Event Player.IsUsingUltimate, 5);
 		Event Player.State = Custom String("Idle");
 	}
 }
@@ -6655,7 +6706,7 @@ rule("Choose Target Subroutine")
 			Start Camera(Event Player, Eye Position(Event Player.Target) + (Is In Alternate Form(Event Player.Target) ? -1 : 1) * Facing Direction Of(Event Player.Target), Eye Position(
 				Event Player.Target) + 5 * Facing Direction Of(Event Player.Target), 30);
 			Stop Forcing Throttle(Event Player);
-			Stop Forcing Throttle(Event Player.Target);
+			Event Player.Target.AI[4] = Vector(0, 0, 0);
 			If(!Is Button Held(Event Player, Button(Primary Fire)));
 				Stop Holding Button(Event Player.Target, Button(Primary Fire));
 			End;
@@ -6723,7 +6774,7 @@ rule("Add Start Facing")
 	}
 }
 
-rule("Add Start Throttle")
+rule("Master controlled throttle")
 {
 	event
 	{
@@ -6744,6 +6795,32 @@ rule("Add Start Throttle")
 	{
 		Start Throttle In Direction(Event Player, Throttle Of(Event Player.Master[1]), Magnitude Of(Throttle Of(Event Player.Master[1])),
 			To Player, Replace existing throttle, Direction and Magnitude);
+		Log To Inspector(Custom String("{0}: controlled throttle", Event Player.Ids[0]));
+	}
+}
+
+rule("AI Throttle")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Master[1] == Null;
+		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+			* Up) + 1 > Global.ArenaRadius) == False;
+		Event Player.State != Custom String("Dashing");
+		Magnitude Of(Event Player.AI[4]) != 0;
+	}
+
+	actions
+	{
+		Start Throttle In Direction(Event Player, Event Player.AI[4], 1, To Player, Replace existing throttle, Direction and Magnitude);
+		Log To Inspector(Custom String("{0}: ai throttle", Event Player.Ids[0]));
 	}
 }
 
@@ -6762,11 +6839,13 @@ rule("Stop Throttle in direction")
 		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 		Event Player.State != Custom String("Dashing");
+		Magnitude Of(Event Player.AI[4]) == 0;
 	}
 
 	actions
 	{
 		Stop Throttle In Direction(Event Player);
+		Log To Inspector(Custom String("{0}: stop throttle", Event Player.Ids[0]));
 	}
 }
 
@@ -7454,7 +7533,6 @@ rule("On Enter Phase: 4 (Global)")
 		Wait(0.500, Ignore Condition);
 		Kill(Filtered Array(All Players(Team 2), Current Array Element.IsMook), Global.NullPlayer[0]);
 		Wait Until(Is True For All(Global.Bosses, Current Array Element.State == Custom String("Stealing")), 9999);
-		
 		Global.Stealees = Filtered Array(Global.Heroes, !Current Array Element.IsDead);
 		Global.BossIndex = 0;
 		While(Count Of(Global.Stealees) > 0);
@@ -7514,9 +7592,11 @@ rule("On Enter Phase: 4 (Boss)")
 		Call Subroutine(UpdateStats);
 		Set Invisible(Event Player, None);
 		Event Player.PizzaIndex = Custom String("Dormant");
+		Start Facing(Event Player, Vector(0, -0.999, 0.035), 1000, To Player, None);
 		Wait(5.750, Abort When False);
 		Start Holding Button(Event Player, Button(Crouch));
 		Wait(0.250, Abort When False);
+		Start Facing(Event Player, Vector(0, 0.999, 0.035), 1000, To Player, None);
 		Disallow Button(Event Player, Button(Crouch));
 		Stop Holding Button(Event Player, Button(Crouch));
 		Event Player.CanUseOrbs = False;
@@ -7528,7 +7608,9 @@ rule("On Enter Phase: 4 (Boss)")
 		Clear Status(Event Player, Phased Out);
 		Allow Button(Event Player, Button(Crouch));
 		Start Holding Button(Event Player, Button(Crouch));
+		Start Facing(Event Player, Vector(0, -0.999, 0.035), 1000, To Player, None);
 		Wait(4, Abort When False);
+		Stop Facing(Event Player);
 		Disallow Button(Event Player, Button(Crouch));
 		Stop Holding Button(Event Player, Button(Crouch));
 		Abort If(Event Player.IsDead);
@@ -7609,34 +7691,51 @@ rule("Enter State: Orbs")
 		Start Facing(Event Player, Vector(0, -1, 1), 120, To Player, None);
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Start Holding Button(Event Player, Button(Crouch));
-		Wait Until(Is Dead(Event Player), 1.500);
+		Event Player.OrbCreationIndex = Array(0);
+		"May want to do more to ensure two bosses simultaneously creating orbs doesn't break this"
+		While(Event Player.OrbCreationIndex[0] < 8);
+			Event Player.NewOrbGlobalIndex = Remove From Array(Mapped Array(Global.OrbCreators,
+				Current Array Element == Null ? Current Array Index + 1 : 0), 0)[0];
+			If(Event Player.NewOrbGlobalIndex == 0);
+				Modify Global Variable(OrbCreators, Append To Array, Null);
+				Event Player.NewOrbGlobalIndex = Remove From Array(Mapped Array(Global.OrbCreators,
+				Current Array Element == Null ? Current Array Index + 1 : 0), 0)[0];
+			End;
+			Event Player.NewOrbGlobalIndex -= 1;
+			Global.OrbCreators[Event Player.NewOrbGlobalIndex] = Event Player;
+			Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex] = Mapped Array(Position Of(Event Player),
+				Current Array Element - Y Component Of(Current Array Element) * Up)[0];
+			Global.OrbDisplayPositions[Event Player.NewOrbGlobalIndex] = Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex] + Up;
+			Global.OrbInitialAngles[Event Player.NewOrbGlobalIndex] = Horizontal Facing Angle Of(Event Player) + (
+				0.500 - Event Player.OrbCreationIndex[0]) * 45;
+			Wait(0.032, Ignore Condition);
+			Create Effect(All Players(All Teams), Orb, Color(White), Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)],
+				0.750, Visible To Position and Radius);
+			Global.OrbEffects[Event Player.NewOrbGlobalIndex * 2] = Last Created Entity;
+			Create Effect(All Players(All Teams), Orisa Amplifier Sound, Color(White), Global.OrbDisplayPositions[Evaluate Once(
+				Event Player.NewOrbGlobalIndex)], 100, Visible To Position and Radius);
+			Global.OrbSounds[Event Player.NewOrbGlobalIndex] = Last Created Entity;
+			Modify Player Variable(Event Player, OrbCreationIndex, Append To Array, Event Player.NewOrbGlobalIndex);
+			Event Player.OrbCreationIndex[0] += 1;
+		End;
+		Wait Until(Is Dead(Event Player), 1.250);
 		Abort If(Is Dead(Event Player));
 		Play Effect(All Players(All Teams), Ring Explosion Sound, Color(White), Event Player, 100);
 		Event Player.CauseOfDeath = Array(Null, Custom String("Your own stupidity"));
 		Damage(Event Player, Global.NullPlayer[0], 0.080 * Health(Event Player) / (Event Player.HealthScale[2] * Event Player.HealthScale[5]));
+		Event Player.OrbCreationIndex[0] = 1;
 		"May want to do more to ensure two bosses simultaneously creating orbs doesn't break this"
-		For Player Variable(Event Player, OrbCreationIndex, 0, 8, 1);
-			Modify Global Variable(OrbCreators, Append To Array, Event Player);
+		While(Event Player.OrbCreationIndex[0] < Count Of(Event Player.OrbCreationIndex));
 			Wait(0.016, Ignore Condition);
-			Event Player.NewOrbGlobalIndex = Last Of(Remove From Array(Mapped Array(Global.OrbCreators,
-				Current Array Element == Event Player ? Current Array Index : -1), -1));
-			Global.OrbInitialAngles[Event Player.NewOrbGlobalIndex] = Horizontal Facing Angle Of(Event Player) + (
-				0.500 - Event Player.OrbCreationIndex) * 45;
+			Event Player.NewOrbGlobalIndex = Event Player.OrbCreationIndex[Event Player.OrbCreationIndex[0]];
 			Global.OrbCreationTimes[Event Player.NewOrbGlobalIndex] = Total Time Elapsed;
-			Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex] = Mapped Array(Position Of(Event Player),
-				Current Array Element - Y Component Of(Current Array Element) * Up)[0];
+			Global.OrbDisplayPositions[Event Player.NewOrbGlobalIndex] = Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex];
 			Global.PreviousOrbPositions[Event Player.NewOrbGlobalIndex] = Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex];
 			Global.OrbPositions[Event Player.NewOrbGlobalIndex] = Global.PreviousOrbPositions[Event Player.NewOrbGlobalIndex];
-			Global.OrbDisplayPositions[Event Player.NewOrbGlobalIndex] = Global.OrbPositions[Event Player.NewOrbGlobalIndex];
-			Create Effect(All Players(All Teams), Orb, Color(White), Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)],
-				0.750, Visible To Position and Radius);
-			Global.OrbEffects[Event Player.NewOrbGlobalIndex * 2] = Last Created Entity;
 			Create Effect(All Players(All Teams), Ring, Color(Blue), Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)],
 				2, Visible To Position and Radius);
 			Global.OrbEffects[Event Player.NewOrbGlobalIndex * 2 + 1] = Last Created Entity;
-			Create Effect(All Players(All Teams), Orisa Amplifier Sound, Color(White), Global.OrbDisplayPositions[Evaluate Once(
-				Event Player.NewOrbGlobalIndex)], 100, Visible To Position and Radius);
-			Global.OrbSounds[Event Player.NewOrbGlobalIndex] = Last Created Entity;
+			Event Player.OrbCreationIndex[0] += 1;
 		End;
 		Stop Facing(Event Player);
 		Wait Until(Is Dead(Event Player), 1.500);
@@ -7722,6 +7821,7 @@ rule("Destroy Orb")
 		Destroy Effect(Global.OrbEffects[Global.OrbEvaluationIndex * 2 + 1]);
 		Destroy Effect(Global.OrbSounds[Global.OrbEvaluationIndex]);
 		Global.OrbPositions[Global.OrbEvaluationIndex] = Null;
+		Global.OrbCreators[Global.OrbEvaluationIndex] = Null;
 	}
 }
 
@@ -7886,13 +7986,15 @@ rule("Player Died")
 				If(Hero Of(Event Player) == Hero(Wrecking Ball));
 					Wait(1.350, Ignore Condition);
 					Play Effect(All Players(All Teams), Good Explosion, Color(White), Position Of(Event Player) + Up, 1);
-					Play Effect(All Players(All Teams), Explosion Sound, Color(Team 2), Position Of(Event Player) + Up, 100);
+					Play Effect(All Players(All Teams), Echo Sticky Bomb Explosion Sound, Color(Team 2), Position Of(Event Player) + Up, 100);
 					Event Player.FlameTornadoPosition = Position Of(Event Player);
 					Event Player.FlameTornadoExpirationTime = Total Time Elapsed + 7;
 					Create Effect(All Players(All Teams), Ring, Color(Sky Blue), Event Player.FlameTornadoPosition, 5, Visible To);
 					Event Player.FlameTornado = Last Created Entity;
+					Wait(7.650, Ignore Condition);
+				Else;
+					Wait(9, Ignore Condition);
 				End;
-				Wait(9, Ignore Condition);
 				Call Subroutine(DestroyMe);
 			End;
 		End;
