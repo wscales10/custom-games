@@ -897,7 +897,7 @@ rule("Player Setup")
 		If(Event Player.IsBoss || Event Player.IsHero);
 			Chase Player Variable At Rate(Event Player, RecoveryTime, 0, 1, None);
 			Create HUD Text(Event Player.CameraPosition != Null || Array Contains(Array(Null, Custom String("Buy")), Global.State)
-				? Null : Event Player, Null, Null, Custom String("{0}{1}", Custom String("{0}{1}{2}", Custom String("{0}{1}{2}",
+				? Null : Event Player, Null, Null, Custom String(" {0}{1}", Custom String("{0}{1}{2}", Custom String("{0}{1}{2}",
 				Event Player.BlastCooldown ? Custom String("{0}×{1} ", Icon String(Asterisk), Round To Integer(Event Player.BlastCooldown, Up))
 				: Custom String(""), Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Custom String("{0} ", Icon String(Ring Thick))
 				: Custom String(""), Event Player.DebuffShield[0] > 0 ? Custom String("Θ×{0} ", Event Player.DebuffShield[0]) : Custom String(
@@ -1077,7 +1077,7 @@ rule("Team 1 Setup")
 			Event Player.UltCharges[4] - Total Time Elapsed - 1.500, Up), Current Array Element <= 0 ? Custom String(" ")
 			: Current Array Element), Event Player.UltCharges[0], Right, 1.100, Color(White), Color(White), Color(White),
 			Visible To and String, Default Visibility);
-		Create HUD Text(Event Player.Target[0].ShowBossInfo[0] ? Event Player : Null, Null, Custom String("{0}{1}", Custom String("{0}{1}{2}", Custom String("{0}{1}{2}",
+		Create HUD Text(Event Player.Target[0].ShowBossInfo[0] ? Event Player : Null, Null, Custom String(" {0}{1}", Custom String("{0}{1}{2}", Custom String("{0}{1}{2}",
 			Event Player.Target[0].BlastCooldown ? Custom String("{0}×{1} ", Icon String(Asterisk), Round To Integer(Event Player.Target[0].BlastCooldown, Up))
 			: Custom String(""), Event Player.Target[0].BarrierInfo[0] && Event Player.Target[0].BarrierInfo[1] < Total Time Elapsed ? Custom String("{0} ", Icon String(Ring Thick))
 			: Custom String(""), Event Player.Target[0].DebuffShield[0] > 0 ? Custom String("Θ×{0} ", Event Player.Target[0].DebuffShield[0]) : Custom String(
@@ -3820,7 +3820,7 @@ rule("Flame Tornado Damage")
 	actions
 	{
 		Event Player.Victims = Filtered Array(Players Within Radius(Event Player.FlameTornadoPosition, 5, Opposite Team Of(Team Of(
-			Event Player)), Off), Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out) && (!Event Player.IsMook || Is On Ground(
+			Event Player)), Off), Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out) && !Has Status(Current Array Element, Invincible) && (!Event Player.IsMook || Is On Ground(
 			Current Array Element)));
 		If(Event Player.IsMook);
 			Set Status(Event Player.Victims, Event Player, Burning, 0.350);
@@ -3850,10 +3850,11 @@ rule("Lightning Strike Loop")
 	{
 		Global.StrikeVictims = Filtered Array(All Living Players(Opposite Team Of(Team Of(Global.LightningStrikes[2]))), !Has Status(Current Array Element, Phased Out) && Distance Between(
 			Eye Position(Current Array Element), Global.LightningStrikes[1]) < 3);
+		Apply Impulse(Global.StrikeVictims, Down, 70 * Global.LightningStrikes[4], To World, Cancel Contrary Motion);
+		Global.StrikeVictims = Filtered Array(Global.StrikeVictims, !Has Status(Current Array Element, Invincible));
 		Global.StrikeVictims.CauseOfDeath[1] = Custom String("Lightning");
 		Damage(Global.StrikeVictims, Global.LightningStrikes[2],
 			Global.LightningStrikes[3] / Global.LightningStrikes[2].BaseDamageMultiplier[0]);
-		Apply Impulse(Global.StrikeVictims, Down, 70 * Global.LightningStrikes[4], To World, Cancel Contrary Motion);
 		Wait(0.080, Ignore Condition);
 		Global.LightningStrikes = Array Slice(Global.LightningStrikes, 5, 1000);
 		Loop If Condition Is True;
@@ -3956,7 +3957,7 @@ rule("Damage Beam Loop 2")
 	actions
 	{
 		While(Count Of(Global.DamageBeamInstances) > 5 && Total Time Elapsed > Global.DamageBeamInstances[0]);
-			If(Is Alive(Global.DamageBeamInstances[4]));
+			If(Is Alive(Global.DamageBeamInstances[4]) && !Has Status(Global.DamageBeamInstances[4], Invincible));
 				Global.DamageBeamInstances[4].CauseOfDeath[1] = Global.DamageBeamInstances[1];
 				Damage(Global.DamageBeamInstances[4], Global.DamageBeamInstances[2], Global.DamageBeamInstances[3]);
 			End;
@@ -5181,6 +5182,7 @@ rule("Shockwave Damage")
 
 	actions
 	{
+		Abort If(Has Status(Event Player, Invincible));
 		Event Player.CauseOfDeath = Array(Null, Custom String("Shockwave"));
 		Damage(Event Player, Global.NullPlayer[1], 4 * Last Of(Sorted Array(Mapped Array(Global.Bosses, Current Array Element.BaseDamageMultiplier[1]), Current Array Element)));
 		If(Event Player.DebuffShield[0] > 0);
@@ -7841,11 +7843,13 @@ rule("On Enter State: Pizza")
 			Play Effect(All Players(All Teams), Brigitte Repair Pack Impact Sound, Color(White), Eye Position(Event Player)+ 49.497 * Direction From Angles(Event Player.PizzaAngle + 240, -45), 100);
 			Play Effect(All Players(All Teams), Ashe Dynamite Explosion Sound, Color(White), Eye Position(Event Player) + 49.497 * Direction From Angles(Event Player.PizzaAngle + 300, -45), 100);
 			Play Effect(All Players(All Teams), Brigitte Repair Pack Impact Sound, Color(White), Eye Position(Event Player)+ 49.497 * Direction From Angles(Event Player.PizzaAngle + 300, -45), 100);
+			Apply Impulse(Event Player.Victims, Up, 8, To World, Incorporate Contrary Motion);
+			Event Player.Victims = Filtered Array(Event Player.Victims, !Has Status(Current Array Element, Invincible));
 			Event Player.Victims.CauseOfDeath[1] = Custom String("Spinning lines of death");
 			Damage(Event Player.Victims, Event Player, 9 * Event Player.BaseDamageMultiplier[2]);
-			Apply Impulse(Event Player.Victims, Up, 8, To World, Incorporate Contrary Motion);
 			Event Player.State = Custom String("PizzaDamage");
 			Wait(0.100, Ignore Condition);
+			Event Player.Victims = Filtered Array(Event Player.Victims, Is Alive(Current Array Element));
 			Modify Player Variable(Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] <= 0), CrippleTime, Max, 3);
 			Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] > 0).DebuffShield[3] += 1;
 			Filtered Array(Event Player.Victims, Current Array Element.DebuffShield[0] > 0).DebuffShield[0] -= 1;
@@ -8201,7 +8205,7 @@ rule("Handle Orb")
 		If(Count Of(Global.OrbVictims) > 0);
 			Apply Impulse(Global.OrbVictims, Direction From Angles(Horizontal Angle From Direction(Global.OrbPositions[Global.OrbEvaluationIndex] - Global.PreviousOrbPositions[Global.OrbEvaluationIndex]), -25), 10, To World, Cancel Contrary Motion);
 			Play Effect(All Players(All Teams), Bad Explosion, Color(Blue), Global.OrbDisplayPositions[Global.OrbEvaluationIndex], 2);
-			Global.OrbVictims.CauseOfDeath[1] = Custom String("Orb");
+			Filtered Array(Global.OrbVictims, !Has Status(Current Array Element, Invincible)).CauseOfDeath[1] = Custom String("Orb");
 			Damage(Global.OrbVictims, Global.OrbCreators[Global.OrbEvaluationIndex], 4 * Global.OrbCreators[Global.OrbEvaluationIndex].BaseDamageMultiplier[2]);
 			"Don't set effect to null, to ensure this is definitely destroyed."
 			Call Subroutine(DestroyOrb);
@@ -8347,7 +8351,7 @@ rule("Player Died")
 			Log To Inspector(Custom String("Bleed Time: {0} / 1000", Event Player.BleedTime * 1000));
 			Play Effect(All Players(All Teams), Bad Explosion, Color(Red), Eye Position(Event Player), 16);
 			Filtered Array(Players Within Radius(Eye Position(Event Player), 16, Team Of(Event Player), Surfaces And Enemy Barriers), Is Alive(
-				Current Array Element) && !Has Status(Current Array Element, Phased Out)).CauseOfDeath[1] = Custom String("Insides");
+				Current Array Element) && !Has Status(Current Array Element, Phased Out) && !Has Status(Current Array Element, Invincible)).CauseOfDeath[1] = Custom String("Insides");
 			Damage(Players Within Radius(Eye Position(Event Player), 16, Team Of(Event Player), Surfaces And Enemy Barriers),
 				Event Player.BleedInfo[3], Event Player.BleedInfo[3].MyItemStackSizes[27] * (4 * Event Player.BleedInfo[3].BaseDamageMultiplier[1] + 0.150 * Max Health(Event Player) / (Event Player.HealthScale[2] * Event Player.HealthScale[5])) / Event Player.BleedInfo[3].BaseDamageMultiplier[0]);
 		End;
