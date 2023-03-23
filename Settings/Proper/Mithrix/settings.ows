@@ -39,6 +39,26 @@ settings
 			Ultimate Generation - Combat: 0%
 			Ultimate Generation - Passive: 380%
 			
+			Cassidy
+			{
+				Ultimate Generation - Passive Deadeye: 260%
+			}
+			
+			Hanzo
+			{
+				Ultimate Generation - Passive Dragonstrike: 240%
+			}
+			
+			Sigma
+			{
+				Ultimate Generation - Passive Gravitic Flux: 300%
+			}
+
+			Sombra
+			{
+				Ultimate Generation - Passive EMP: 220%
+			}
+			
 			disabled heroes
 			{
 				D.Va
