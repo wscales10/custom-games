@@ -183,8 +183,8 @@ variables
 		34: ItemShops
 		35: ItemShopPositions
 		36: ItemShopPrices
-		37: ItemShopEffects1
-		38: ItemShopEffects2
+		37: ItemShopLabels
+		38: ItemShopEffects
 		39: ItemShopIndex
 		40: Stealees
 		41: BossIndex
@@ -245,6 +245,8 @@ variables
 		96: OrbDisplayPositions
 		97: PreviousOrbPositions
 		98: OrbPositionDeltas
+		100: SpecialOffers
+		101: SpecialOfferWeights
 
 	player:
 		0: Ids
@@ -416,6 +418,7 @@ subroutines
 	43: ChooseHThrottle
 	44: PrepareForDebuffs
 	45: ChooseAdd
+	46: GenerateSpecialOffer
 }
 
 rule("Global setup")
@@ -1055,7 +1058,10 @@ rule("Team 1 Setup")
 			: Custom String(" "), Custom String("£{0}", Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions,
 			Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
 			+ 4 * Facing Direction Of(Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0]]),
-			Top, 1, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
+			Top, 1, Color(White), Color(White), Array Contains(Global.SpecialOffers, Sorted Array(Mapped Array(
+			Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
+			Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
+			Global.ItemShopPositions[Current Array Element]))[0]) ? Color(Yellow) : Color(White), Visible To String and Color, Default Visibility);
 		Create HUD Text(Global.State == Custom String("Buy") && Is True For Any(Global.ItemShopPositions, Distance Between(
 			Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
 			Event Player, False), Current Array Element) < 1.500) ? Event Player : Null, Null, Global.ItemShopDescriptions[Sorted Array(
@@ -3805,6 +3811,19 @@ rule("On Enter State: Buy")
 		Global.ItemShops = Sorted Array(Global.ItemShops, Global.ItemShopRarities[Current Array Index] + (Index Of Array Value(
 			Global.Items, Current Array Element) + Current Array Index / Count Of(Global.ItemShops)) / Count Of(Global.Items));
 		Global.ItemShopRarities = Sorted Array(Global.ItemShopRarities, Current Array Element);
+		Global.SpecialOffers = Empty Array;
+		Global.SpecialOfferWeights = 1;
+		Call Subroutine(GenerateSpecialOffer);
+		Global.SpecialOfferWeights = 1;
+		Call Subroutine(GenerateSpecialOffer);
+		Global.SpecialOfferWeights = 2;
+		Call Subroutine(GenerateSpecialOffer);
+		Global.SpecialOfferWeights = 2;
+		Call Subroutine(GenerateSpecialOffer);
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.SpecialOffers), 1);
+			Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] = Round To Integer(Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] / 10, Up) * 5;
+			Log To Inspector(Global.ItemShops[Global.SpecialOffers[Global.ItemShopIndex]]);
+		End;
 		"Largest shop radius, Shop radius, Cumulative radius, shop radius..."
 		Global.ItemShopRadii = Array(0);
 		For Global Variable(ShopIndex, 1, 5, 1);
@@ -3828,6 +3847,8 @@ rule("On Enter State: Buy")
 		End;
 		disabled Global.ItemShopPositions = Mapped Array(Global.ItemShops, Vector(95, 0, ((Count Of(Global.ItemShops) - 1)
 			/ 2 - Current Array Index) * 3));
+		Global.ItemShopLabels = Empty Array;
+		Global.ItemShopEffects = Empty Array;
 		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
 			Create In-World Text(All Players(Team 1), Mapped Array(Evaluate Once(Mapped Array(Index Of Array Value(Global.Items,
 				Global.ItemShops[Global.ItemShopIndex]),
@@ -3838,10 +3859,14 @@ rule("On Enter State: Buy")
 				Clip Against Surfaces, Visible To and String, Mapped Array(Index Of Array Value(Global.Items,
 				Global.ItemShops[Global.ItemShopIndex]), Current Array Element == -1 ? Color(White)
 				: Global.ItemColours[Current Array Element]), Default Visibility);
-			Global.ItemShopEffects1[Global.ItemShopIndex] = Last Text ID;
+			Modify Global Variable(ItemShopLabels, Append To Array, Last Text ID);
+			If(Array Contains(Global.SpecialOffers, Global.ItemShopIndex));
+				Create Effect(All Players(All Teams), Ring, Color(Red), Global.ItemShopPositions[Global.ItemShopIndex], 0.900, Visible To);
+				Modify Global Variable(ItemShopEffects, Append To Array, Last Created Entity);
+			End;
 			Create Effect(All Players(All Teams), Orb, Array(Color(White), Color(Green), Color(Red), Color(Yellow))
 				[Global.ItemShopRarities[Global.ItemShopIndex] - 1], Global.ItemShopPositions[Global.ItemShopIndex], 1, Visible To);
-			Global.ItemShopEffects2[Global.ItemShopIndex] = Last Created Entity;
+			Modify Global Variable(ItemShopEffects, Append To Array, Last Created Entity);
 			Wait(0.016, Ignore Condition);
 		End;
 		If(Global.BuyPhaseSettings[1]);
@@ -3852,12 +3877,35 @@ rule("On Enter State: Buy")
 		Wait Until(Is True For All(All Players(Team 1), !Current Array Element.IsHero || (
 			Current Array Element.State == Custom String("Ready") && (X Component Of(Position Of(Current Array Element))
 			< 80 || Current Array Element.Currency < 25))), Global.BuyPhaseSettings[3] ? Global.BuyPhaseSettings[0] - 10 : 99999);
-		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShops), 1);
-			Destroy In-World Text(Global.ItemShopEffects1[Global.ItemShopIndex]);
-			Destroy Effect(Global.ItemShopEffects2[Global.ItemShopIndex]);
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShopLabels), 1);
+			Destroy In-World Text(Global.ItemShopLabels[Global.ItemShopIndex]);
+			Wait(0.016, Ignore Condition);
+		End;
+		For Global Variable(ItemShopIndex, 0, Count Of(Global.ItemShopEffects), 1);
+			Destroy Effect(Global.ItemShopEffects[Global.ItemShopIndex]);
 			Wait(0.016, Ignore Condition);
 		End;
 		Global.State = Custom String("Waiting");
+	}
+}
+
+rule("Generate Special Offer")
+{
+	event
+	{
+		Subroutine;
+		GenerateSpecialOffer;
+	}
+	
+	actions
+	{
+		Global.SpecialOfferWeights = Global.SpecialOfferWeights == 1 ? Array(0.792, 0, 0.01) : Array(0, 0.800, 0.200);
+		Global.SpecialOfferWeights = Mapped Array(Global.ItemShopRarities, !Array Contains(Global.Items, Global.ItemShops[Current Array Index]) || Array Contains(Global.SpecialOffers, Current Array Index) ? 0 : Global.SpecialOfferWeights[Current Array Element - 1]);
+		For Global Variable(ItemShopIndex, 1, Count Of(Global.SpecialOfferWeights), 1);
+			Global.SpecialOfferWeights[Global.ItemShopIndex] += Global.SpecialOfferWeights[Global.ItemShopIndex - 1];
+		End;
+		Global.SpecialOfferWeights = Append To Array(Random Real(0, Last Of(Global.SpecialOfferWeights)), Global.SpecialOfferWeights);
+		Modify Global Variable(SpecialOffers, Append To Array, Filtered Array(Mapped Array(Global.ItemShops, Current Array Index), Global.SpecialOfferWeights[0] < Global.SpecialOfferWeights[Current Array Element + 1] && Global.SpecialOfferWeights[0] >= (Current Array Element == 0 ? 0 : Global.SpecialOfferWeights[Current Array Element])));
 	}
 }
 
