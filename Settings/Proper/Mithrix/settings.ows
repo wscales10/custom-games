@@ -245,6 +245,7 @@ variables
 		96: OrbDisplayPositions
 		97: PreviousOrbPositions
 		98: OrbPositionDeltas
+		99: AbilityIsCombat
 		100: SpecialOffers
 		101: SpecialOfferWeights
 
@@ -369,6 +370,7 @@ variables
 		117: CauseOfDeath
 		118: DashVector
 		119: IsUsingUltimate
+		120: CombatTime
 }
 
 subroutines
@@ -460,12 +462,12 @@ rule("Global setup")
 		Global.DeathLineRadius = 0.750;
 		Create Effect(All Players(All Teams), Bad Aura, Color(Black), Vector(0, 0, 0), 3.500, Visible To Position and Radius);
 		Global.BossSpawnEffect = Last Created Entity;
-		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2, 2, 1, 2, 3, 4, 2, 2, 1);
-		Global.Items = Array(Custom String("Max HP"), Custom String("Speed"), Custom String("Slow"), Custom String("Bleed"), Custom String("Armour Piercing"), Custom String("Extra Life"), Custom String("Close Range Damage"), Custom String("Ice Blast"), Custom String("Flame Blast"), Custom String("Lifesteal"), Custom String("Stun Chance"), Custom String("Recovery"), Custom String("Double Jump"), Custom String("Armour Reduction"), Custom String("Egg"), Custom String("Reprieve"), Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"), Custom String("Shields"), Custom String("Barrier"), Custom String("Debuff Shield"), Custom String("Chain Lightning"), Custom String("Ult Charge"), Custom String("Crit %"), Custom String("Heal on Crit"), Custom String("Extra Crit Damage"), Custom String("Insides"), Custom String("Debuff Focus"), Custom String("Retaliation"), Custom String("Explosive Kill"));
-		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"), Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"), Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt), Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"), Custom String("Ult"), Custom String("!%"), Custom String("!+"), Custom String("!!!"), Custom String("8"), Custom String("ǒ"), Custom String("↑↓"), Custom String("Ḿ"));
-		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255), Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165,239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255), Custom Color(82, 83, 71, 255), Custom Color(100, 0, 0, 244), Custom Color(143, 131, 126, 255), Custom Color(255, 0, 0, 244), Custom Color(123, 23, 45, 255), Custom Color(143, 91, 101, 255), Custom Color(161, 187, 208, 255), Custom Color(112, 27, 19, 255));
-		Global.ItemDescriptions = Array(Custom String("Each stack increases maximum health.\n"), Custom String("Each stack increases movement speed.\n"), Custom String("Slow enemies on hit for 2s\n(extra stacks increase the duration)."), Custom String("Each stack grants 10% chance to bleed enemies on hit.\n"), Custom String("Hitting an enemy 5 times increases their damage taken for 8s\n(extra stacks increase the duration)."), Custom String("Each stack grants one extra life.\n"), Custom String("Each stack increases damage dealt to nearby enemies by 20%.\n"), Custom String("High damage hits also blast enemies with ice, on a 10s cooldown.\n"), Custom String("High damage hits also leave behind a flame blast, on a 10s cooldown.\n"), Custom String("Dealing damage heals you.\n"), Custom String("5% chance to stun enemies on hit for 2s\n(extra stacks increase the stun chance)."), Custom String("Heal for a % of max HP 2s after getting hurt\n(extra stacks increase the healing received)."), Custom String("Each stack grants an extra jump.\n"), Custom String("Each hit on an enemy permanently increases their damage taken.\n"), Custom String("is egg\n"), Custom String("Turn invisible at low health\n(extra stacks reduce the cooldown)."), Custom String("is lightning!\n"), Custom String("is beeg explosion\n"), Custom String("rok\n"), Custom String("Each stack adds 8% of your max HP as regenerating shield health.\n"), Custom String("Reduce the damage of one hit, on a cooldown\n(extra stacks increase the damage reduction)."), Custom String("Prevent 1 debuff on a 5s cooldown\n(extra stacks prevent more debuffs)."), Custom String("25% chance for hits to fire chain lightning\n(extra stacks increase the number of targets hit)."), Custom String("Each stack grants an extra charge of your ultimate ability.\nUlt also charges faster."), Custom String("Each stack grants 10% critical hit damage / chance\n(depending on your hero)."), Custom String("Grants 5% critical hit damage / chance.\nCritical hits heal you (extra stacks heal more)."), Custom String("Each stack causes critical hits to deal 100% more damage.\n"), Custom String("yuck :/\n"), Custom String("Hitting an enemy with at least 4 debuffs increases their damage taken\n(for 7 seconds per stack)."), Custom String("25% chance to damage up to 5 nearby enemies every time you are hit\n(extra stacks increase the range and the number of targets)."), Custom String("Killing an enemy sets other nearby enemies on fire.\n(extra stacks increase the range and the burn damage)"));
-		Global.ItemCategories = Array(Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 1, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 1, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0));
+		Global.ItemRarities = Array(1, 1, 2, 1, 3, 3, 1, 2, 2, 2, 1, 1, 2, 3, 4, 2, 4, 4, 4, 1, 1, 3, 2, 2, 1, 2, 3, 4, 2, 2, 1, 2);
+		Global.Items = Array(Custom String("Max HP"), Custom String("Speed"), Custom String("Slow"), Custom String("Bleed"), Custom String("Armour Piercing"), Custom String("Extra Life"), Custom String("Close Range Damage"), Custom String("Ice Blast"), Custom String("Flame Blast"), Custom String("Lifesteal"), Custom String("Stun Chance"), Custom String("Recovery"), Custom String("Double Jump"), Custom String("Armour Reduction"), Custom String("Egg"), Custom String("Reprieve"), Custom String("Lightning"), Custom String("Big Explosion"), Custom String("Rock"), Custom String("Shields"), Custom String("Barrier"), Custom String("Debuff Shield"), Custom String("Chain Lightning"), Custom String("Ult Charge"), Custom String("Crit %"), Custom String("Heal on Crit"), Custom String("Extra Crit Damage"), Custom String("Insides"), Custom String("Debuff Focus"), Custom String("Retaliation"), Custom String("Explosive Kill"), Custom String("Fast Travel"));
+		Global.ItemSymbols = Array(Custom String("♥"), Custom String("»"), Custom String("«"), Custom String("†"), Custom String("▲"), Custom String("+1"), Custom String("(•)"), Custom String("*"), Custom String("*"), Custom String("Ϣ"), Custom String("@"), Custom String("+"), Custom String("ニ"), Custom String("Ø"), Custom String("0"), Custom String("◌"), Icon String(Bolt), Icon String(Warning), Custom String("●"), Custom String("♥"), Custom String("○"), Custom String("Θ"), Custom String("Y"), Custom String("Ult"), Custom String("!%"), Custom String("!+"), Custom String("!!!"), Custom String("8"), Custom String("ǒ"), Custom String("↑↓"), Custom String("Ḿ"), Custom String("G"));
+		Global.ItemColours = Array(Custom Color(205, 83, 63, 255), Custom Color(189, 192, 159, 255), Custom Color(230, 225, 209, 255), Custom Color(171, 43, 43, 255), Custom Color(88, 100, 73, 255), Custom Color(189, 191, 206, 255), Custom Color(226, 40, 78,255), Custom Color(214, 229, 233, 255), Custom Color(165, 114, 106, 255), Custom Color(77, 34, 21, 255), Custom Color(62, 75,53, 255), Custom Color(25, 98, 10, 255), Custom Color(85, 188, 229, 255), Custom Color(230, 139, 142, 255), Custom Color(255,185, 148, 255), Custom Color(96, 71, 70, 200), Color(White), Color(White), Custom Color(13, 20, 59, 255), Custom Color(165,239, 246, 255), Custom Color(198, 193, 252, 200), Custom Color(239, 221, 23, 255), Custom Color(180, 229, 222, 255), Custom Color(82, 83, 71, 255), Custom Color(100, 0, 0, 244), Custom Color(143, 131, 126, 255), Custom Color(255, 0, 0, 244), Custom Color(123, 23, 45, 255), Custom Color(143, 91, 101, 255), Custom Color(161, 187, 208, 255), Custom Color(112, 27, 19, 255), Custom Color(111, 67, 59, 255));
+		Global.ItemDescriptions = Array(Custom String("Each stack increases maximum health.\n"), Custom String("Each stack increases movement speed.\n"), Custom String("Slow enemies on hit for 2s\n(extra stacks increase the duration)."), Custom String("Each stack grants 10% chance to bleed enemies on hit.\n"), Custom String("Hitting an enemy 5 times increases their damage taken for 8s\n(extra stacks increase the duration)."), Custom String("Each stack grants one extra life.\n"), Custom String("Each stack increases damage dealt to nearby enemies by 20%.\n"), Custom String("High damage hits also blast enemies with ice, on a 10s cooldown.\n"), Custom String("High damage hits also leave behind a flame blast, on a 10s cooldown.\n"), Custom String("Dealing damage heals you.\n"), Custom String("5% chance to stun enemies on hit for 2s\n(extra stacks increase the stun chance)."), Custom String("Heal for a % of max HP 2s after getting hurt\n(extra stacks increase the healing received)."), Custom String("Each stack grants an extra jump.\n"), Custom String("Each hit on an enemy permanently increases their damage taken.\n"), Custom String("is egg\n"), Custom String("Turn invisible at low health\n(extra stacks reduce the cooldown)."), Custom String("is lightning!\n"), Custom String("is beeg explosion\n"), Custom String("rok\n"), Custom String("Each stack adds 8% of your max HP as regenerating shield health.\n"), Custom String("Reduce the damage of one hit, on a cooldown\n(extra stacks increase the damage reduction)."), Custom String("Prevent 1 debuff on a 5s cooldown\n(extra stacks prevent more debuffs)."), Custom String("25% chance for hits to fire chain lightning\n(extra stacks increase the number of targets hit)."), Custom String("Each stack grants an extra charge of your ultimate ability.\nUlt also charges faster."), Custom String("Each stack grants 10% critical hit damage / chance\n(depending on your hero)."), Custom String("Grants 5% critical hit damage / chance.\nCritical hits heal you (extra stacks heal more)."), Custom String("Each stack causes critical hits to deal 100% more damage.\n"), Custom String("yuck :/\n"), Custom String("Hitting an enemy with at least 4 debuffs increases their damage taken\n(for 7 seconds per stack)."), Custom String("25% chance to damage up to 5 nearby enemies every time you are hit\n(extra stacks increase the range and the number of targets)."), Custom String("Killing an enemy sets other nearby enemies on fire.\n(extra stacks increase the range and the burn damage)"), Custom String("Move 30% faster after staying out of combat for 5 seconds\n(extra stacks increase speed even more)"));
+		Global.ItemCategories = Array(Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 1, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 1, 0), Vector(0, 1, 0), Vector(0, 0, 1), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 0, 1), Vector(1, 0, 0), Vector(0, 1, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(1, 0, 0), Vector(0, 0, 1));
 		Global.ItemDistributionQueue = Empty Array;
 		Global.ItemStackOriginalOwners = Empty Array;
 		Global.Buttons = Array(Button(Ability 1), Button(Ability 2), Button(Crouch), Button(Melee), Button(Primary Fire), Button(
@@ -483,6 +485,7 @@ rule("Global setup")
 			0, 1, 0, 1, 1, 0, 0, 0, 0.200, 0, 1, 0.500, 1, 1, 0, 0, 0, 1, 0.700, 1, 0.700, 0, 0, 0, 1, 0.350, 0, 0, 0, 0, 0, 1, 0.500, 1,
 			0, 0, 0, 0, 1, 1, 1, 0.100, 0, 0, 0, 1, 0.150, 0, 1, 0, 0.100, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0.600, 1, 1, 0, 0, 1, 1, 0.300, 1, 1,
 			0, 0, 0, 1, 0.500, 1, 0.100, 0, 0, 0, 1, 1, 0.800, 0);
+		Global.AbilityIsCombat = Array(3, 3, 0, 3, 3, 3, 1, 3, 3, 0, 3, 3, 3, 3, 3, 0, 0, 3, 3, 3, 3, 3, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0, 3, 1, 0, 0, 3, 0, 3, 3, 3, 3, 0, 3, 0, 3, 3, 1, 3, 3, 1, 0, 3, 3, 3, 3, 0, 3, 0, 3, 3, 3, 0, 0, 1, 0, 3, 3, 3, 3, 0, 3, 0, 3, 3, 0, 3, 0, 3, 0, 3, 3, 3, 3, 3, 2, 0, 3, 3, 3, 3, 0, 2, 0, 3, 3, 3, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 0, 3, 3, 3, 3, 0, 1, 0, 3, 3, 3, 0, 0, 3, 0, 3, 3, 3, 3, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 3, 3, 0, 3, 0, 3, 0, 3, 3, 0, 3, 0, 0, 0, 3, 3, 0, 3, 1, 3, 0, 0, 3, 1, 1, 3, 0, 0, 3, 3, 3, 3, 1, 3, 0, 3, 3, 0, 3, 0, 2, 0, 3, 3, 3, 3, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 3, 3, 3, 2, 3, 0, 0, 3, 3, 3, 0, 3, 0, 0, 3, 3, 3, 3, 0, 1, 0, 3, 3, 0, 3, 0, 2, 0, 3, 3, 3, 0, 0, 0, 0, 3, 3, 3, 0, 0, 0, 2, 3, 3, 0, 3, 0, 1, 0, 3, 3, 3, 3, 1, 2, 0, 3, 3, 3, 0);
 		Global.FlamePillarPositions = Empty Array;
 		Global.FlamePillarExpirationTimes = Empty Array;
 		Global.FlamePillars = Empty Array;
@@ -898,7 +901,7 @@ rule("Player Setup")
 				Event Player.BlastCooldown ? Custom String("{0}×{1} ", Icon String(Asterisk), Round To Integer(Event Player.BlastCooldown, Up))
 				: Custom String(""), Event Player.BarrierInfo[0] && Event Player.BarrierInfo[1] < Total Time Elapsed ? Custom String("{0} ", Icon String(Ring Thick))
 				: Custom String(""), Event Player.DebuffShield[0] > 0 ? Custom String("Θ×{0} ", Event Player.DebuffShield[0]) : Custom String(
-				"")), Event Player.RecoveryTime ? Custom String("{0} ", Icon String(Plus)) : Custom String(""), Event Player.StealthTime[1] ? Custom String(
+				"")), Custom String("{0}{1}", Event Player.RecoveryTime ? Custom String("{0} ", Icon String(Plus)) : Custom String(""), Event Player.CombatTime < 5 ? Custom String("") : Custom String("{0} ", Icon String(Arrow: Right))), Event Player.StealthTime[1] ? Custom String(
 				"{0}{1} ", Icon String(Eye), Event Player.Visibility[0] || Event Player.Visibility[1] ? Custom String("") : Max(1,
 				Round To Integer(Event Player.StealthTime[1] - Total Time Elapsed, Up))) : Custom String("")), Custom String("{0}{1}{2}", Custom String("{0}{1}", Event Player.BurnTime ? Custom String("{0} ", Icon String(Fire)) : Custom String(""),
 				Event Player.CrippleTime ? Custom String("{0} ", Icon String(Skull)) : Custom String("")), Custom String("{0}{1}{2}",
@@ -1078,7 +1081,7 @@ rule("Team 1 Setup")
 			Event Player.Target[0].BlastCooldown ? Custom String("{0}×{1} ", Icon String(Asterisk), Round To Integer(Event Player.Target[0].BlastCooldown, Up))
 			: Custom String(""), Event Player.Target[0].BarrierInfo[0] && Event Player.Target[0].BarrierInfo[1] < Total Time Elapsed ? Custom String("{0} ", Icon String(Ring Thick))
 			: Custom String(""), Event Player.Target[0].DebuffShield[0] > 0 ? Custom String("Θ×{0} ", Event Player.Target[0].DebuffShield[0]) : Custom String(
-			"")), Event Player.Target[0].RecoveryTime ? Custom String("{0} ", Icon String(Plus)) : Custom String(""), Event Player.Target[0].StealthTime[1] ? Custom String(
+			"")), Custom String("{0}{1}", Event Player.Target[0].RecoveryTime ? Custom String("{0} ", Icon String(Plus)) : Custom String(""), Event Player.Target[0].CombatTime < 5 ? Custom String("") : Custom String("{0} ", Icon String(Arrow: Right))), Event Player.Target[0].StealthTime[1] ? Custom String(
 			"{0}{1} ", Icon String(Eye), Event Player.Target[0].Visibility[0] || Event Player.Target[0].Visibility[1] ? Custom String("") : Max(1,
 			Round To Integer(Event Player.Target[0].StealthTime[1] - Total Time Elapsed, Up))) : Custom String("")), Custom String("{0}{1}{2}", Custom String("{0}{1}", Event Player.Target[0].BurnTime ? Custom String("{0} ", Icon String(Fire)) : Custom String(""),
 			Event Player.Target[0].CrippleTime ? Custom String("{0} ", Icon String(Skull)) : Custom String("")), Custom String("{0}{1}{2}",
@@ -1389,7 +1392,7 @@ rule("Update Move Speed")
 		Event Player.MoveSpeedBuffs[1] = 1;
 		Event Player.MoveSpeedDebuffs[1] = 1;
 		For Player Variable(Event Player, MoveSpeedIndex, 2, Count Of(Event Player.MoveSpeedBuffs), 1);
-			"2: Sprint, 3: Speed Item, 4: Stealth bonus, 5: Extra Hard Enemy Speed"
+			"2: Sprint, 3: Speed Item, 4: Stealth bonus, 5: Extra Hard Enemy Speed, 6: Fast Travel item"
 			Event Player.MoveSpeedBuffs[1] += Event Player.MoveSpeedBuffs[Event Player.MoveSpeedIndex] / 100;
 		End;
 		For Player Variable(Event Player, MoveSpeedIndex, 2, Count Of(Event Player.MoveSpeedDebuffs), 1);
@@ -1746,6 +1749,340 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 	}
 }
 
+rule("Player dealt healing")
+{
+	event
+	{
+		Player Dealt Healing;
+		All;
+		All;
+	}
+	
+	conditions
+	{
+		Healer.Master[0] != Healee;
+	}
+	
+	actions
+	{
+		Healer.Master[0].CombatTime = 0;
+	}
+}
+
+rule("Player dealt knockback")
+{
+	event
+	{
+		Player Dealt Knockback;
+		All;
+		All;
+	}
+	
+	conditions
+	{
+		Attacker.Master[0] != Victim;
+	}
+	
+	actions
+	{
+		Attacker.Master[0].CombatTime = 0;
+	}
+}
+
+rule("Disable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		(Event Player.MyItemStackSizes[31] == 0 ||
+		(Is Using Ability 1(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1]] == 3)) || 
+		(Is Using Ability 2(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 1] == 3)) || 
+		(Is Meleeing(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 3] == 3)) || 
+		(Is Firing Primary(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 4] == 3)) || 
+		(Is Firing Secondary(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 5] == 3)) || 
+		(Is Using Ultimate(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 6] == 3))) == True;
+	}
+	
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, CombatTime);
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Enable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		((Is Using Ability 1(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1]] == 3)) || 
+		(Is Using Ability 2(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 1] == 3)) || 
+		(Is Meleeing(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 3] == 3)) || 
+		(Is Firing Primary(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 4] == 3)) || 
+		(Is Firing Secondary(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 5] == 3)) || 
+		(Is Using Ultimate(Event Player) && (Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 6] == 3))) == False;
+	}
+	
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, CombatTime, 5, 1, None);
+	}
+}
+
+rule("Disable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+	
+	conditions
+	{
+		(Event Player.MyItemStackSizes[31] == 0 || Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bots[0])) == True;
+	}
+	
+	actions
+	{
+		Stop Chasing Player Variable(Event Player, CombatTime);
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Enable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		(Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bots[0])) == False;
+	}
+	
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, CombatTime, 5, 1, None);
+	}
+}
+
+rule("Is Using Ability 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1]] == 1;
+		Is Using Ability 1(Event Player) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Using Ability 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 1] == 1;
+		Is Using Ability 2(Event Player) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Button Held(Ability 2)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 1] == 2;
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Button Held(Crouch)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		Wrecking Ball;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Firing Secondary")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 5] == 1;
+		Is Firing Secondary(Event Player) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Using Ultimate")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 6] == 1;
+		Is Using Ultimate(Event Player) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Is Button Held(Ultimate)")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.MyItemStackSizes[31] > 0;
+		Global.AbilityIsCombat[Count Of(Global.Buttons) * Event Player.Hero[1] + 6] == 2;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+	
+	actions
+	{
+		Event Player.CombatTime = 0;
+	}
+}
+
+rule("Disable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.CombatTime < 5;
+		
+	}
+	
+	actions
+	{
+		If(Event Player.MyItemStackSizes[31] > 0);
+			Event Player.MoveSpeedBuffs[6] = 0;
+			Event Player.ShouldUpdateMoveSpeed = True;
+		End;
+	}
+}
+
+rule("Enable Fast Travel")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+	
+	conditions
+	{
+		Event Player.CombatTime == 5;
+		Event Player.MyItemStackSizes[31] > 0;
+	}
+	
+	actions
+	{
+		Event Player.MoveSpeedBuffs[6] = 30 * Event Player.MyItemStackSizes[31];
+		Event Player.ShouldUpdateMoveSpeed = True;
+	}
+}
+
 rule("On hit effects")
 {
 	event
@@ -1761,6 +2098,7 @@ rule("On hit effects")
 		Victim.CauseOfDeath = Array(Attacker.IsNullPlayer ? Victim.CauseOfDeath[0] : Attacker.Master[0], Event Ability == Null ? Victim.CauseOfDeath[1] : Ability Icon String(Attacker.Hero[0], Event Ability));
 		"Show cause of death HUD, Event Damage, Killer Hero, Killer Name"
 		Victim.ExtraDeathInfo = Array(False, Event Damage, Hero Of(Victim.CauseOfDeath[0]), Victim.CauseOfDeath[0].Ids[0]);
+		Attacker.Master[0].CombatTime = 0;
 		If(Attacker.IsHero && Victim.IsBoss);
 			If(Attacker.Target[0] != Victim && Total Time Elapsed > Attacker.Target[1]);
 				Attacker.Target = Array(Victim, Total Time Elapsed + 1.500);
