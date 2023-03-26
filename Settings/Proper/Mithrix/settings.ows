@@ -122,7 +122,7 @@ settings
 
 	workshop
 	{
-		Difficulty: 3
+		Difficulty: 2
 		Enable Dialogue: On
 		Music Mode: [1]
 		Player Level: 23
@@ -941,9 +941,9 @@ rule("Boss Setup")
 		Create HUD Text(Global.ShowBossAbilityInfo[0] ? Event Player : Null, Ability Icon String(Hero(Tracer), Button(Ability 1)),
 			Event Player.State == Custom String("ClosingIn") ? Custom String("←/↓/→") : Custom String("[{0}]", Input Binding String(Button(
 			Jump))), Custom String("{0} • {1}", Event Player.DashCooldown > 0 ? Round To Integer(Event Player.DashCooldown, Up)
-			: Custom String(" "), Event Player.CanDash[1]), Right, 0.600, Event Player.CanDash[0] ? (
+			: Custom String(" "), Array(Custom String("°"), Custom String("¹"), Custom String("²"))[Event Player.CanDash[1]]), Right, 0.600, Event Player.CanDash[0] ? (
 			Event Player.DashCooldown > 0 || Event Player.CanDash[1] == 0 || Event Player.State == Custom String("Dashing") ? Color(Orange)
-			: Color(Gray)) : Color(Red), Event Player.CanDash ? Color(White) : Custom Color(127, 127, 127, 170), Color(White),
+			: Color(Gray)) : Color(Red), Event Player.CanDash[0] ? Color(White) : Custom Color(127, 127, 127, 170), Color(White),
 			Visible To String and Color, Default Visibility);
 		"Takeoff"
 		Create HUD Text(Global.ShowBossAbilityInfo[0] ? Event Player : Null, Ability Icon String(Hero(Doomfist), Button(Ultimate)),
@@ -1025,7 +1025,6 @@ rule("Boss Setup")
 		Event Player.ItemStackReturnInfo = Empty Array;
 		Event Player.CanDash[1] = 2;
 		Event Player.State = Custom String("Waiting");
-		Event Player.CanDash[3] = 1;
 		Event Player.IsSetup = True;
 	}
 }
@@ -1075,7 +1074,7 @@ rule("Player Setup")
 		Call Subroutine(UpdateCrit);
 		Event Player.MyItemStacks = Empty Array;
 		Event Player.NormalExtraHealthPools = Empty Array;
-		Event Player.HealthScale = Array(Null, Null, 1, Null, Null, Team Of(Event Player) == Team 2 ? 1 / (1 + 0.200 * (Round To Integer(
+		Event Player.HealthScale = Array(Null, Null, 1, Null, Null, Team Of(Event Player) == Team 2 ? 0.100 / (1 + 0.200 * (Round To Integer(
 			Global.OverallPlayerLevel, Down) - 1)) : 1);
 		Event Player.HealthScale[3] = Global.HealthScalar * Event Player.HealthScale[5];
 		If(Event Player.IsBoss || Event Player.IsHero);
@@ -2870,8 +2869,7 @@ rule("Create Item Stack Subroutine")
 				Global.Items[Global.NewItemStackIndex])) : Custom String(""), Update Every Frame(Local Player.MyItemStackSizes[Evaluate Once(
 				Global.NewItemStackIndex)])), Local Player.ShowItemNames ? Custom String(
 				"{0}{1}", Current Array Element, String Slice(Custom String("                                              "), 0, (
-				23 - String Length(Current Array Element)) * 2)) : Current Array Element), Null, Left, 4 + Evaluate Once(
-				Global.NewItemStackIndex + 1) / (Count Of(Global.Items) + 1), Evaluate Once(Global.ItemColours[Global.NewItemStackIndex]), Color(White), Color(White), Visible To Sort Order String and Color,
+				23 - String Length(Current Array Element)) * 2)) : Current Array Element), Null, Left, 4 + (Index Of Array Value(Local Player.MyItemStacks, Evaluate Once(Global.ItemDistributionInfo)) + 1) / (Count Of(Global.Items) + 1), Evaluate Once(Global.ItemColours[Global.NewItemStackIndex]), Color(White), Color(White), Visible To Sort Order String and Color,
 				Default Visibility);
 			Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
 		End;
@@ -5064,7 +5062,7 @@ rule("On Phase 1 Start")
 		Stop Facing(Global.Bosses);
 		Wait(1, Abort When False);
 		Chase Player Variable At Rate(Global.Bosses, TakeoffCooldown, 0, 1, None);
-		Global.Bosses.State = Custom String("ClosingIn");
+		Global.Bosses.State = Custom String("ChooseState");
 	}
 }
 
@@ -5084,11 +5082,14 @@ rule("On Enter State: Closing In")
 
 	actions
 	{
+		Set Crouch Enabled(Event Player, False);
 		Event Player.CanSprint = True;
 		Event Player.CanNeedle[1] = Event Player.CanNeedle[0];
 		Event Player.MoveSpeedBuffs[2] = 200;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 0.010);
+		Wait Until(Event Player.State != Custom String("ClosingIn") || !Is Button Held(Event Player, Button(Crouch)), 99999);
+		Set Crouch Enabled(Event Player, True);
 	}
 }
 
@@ -5110,6 +5111,27 @@ rule("Exit State: Closing In")
 
 	actions
 	{
+		Event Player.State = Custom String("BecomingIdle");
+	}
+}
+
+rule("Is Crouching")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.State != Custom String("ClosingIn"));
 		Event Player.State = Custom String("BecomingIdle");
 	}
 }
@@ -5304,8 +5326,7 @@ rule("Enter State: StartingTakeoff")
 	conditions
 	{
 		Event Player.CanTakeOff == True;
-		Array Contains(Array(Custom String("Idle"), Custom String("ClosingIn")), Event Player.State) == True;
-		"Maybe add an extra requirement - either a manual keypress or taking 2 instances of damage for each takeoff or something?"
+		Event Player.State == Custom String("Idle");
 		Event Player.TakeoffCooldown == 0;
 		Is On Ground(Event Player) == True;
 		"don't initiate takeoff just before hammer hits the ground"
@@ -5426,13 +5447,33 @@ rule("Choose State (Closing In / Becoming Idle)")
 {
 	event
 	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+	
+	conditions
+	{
+		Event Player.State == Custom String("ChooseState");
+	}
+
+	actions
+	{
+		Call Subroutine(ChooseState);
+	}
+}
+
+rule("Choose State (Closing In / Becoming Idle)")
+{
+	event
+	{
 		Subroutine;
 		ChooseState;
 	}
 
 	actions
 	{
-		If(Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(All Living Players(Team 1), Distance Between(
+		If(Is Crouching(Event Player) || Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(All Living Players(Team 1), Distance Between(
 			Event Player, Current Array Element) < 2));
 			Event Player.State = Custom String("BecomingIdle");
 		Else;
@@ -5753,7 +5794,7 @@ rule("Enter State: StartingSwing")
 			Event Player.CanSwing = False;
 			Event Player.CanSlam[0] = False;
 			Event Player.SwingCooldown = Global.Difficulty[2] >= 6 ? 2.500 : 5;
-			Wait(0.200, Abort When False);
+			Wait(0.352, Abort When False);
 			Abort If(Event Player.State != Custom String("StartingSwing"));
 			Start Forcing Throttle(Event Player, 0, 1, 0, 1, 0, 0);
 			Wait Until(Is On Ground(Event Player), 1);
@@ -5925,7 +5966,6 @@ rule("On Enter State: Slamming")
 	{
 		Event Player.SlamCooldown = Global.Difficulty[2] >= 6 ? 2 : 4;
 		Event Player.CanSwing = False;
-		Event Player.CanDash[0] = False;
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		If(Global.Phase == 3);
 			Modify Global Variable(FlamePillarPositions, Append To Array, World Vector Of(3 * Forward, Event Player,
@@ -6111,13 +6151,16 @@ rule("On Enter State: Dashing")
 		Event Player.CanSlam[0] = False;
 		Event Player.DashAngles[0] = Horizontal Angle From Direction(World Vector Of(Mapped Array(Throttle Of(Event Player),
 			X Component Of(Current Array Element) == 0 ? (Z Component Of(Current Array Element) == 0 ? Forward : Backward) : Vector(
-			X Component Of(Current Array Element) * 100, 0, Z Component Of(Current Array Element))), Event Player, Rotation));
+			X Component Of(Current Array Element) * 100, 0, 0)), Event Player, Rotation));
 		Event Player.DashVector = Direction From Angles(Event Player.DashAngles[0], 0) * 30.813 * (
 			1 + Event Player.MoveSpeedBuffs[5] / 100) + 3.402 * Up;
 		Event Player.DashAngles[1] = Vertical Angle From Direction(Event Player.DashVector);
 		Set Gravity(Event Player, 175);
 		Event Player.DashSpeed = Magnitude Of(Event Player.DashVector);
 		Call Subroutine(Dash);
+		Wait Until(Event Player.State != Custom String("Dashing"), 0.500);
+		Abort If(Event Player.State != Custom String("Dashing"));
+		Event Player.State = Custom String("BecomingIdle");
 	}
 }
 
