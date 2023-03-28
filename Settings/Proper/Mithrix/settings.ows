@@ -679,6 +679,7 @@ rule("Settings")
 			"Buy Phase starts when a player picks a hero"), True, 3);
 		Global.BuyPhaseSettings[3] = Workshop Setting Toggle(Custom String("Customization"), Custom String("Buy Phase Timer"), True, 2);
 		Global.Options[1] = True;
+		Global.Options[2] = Workshop Setting Toggle(Custom String("Customization"), Custom String("Allow boss to move during setup phase"), False, 3);
 		Global.HealthScalar = 0.900;
 	}
 }
@@ -855,6 +856,8 @@ rule("Boss Setup")
 	{
 		Event Player.Ids[0] = Custom String("{0}", Event Player);
 		Event Player.PizzaRadius = 100;
+		Event Player.BaseMoveSpeedModifier = 100;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Chase Player Variable At Rate(Event Player, SwingCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, SlamCooldown, 0, 1, None);
 		Chase Player Variable At Rate(Event Player, NeedleCooldown, 0, 1, None);
@@ -862,8 +865,8 @@ rule("Boss Setup")
 		"Hammer swing"
 		Create HUD Text(Global.ShowBossAbilityInfo[0] ? Event Player : Null, Ability Icon String(Hero(Reinhardt), Button(Primary Fire)),
 			Custom String("[{0}]", Input Binding String(Button(Primary Fire))), Event Player.SwingCooldown ? Round To Integer(
-			Event Player.SwingCooldown, Up) : Custom String(" "), Right, 0.100, Event Player.CanSwing ? (
-			Event Player.SwingCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), Event Player.CanSwing ? Color(White)
+			Event Player.SwingCooldown, Up) : Custom String(" "), Right, 0.100, (Event Player.CanSwing[0] || Event Player.CanSwing[1]) ? (
+			Event Player.SwingCooldown > 0 ? Color(Orange) : Color(Gray)) : Color(Red), (Event Player.CanSwing[0] || Event Player.CanSwing[1]) ? Color(White)
 			: Custom Color(127, 127, 127, 170), Color(White), Visible To String and Color, Default Visibility);
 		"Shoot"
 		Create HUD Text(Global.Phase != Custom String("X") ? Event Player : Null, Ability Icon String(Hero(Sojourn), Button(Ultimate)),
@@ -1075,10 +1078,7 @@ rule("Player Setup")
 			Event Player, Armor), Max Health Of Type(Event Player, Shields));
 		If(Team Of(Event Player) == Team 2);
 			Call Subroutine(PrepareForDebuffs);
-			If(Global.Difficulty[2] >= 3);
-				Event Player.MoveSpeedBuffs[5] = 40;
-				Event Player.ShouldUpdateMoveSpeed = True;
-			End;
+			Event Player.MoveSpeedBuffs[5] = (Global.Difficulty[2] >= 3) ? 40 : 0;
 		Else If(Team Of(Event Player) == Team 1 && Global.Difficulty[2] >= 4);
 			Event Player.HealingModifiers[5] = Vector(1, 0.500, 0);
 			Event Player.ShouldUpdateHealing = True;
@@ -1481,7 +1481,7 @@ rule("Inwards")
 	conditions
 	{
 		Event Player.IsSetup == True;
-		Global.State == Custom String("BossFight");
+		(Team Of(Event Player) == Team 2 || Global.State == Custom String("BossFight")) == True;
 		Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) > Global.ArenaRadius;
 	}
 
@@ -1511,7 +1511,7 @@ rule("Not Inwards")
 	conditions
 	{
 		Event Player.IsSetup == True;
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+		((Team Of(Event Player) == Team 2 || Global.State == Custom String("BossFight")) && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 	}
 
@@ -1569,6 +1569,7 @@ rule("Update Move Speed")
 		Event Player.MoveSpeedDebuffs[0] = Event Player.MoveSpeedDebuffs[1];
 		Set Move Speed(Event Player, Event Player.BaseMoveSpeedModifier * (
 			Event Player.MoveSpeedBuffs[0] / Event Player.MoveSpeedDebuffs[0]));
+		disabled Log To Inspector(Custom String("Set Move Speed For {0}", Event Player));
 	}
 }
 
@@ -4348,6 +4349,7 @@ rule("Stationary")
 	{
 		Event Player.MyItemStackSizes[34] > 0;
 		Is On Ground(Event Player) == True;
+		Is Alive(Event Player) == True;
 		Speed Of(Event Player) == 0;
 	}
 
@@ -4358,7 +4360,7 @@ rule("Stationary")
 		Chase Player Variable Over Time(Event Player, HealingFieldRadius, 3 + 1.500 * Event Player.MyItemStackSizes[34], 0.300, Destination and Duration);
 		Event Player.HealingField[1] = Position Of(Event Player);
 		Event Player.HealingField[0] = True;
-		Wait Until(Event Player.MyItemStackSizes[34] <= 0 || Is In Air(Event Player) || Speed Of(Event Player) > 0, 99999);
+		Wait Until(Event Player.MyItemStackSizes[34] <= 0 || Is In Air(Event Player) || Is Dead(Event Player) || Speed Of(Event Player) > 0, 99999);
 		Stop Chasing Player Variable(Event Player, HealingFieldRadius);
 		Event Player.HealingFieldRadius = 0;
 		Event Player.HealingField[0] = False;
@@ -4657,10 +4659,35 @@ rule("On Enter State: Waiting")
 	actions
 	{
 		Set Invisible(Event Player, All);
-		Start Forcing Player Position(Event Player, Vector(1, 2.500, 0), False);
 		Set Status(Event Player, Null, Phased Out, 9999);
 		Set Status(Event Player, Null, Unkillable, 9999);
-		Event Player.CanSwing = False;
+		If(Global.Options[2]);
+			Event Player.CanSwing[1] = True;
+			Start Rule(ChooseState, Do Nothing);
+		Else;
+			Event Player.State = Custom String("Suspended");
+		End;
+	}
+}
+
+rule("On Enter State: Suspended")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.State == Custom String("Suspended");
+	}
+
+	actions
+	{
+		Event Player.CanSwing = Array(False, False);
+		Start Forcing Player Position(Event Player, Vector(1, 2.500, 0), False);
 	}
 }
 
@@ -4733,6 +4760,7 @@ rule("On Enter State: On The Way (Boss)")
 
 	actions
 	{
+		Event Player.State = Custom String("Suspended");
 		Call Subroutine(UpdateStats);
 	}
 }
@@ -5101,11 +5129,16 @@ rule("On Enter State: Closing In")
 		Set Crouch Enabled(Event Player, False);
 		Event Player.CanSprint = True;
 		Event Player.CanNeedle[1] = Event Player.CanNeedle[0];
-		Event Player.MoveSpeedBuffs[2] = 200;
+		Event Player.MoveSpeedBuffs[2] = 170;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Start Forcing Throttle(Event Player, 1, 1, 0, 0, 0, 0.010);
 		Wait Until(Event Player.State != Custom String("ClosingIn") || !Is Button Held(Event Player, Button(Crouch)), 99999);
 		Set Crouch Enabled(Event Player, True);
+		Wait Until(Event Player.State != Custom String("ClosingIn"), 99999);
+		Event Player.CanNeedle[1] = False;
+		Wait Until(Event Player.State != Custom String("ClosingIn") && Event Player.State != Custom String("StartingSwing"), 99999);
+		Event Player.MoveSpeedBuffs[2] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
 	}
 }
 
@@ -5121,7 +5154,7 @@ rule("Exit State: Closing In")
 	conditions
 	{
 		Event Player.State == Custom String("ClosingIn");
-		(Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(All Living Players(Team 1), Distance Between(
+		(Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Distance Between(
 			Event Player, Current Array Element) < 2)) == True;
 	}
 
@@ -5149,28 +5182,6 @@ rule("Is Crouching")
 	{
 		Abort If(Event Player.State != Custom String("ClosingIn"));
 		Event Player.State = Custom String("BecomingIdle");
-	}
-}
-
-rule("On Exit State: Closing In")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Event Player.State != Custom String("ClosingIn");
-	}
-
-	actions
-	{
-		Event Player.CanNeedle[1] = False;
-		Event Player.MoveSpeedBuffs[2] = 0;
-		Start Rule(UpdateMoveSpeed, Restart Rule);
 	}
 }
 
@@ -5220,7 +5231,7 @@ rule("Enable Sprint")
 	conditions
 	{
 		Event Player.State == Custom String("Idle");
-		Is True For Any(All Living Players(Team 1), Distance Between(Position Of(Current Array Element) - Y Component Of(Position Of(
+		Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Distance Between(Position Of(Current Array Element) - Y Component Of(Position Of(
 			Current Array Element)) * Up, Event Player) < 13) == False;
 		Event Player.IsHacked == False;
 	}
@@ -5243,7 +5254,7 @@ rule("Disable Sprint")
 	conditions
 	{
 		Event Player.State != Custom String("ClosingIn");
-		(Event Player.State == Custom String("Idle") && !Is True For Any(All Living Players(Team 1), Distance Between(Position Of(
+		(Event Player.State == Custom String("Idle") && !Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Distance Between(Position Of(
 			Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up, Event Player) < 13)
 			&& !Event Player.IsHacked) == False;
 	}
@@ -5489,7 +5500,7 @@ rule("Choose State (Closing In / Becoming Idle)")
 
 	actions
 	{
-		If(Is Crouching(Event Player) || Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(All Living Players(Team 1), Distance Between(
+		If(Is Crouching(Event Player) || Has Status(Event Player, Stunned) || Event Player.IsHacked || Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Distance Between(
 			Event Player, Current Array Element) < 2));
 			Event Player.State = Custom String("BecomingIdle");
 		Else;
@@ -5569,7 +5580,7 @@ rule("Low health")
 		Else If(Global.Phase == 3);
 			Event Player.HasLostThisPhase = True;
 			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Color(White), Event Player, 100);
-			Event Player.CanSwing = False;
+			Event Player.CanSwing[0] = False;
 			Event Player.CanSlam[0] = False;
 			Cancel Primary Action(Event Player);
 			Set Status(Event Player, Null, Phased Out, 9999);
@@ -5623,7 +5634,7 @@ rule("TakeOff")
 		"Add Armour Boost"
 		Event Player.ArmourModifiers[1] = 200;
 		Start Rule(UpdateDamageReceived, Restart Rule);
-		Event Player.CanSwing = False;
+		Event Player.CanSwing[0] = False;
 		Event Player.CanSlam[0] = False;
 		Start Holding Button(Event Player, Button(Crouch));
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
@@ -5736,7 +5747,7 @@ rule("Disable Swing")
 
 	conditions
 	{
-		(Event Player.CanSwing && Event Player.SwingCooldown == 0) == False;
+		(Event Player.CanSwing[0] && Event Player.SwingCooldown == 0) == False;
 	}
 
 	actions
@@ -5762,7 +5773,7 @@ rule("Enable swing (cooldown permitting)")
 
 	actions
 	{
-		Event Player.CanSwing = True;
+		Event Player.CanSwing[0] = True;
 	}
 }
 
@@ -5777,13 +5788,35 @@ rule("Enable swing")
 
 	conditions
 	{
-		Event Player.CanSwing == True;
+		Event Player.CanSwing[0] == True;
 		Event Player.SwingCooldown == 0;
 	}
 
 	actions
 	{
 		Set Primary Fire Enabled(Event Player, True);
+	}
+}
+
+rule("Enable simulated swing")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 2;
+		Reinhardt;
+	}
+
+	conditions
+	{
+		Event Player.CanSwing[1] == True;
+		Event Player.SwingCooldown == 0;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.CanSwing[2] = True;
 	}
 }
 
@@ -5798,19 +5831,20 @@ rule("Enter State: StartingSwing")
 
 	conditions
 	{
-		Is Firing Primary(Event Player) == True;
+		(Is Firing Primary(Event Player) || Event Player.CanSwing[2]) == True;
 	}
 
 	actions
 	{
-		If(Event Player.CanSwing);
+		If(Event Player.CanSwing[0] || Event Player.CanSwing[1]);
 			Event Player.State = Custom String("StartingSwing");
 			Disable Movement Collision With Players(Event Player);
 			"only allow 1 swing"
-			Event Player.CanSwing = False;
+			Event Player.CanSwing[0] = False;
 			Event Player.CanSlam[0] = False;
 			Event Player.SwingCooldown = Global.Difficulty[2] >= 6 ? 2.500 : 5;
 			Wait(0.352, Abort When False);
+			Event Player.CanSwing[2] = False;
 			Abort If(Event Player.State != Custom String("StartingSwing"));
 			Start Forcing Throttle(Event Player, 0, 1, 0, 1, 0, 0);
 			Wait Until(Is On Ground(Event Player), 1);
@@ -5981,7 +6015,7 @@ rule("On Enter State: Slamming")
 	actions
 	{
 		Event Player.SlamCooldown = Global.Difficulty[2] >= 6 ? 2 : 4;
-		Event Player.CanSwing = False;
+		Event Player.CanSwing[0] = False;
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		If(Global.Phase == 3);
 			Modify Global Variable(FlamePillarPositions, Append To Array, World Vector Of(3 * Forward, Event Player,
@@ -8161,7 +8195,7 @@ rule("On Enter State: Pizza")
 
 	actions
 	{
-		Event Player.CanSwing = False;
+		Event Player.CanSwing[0] = False;
 		Event Player.CanSlam[0] = False;
 		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Start Holding Button(Event Player, Button(Crouch));
