@@ -677,8 +677,11 @@ rule("Settings")
 		Global.Options[1] = True;
 		Global.Options[2] = Workshop Setting Toggle(Custom String("1) Customization"), Custom String("Allow boss to move during setup phase"), True, 2);
 		Global.HealthScalar = 0.900;
-		Global.Options[3] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("Choose your items"), False, 0);
-		Global.Options[4] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("No-one can die"), False, 1);
+		If(Global.Difficulty[2] == 0);
+			Global.Options[3] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("Choose your items"), False, 0);
+			Global.Options[4] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("No-one can die"), False, 1);
+			Global.Options[5] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("Fall damage is deadly"), False, 2);
+		End;
 	}
 }
 
@@ -1021,8 +1024,8 @@ rule("Player Setup")
 			Abort;
 		End;
 		Event Player.WispAcceleration = Vector(0, 0, 0);
-		Event Player.FallDamage[0] = (Workshop Setting Toggle(Custom String("3) Difficulty"), Custom String("Fall damage"), True, 2) ? 1 : 0)
-			+ (Global.Difficulty[2] >= 2 ? 1 : 0);
+		Event Player.FallDamage[0] = Global.Options[5] ? 2 : ((Workshop Setting Toggle(Custom String("3) Difficulty"), Custom String("Fall damage"), True, 2) ? 1 : 0)
+			+ (Global.Difficulty[2] >= 2 ? 1 : 0));
 		Event Player.Crit[0] = !Array Contains(Array(Hero(Ana), Hero(Brigitte), Hero(Junkrat), Hero(Moira), Hero(Pharah), Hero(Sigma),
 			Hero(Symmetra), Hero(Winston), Hero(Zarya)), Event Player.Hero[0]);
 		Call Subroutine(UpdateCrit);
@@ -6314,7 +6317,7 @@ rule("Is On Ground")
 					Event Player.CauseOfDeath = Array(Null, Custom String("Gravity"));
 					Damage(Event Player, Global.NullPlayer[1], Mapped Array(Event Player.FallDamage[0] * Event Player.FallDamage[3] * (
 						Max Health Of Type(Event Player, Health) + Max Health Of Type(Event Player, Armor)) * Event Player.DamageReceivedMultiplier[0],
-						Global.Difficulty[2] >= 2 ? Current Array Element : Min(Health(Event Player) - 1, Current Array Element))
+						(Global.Options[5] || (Global.Difficulty[2] >= 2)) ? Current Array Element : Min(Health(Event Player) - 1, Current Array Element))
 						[0] / Event Player.DamageReceivedMultiplier[1]);
 				End;
 			End;
