@@ -678,6 +678,7 @@ rule("Settings")
 		Global.Options[2] = Workshop Setting Toggle(Custom String("1) Customization"), Custom String("Allow boss to move during setup phase"), True, 2);
 		Global.HealthScalar = 0.900;
 		Global.Options[3] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("Choose your items"), False, 0);
+		Global.Options[4] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("No-one can die"), False, 1);
 	}
 }
 
@@ -9048,7 +9049,7 @@ rule("All Heroes Gone")
 	conditions
 	{
 		Global.State == Custom String("BossFight");
-		Is True For All(Global.Heroes, Current Array Element.IsDead) == True;
+		(Global.Options[4] ? Is True For Any(Global.Heroes, Current Array Element.IsDead) || Is True For All(Global.Heroes, Current Array Element.IsDead)) == True;
 	}
 
 	actions
