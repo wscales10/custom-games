@@ -656,8 +656,8 @@ rule("Settings")
 
 	actions
 	{
-		Global.TestMode[0] = Workshop Setting Toggle(Custom String("4) Developer"), Custom String("Test Mode"), False, 0);
-		Global.TestMode[1] = Workshop Setting Toggle(Custom String("4) Developer"), Custom String("Auto-takeoff"), False, 1);
+		Global.TestMode[0] = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Test Mode"), False, 0);
+		Global.TestMode[1] = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Auto-takeoff"), False, 1);
 		Global.Options[0] = Workshop Setting Combo(Custom String("1) Customization"), Custom String("Music Mode"), 1, Array(Custom String(
 			"Overwatch"), Custom String("Scuffed"), Custom String("Broadcast")), 1);
 		Global.Difficulty[2] = Workshop Setting Combo(Custom String("3) Difficulty"), Custom String("Extra Hard Mode (overrides difficulty)"), 0, Array(
@@ -677,6 +677,7 @@ rule("Settings")
 		Global.Options[1] = True;
 		Global.Options[2] = Workshop Setting Toggle(Custom String("1) Customization"), Custom String("Allow boss to move during setup phase"), True, 2);
 		Global.HealthScalar = 0.900;
+		Global.Options[3] = Workshop Setting Toggle(Custom String("4) Modifiers"), Custom String("Choose your items"), False, 0);
 	}
 }
 
@@ -4415,17 +4416,17 @@ rule("On Enter State: Buy")
 
 	actions
 	{
-		Global.ItemShops = Append To Array(Global.Items, Array(Custom String("?"), Custom String("??"), Custom String("???"),
+		Global.ItemShops = Global.Options[3] ? Global.Items : Append To Array(Global.Items, Array(Custom String("?"), Custom String("??"), Custom String("???"),
 			Ability Icon String(Hero(Soldier: 76), Button(Melee)), Ability Icon String(Hero(Kiriko), Button(Primary Fire)),
 			Ability Icon String(Hero(Genji), Button(Ability 1)), Ability Icon String(Hero(Soldier: 76), Button(Melee)),
 			Ability Icon String(Hero(Kiriko), Button(Primary Fire)), Ability Icon String(Hero(Genji), Button(Ability 1))));
-		Global.ItemShopRarities = Append To Array(Global.ItemRarities, Array(1, 2, 3, 1, 1, 1, 2, 2, 2));
-		Global.ItemShopDescriptions = Append To Array(Global.ItemDescriptions, Array(Custom String("A random common item"), Custom String(
-			"A random rare item"), Custom String("A random legendary item"), Custom String("A random damage item\n(common)"),
+		Global.ItemShopRarities = Global.Options[3] ? Global.ItemRarities : Append To Array(Global.ItemRarities, Array(1, 2, 3, 1, 1, 1, 2, 2, 2));
+		Global.ItemShopDescriptions = Global.Options[3] ? Global.ItemDescriptions : Append To Array(Global.ItemDescriptions, Array(Custom String("A random common item"), Custom String("A random rare item"), Custom String("A random legendary item"), Custom String("A random damage item\n(common)"),
 			Custom String("A random healing item\n(common)"), Custom String("A random utility item\n(common)"), Custom String(
 			"A random damage item\n(rare)"), Custom String("A random healing item\n(rare)"), Custom String(
 			"A random utility item\n(rare)")));
-		Global.ItemShopPrices = Append To Array(Mapped Array(Global.Items, Array(50, 75, 500, Custom String("∞"))
+		Global.ItemShopPrices = Global.Options[3] ? Mapped Array(Global.Items, Array(25, 50, 400, Custom String("∞"))
+			[Global.ItemRarities[Current Array Index] - 1]) : Append To Array(Mapped Array(Global.Items, Array(50, 75, 500, Custom String("∞"))
 			[Global.ItemRarities[Current Array Index] - 1]), Array(25, 50, 400, 30, 30, 30, 60, 60, 60));
 		Global.ItemShopPrices = Sorted Array(Global.ItemShopPrices, Global.ItemShopRarities[Current Array Index] + (Index Of Array Value(
 			Global.Items, Global.ItemShops[Current Array Index]) + Current Array Index / Count Of(Global.ItemShopPrices)) / Count Of(
@@ -4437,18 +4438,20 @@ rule("On Enter State: Buy")
 			Global.Items, Current Array Element) + Current Array Index / Count Of(Global.ItemShops)) / Count Of(Global.Items));
 		Global.ItemShopRarities = Sorted Array(Global.ItemShopRarities, Current Array Element);
 		Global.SpecialOffers = Empty Array;
-		Global.SpecialOfferWeights = 1;
-		Call Subroutine(GenerateSpecialOffer);
-		Global.SpecialOfferWeights = 1;
-		Call Subroutine(GenerateSpecialOffer);
-		Global.SpecialOfferWeights = 2;
-		Call Subroutine(GenerateSpecialOffer);
-		Global.SpecialOfferWeights = 2;
-		Call Subroutine(GenerateSpecialOffer);
-		For Global Variable(ItemShopIndex, 0, Count Of(Global.SpecialOffers), 1);
-			Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] = Round To Integer(
-				Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] / 10, Up) * 5;
-			Log To Inspector(Global.ItemShops[Global.SpecialOffers[Global.ItemShopIndex]]);
+		If(!Global.Options[3]);
+			Global.SpecialOfferWeights = 1;
+			Call Subroutine(GenerateSpecialOffer);
+			Global.SpecialOfferWeights = 1;
+			Call Subroutine(GenerateSpecialOffer);
+			Global.SpecialOfferWeights = 2;
+			Call Subroutine(GenerateSpecialOffer);
+			Global.SpecialOfferWeights = 2;
+			Call Subroutine(GenerateSpecialOffer);
+			For Global Variable(ItemShopIndex, 0, Count Of(Global.SpecialOffers), 1);
+				Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] = Round To Integer(
+					Global.ItemShopPrices[Global.SpecialOffers[Global.ItemShopIndex]] / 10, Up) * 5;
+				Log To Inspector(Global.ItemShops[Global.SpecialOffers[Global.ItemShopIndex]]);
+			End;
 		End;
 		"Largest shop radius, Shop radius, Cumulative radius, shop radius..."
 		Global.ItemShopRadii = Array(0);
