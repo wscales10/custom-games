@@ -5126,7 +5126,7 @@ rule("On Enter State: Closing In")
 		Set Crouch Enabled(Event Player, False);
 		Event Player.CanSprint = True;
 		Event Player.CanNeedle[1] = Event Player.CanNeedle[0];
-		Event Player.MoveSpeedBuffs[2] = 170;
+		Event Player.MoveSpeedBuffs[2] = 150 + 0.870 * Event Player.Level;
 		Start Rule(UpdateMoveSpeed, Restart Rule);
 		Wait Until(Event Player.State != Custom String("ClosingIn") || !Is Button Held(Event Player, Button(Crouch)), 99999);
 		Set Crouch Enabled(Event Player, True);
