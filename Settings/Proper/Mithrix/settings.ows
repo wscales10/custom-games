@@ -2706,7 +2706,7 @@ rule("Steal subroutine")
 
 	actions
 	{
-		Play Effect(Global.CurrentStealee, Moira Fade Disappear Sound, Team 2, Global.CurrentStealee, 100);
+		Play Effect(Global.CurrentStealee, Moira Fade Disappear Sound, Color(White), Global.CurrentStealee, 100);
 		Global.ItemStackOriginalOwners[Global.ItemStackBeingStolenIndex] = Global.CurrentStealee;
 		Global.ItemStackOwners[Global.ItemStackBeingStolenIndex] = Null;
 		Global.ItemStackNewOwners[Global.ItemStackBeingStolenIndex] = Global.Stealer;
@@ -2752,8 +2752,7 @@ rule("Acquire Item Subroutine")
 	actions
 	{
 		Skip If(Global.ItemStackNewOwners[Global.ItemStackIndex] == Global.ItemStackOriginalOwners[Global.ItemStackIndex], 1);
-		Play Effect(Global.ItemStackNewOwners[Global.ItemStackIndex], Moira Fade Reappear Sound, Team Of(
-			Global.ItemStackNewOwners[Global.ItemStackIndex]), Global.ItemStackNewOwners[Global.ItemStackIndex], 100);
+		Play Effect(Global.ItemStackNewOwners[Global.ItemStackIndex], Moira Fade Reappear Sound, Color(White), Global.ItemStackNewOwners[Global.ItemStackIndex], 100);
 		Global.CurrentItemStackSize = Global.ItemStackSizes[Global.ItemStackIndex];
 		Global.ExistingMatchingItemStacks = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
 			Global.ItemStacks[Current Array Element] == Global.ItemStacks[Global.ItemStackIndex] && Global.ItemStackOwners[Current Array Element] == Global.ItemStackNewOwners[Global.ItemStackIndex]);
@@ -5441,6 +5440,7 @@ rule("On Enter State: FinishingFullTakeoff")
 		Stop Chasing Player Variable(Event Player, TakeoffCooldown);
 		Event Player.TakeoffCooldown = Global.Difficulty[2] >= 6 ? 15 : 30;
 		Skip If(Global.Phase != 3, 1);
+		Event Player.PizzaIndex = Custom String("Soon");
 		Event Player.CachedHealth[0] = True;
 		Call Subroutine(UpdateStats);
 		Wait(3, Abort When False);
@@ -5592,7 +5592,7 @@ rule("Low health")
 				? Custom String("{0}2", Event Player.State) : Custom String("StartingTakeoff2");
 		Else If(Global.Phase == 3);
 			Event Player.HasLostThisPhase = True;
-			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Team 1, Event Player, 100);
+			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Team 2, Event Player, 100);
 			Event Player.CanSwing[0] = False;
 			Event Player.CanSlam[0] = False;
 			Cancel Primary Action(Event Player);
@@ -8514,15 +8514,14 @@ rule("Enter State: Orbs")
 			Global.OrbCreators[Event Player.NewOrbGlobalIndex] = Event Player;
 			Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex] = Mapped Array(Position Of(Event Player),
 				Current Array Element - Y Component Of(Current Array Element) * Up)[0];
-			Global.OrbDisplayPositions[Event Player.NewOrbGlobalIndex] = Global.OrbInitialPositions[Event Player.NewOrbGlobalIndex] + Up;
+			Global.OrbDisplayPositions[Event Player.NewOrbGlobalIndex] = Null;
 			Global.OrbInitialAngles[Event Player.NewOrbGlobalIndex] = Horizontal Facing Angle Of(Event Player) + (
 				0.500 - Event Player.OrbCreationIndex[0]) * 45;
 			Wait(0.032, Ignore Condition);
-			Create Effect(All Players(All Teams), Orb, Color(White), Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)],
+			Create Effect(All Players(All Teams), Orb, Color(White), Mapped Array(Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)], Current Array Element ? Current Array Element : Global.OrbInitialPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)])[0],
 				0.750, Visible To Position and Radius);
 			Global.OrbEffects[Event Player.NewOrbGlobalIndex * 2] = Last Created Entity;
-			Create Effect(All Players(All Teams), Orisa Amplifier Sound, Team 2, Global.OrbDisplayPositions[Evaluate Once(
-				Event Player.NewOrbGlobalIndex)], 100, Visible To Position and Radius);
+			Create Effect(All Players(All Teams), Orisa Amplifier Sound, Team 2, Mapped Array(Global.OrbDisplayPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)], Current Array Element ? Current Array Element : Global.OrbInitialPositions[Evaluate Once(Event Player.NewOrbGlobalIndex)])[0], 100, Visible To Position and Radius);
 			Global.OrbSounds[Event Player.NewOrbGlobalIndex] = Last Created Entity;
 			Modify Player Variable(Event Player, OrbCreationIndex, Append To Array, Event Player.NewOrbGlobalIndex);
 			Event Player.OrbCreationIndex[0] += 1;
@@ -8693,8 +8692,8 @@ rule("Return Items")
 
 	actions
 	{
-		Play Effect(Event Player, Moira Fade Disappear Sound, Team 1, Event Player, 100);
-		Play Effect(Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex], Moira Fade Reappear Sound, Team 1,
+		Play Effect(Event Player, Moira Fade Disappear Sound, Color(White), Event Player, 100);
+		Play Effect(Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex], Moira Fade Reappear Sound, Color(White),
 			Global.ItemStackOriginalOwners[Event Player.StackBeingReturnedIndex], 100);
 		While(True);
 			Abort If Condition Is False;
@@ -8882,7 +8881,7 @@ rule("Player Died Permanently")
 			Event Player.HasLostThisPhase = True;
 			Event Player.ShowBossInfo[0] = False;
 			Event Player.ShowBossInfo[1] = 0;
-			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Team 1, Event Player, 100);
+			Play Effect(All Players(All Teams), Sombra EMP Explosion Sound, Team 2, Event Player, 100);
 			Skip If(!Global.Dialogue[0], 1);
 			Modify Global Variable(Dialogue, Append To Array, Array(Event Player, Custom String("BossDeath")));
 		End;
