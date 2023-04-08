@@ -5729,6 +5729,8 @@ rule("Low health")
 			Event Player.ShowBossInfo[0] = False;
 			Event Player.ShowBossInfo[1] = 0;
 			Call Subroutine(CleanseAllDebuffs);
+			Start Forcing Player Outlines(Event Player, All Players(All Teams), False, Team 2, Default);
+			Disable Nameplates(Event Player, All Players(All Teams));
 			Event Player.State = Custom String("Absent");
 		End;
 	}
@@ -6612,6 +6614,8 @@ rule("Stop Holding Primary Fire")
 	actions
 	{
 		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		Abort If(Global.Phase != 4 || !Global.TestMode);
+		Press Button(Event Player, Button(Ability 2));
 	}
 }
 
@@ -8536,6 +8540,7 @@ rule("On Enter Phase: 4 (Boss)")
 		Event Player.ShouldUpdateMoveSpeed = True;
 		Event Player.CanNeedle = Array(True, False);
 		Clear Status(Event Player, Unkillable);
+		Stop Holding Button(Event Player, Button(Crouch));
 		Teleport(Event Player, Vector(0, 0, 0));
 		"Add Armour Boost"
 		Event Player.ArmourModifiers[1] = 200;
@@ -8559,6 +8564,8 @@ rule("On Enter Phase: 4 (Boss)")
 		Wait Until(Event Player.State == Custom String("StealingFinished"), 9999);
 		Event Player.HealthPerItemStack = 1 / (Count Of(Event Player.ItemStackReturnInfo) / 2);
 		Clear Status(Event Player, Phased Out);
+		Stop Forcing Player Outlines(Event Player, All Players(All Teams));
+		Enable Nameplates(Event Player, All Players(All Teams));
 		Allow Button(Event Player, Button(Crouch));
 		Start Holding Button(Event Player, Button(Crouch));
 		Start Facing(Event Player, Vector(0, -0.999, 0.035), 1000, To Player, None);
