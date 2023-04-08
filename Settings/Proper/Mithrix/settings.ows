@@ -244,6 +244,7 @@ variables
 		98: SpecialOffers
 		99: SpecialOfferWeights
 		100: IsHealingModificationBugged
+		101: AutoTakeoff
 
 	player:
 		0: Ids
@@ -438,8 +439,8 @@ rule("Global setup")
 			Log To Inspector(Custom String("Tried to run global setup rule again"));
 			Abort;
 		End;
-		Global.TestMode = Array(Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Test Mode"), False, 0),
-			Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Auto-takeoff"), False, 1));
+		Global.TestMode = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Test Mode"), False, 0);
+		Global.AutoTakeoff = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Auto-takeoff"), False, 1);
 		Global.Difficulty[2] = Workshop Setting Combo(Custom String("3) Difficulty"), Custom String(
 			"Extra Hard Mode (overrides difficulty)"), 0, Array(Custom String("Disabled"), Custom String("1) -50% starting health"),
 			Custom String("2) Fall damage"), Custom String("3) +40% enemy speed"), Custom String("4) -50% healing"), Custom String(
@@ -591,7 +592,7 @@ rule("Global setup")
 			Visible To, Default Visibility);
 		Create HUD Text(All Players(All Teams), Null, Null, Custom String(" "), Left, 1.900, Color(White), Color(White), Color(White),
 			Visible To, Default Visibility);
-		Skip If(!Global.TestMode[0], 1);
+		Skip If(!Global.TestMode, 1);
 		Create HUD Text(All Players(All Teams), Server Load Peak, Distance Between(Host Player, First Of(Global.Bosses)), Server Load Average, Left, 0, Color(White),
 			Color(White), Color(White), Visible To and String, Default Visibility);
 		Global.BallNames = Array(Custom String("Interference"), Custom String("Locomotion"), Custom String("Destruction"));
@@ -966,11 +967,11 @@ rule("Boss Setup")
 			Visible To String and Color, Default Visibility);
 		"Crouch button"
 		Create HUD Text(Event Player.ShowBossAbilityInfo[2] ? Event Player : Null, Event Player.ShowBossAbilityInfo[2],
-			Global.TestMode[1] ? Custom String("") : Custom String("[{0}]", Input Binding String(Button(Crouch))),
+			Global.AutoTakeoff ? Custom String("") : Custom String("[{0}]", Input Binding String(Button(Crouch))),
 			Event Player.CanTakeOff && Event Player.TakeoffCooldown ? Round To Integer(Event Player.TakeoffCooldown, Up) : Custom String(
 			" "), Right, 0.700, Event Player.Target ? (Has Status(Event Player.Target, Rooted) ? Color(Red) : (Y Component Of(
 			Event Player.Target.WispAcceleration) < 0 ? Color(Orange) : Color(Gray))) : (Event Player.CanTakeOff ? (
-			Global.TestMode[1] || Event Player.TakeoffCooldown || String Contains(Event Player.State, Custom String("Takeoff")) ? Color(
+			Global.AutoTakeoff || Event Player.TakeoffCooldown || String Contains(Event Player.State, Custom String("Takeoff")) ? Color(
 			Orange) : Custom Color(204 + 51 * Cosine From Degrees(360 * Total Time Elapsed), 204 + 51 * Cosine From Degrees(
 			360 * Total Time Elapsed), 255, 255)) : Color(Red)), Event Player.Target || Event Player.CanTakeOff ? Color(White)
 			: Custom Color(127, 127, 127, 170), Color(White), Visible To String and Color, Default Visibility);
@@ -4671,7 +4672,7 @@ rule("Random Buy")
 
 	conditions
 	{
-		Global.TestMode[0] == True;
+		Global.TestMode == True;
 		Global.State == Custom String("Buy");
 		(!Array Contains(All Players(Team 1), Host Player) || Is Button Held(Host Player, Button(Interact))) == True;
 		Event Player.IsHero == True;
@@ -4702,7 +4703,7 @@ rule("Buy subroutine")
 	{
 		If((
 			Global.ItemShopRarities[Event Player.BuyIndex] == 4 ? Event Player.Currency[3] > 0 : Event Player.Currency[0] >= Global.ItemShopPrices[Event Player.BuyIndex])
-			|| (Global.TestMode[0] && Event Player == Host Player && Global.ItemShopPrices[Event Player.BuyIndex] == Custom String("∞")));
+			|| (Global.TestMode && Event Player == Host Player && Global.ItemShopPrices[Event Player.BuyIndex] == Custom String("∞")));
 			If(Global.ItemShopRarities[Event Player.BuyIndex] == 4);
 				Event Player.Currency[3] = Max(Event Player.Currency[3] - 1, 0);
 			Else;
@@ -4814,7 +4815,7 @@ rule("Enter State: OnTheWay")
 	conditions
 	{
 		Global.State == Custom String("Waiting");
-		Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && ((Global.TestMode[0] && Team Of(Host Player)
+		Is True For Any(All Living Players(Team 1), Has Spawned(Current Array Element) && ((Global.TestMode && Team Of(Host Player)
 			!= Team 1) || (Distance Between(Current Array Element, Vector(0, 0, 0)) < 70))) == True;
 		Is True For Any(Players On Hero(Hero(Reinhardt), Team 2), Has Spawned(Current Array Element)) == True;
 	}
@@ -5362,7 +5363,7 @@ rule("On Enter State: Becoming Idle")
 		Stop Forcing Throttle(Event Player);
 		If(Event Player.PizzaIndex == Custom String("ASAP") && !Event Player.IsHacked && Is On Ground(Event Player));
 			Event Player.State = Custom String("Pizza");
-		Else If(Global.TestMode[1] && Array Contains(Array(1, 3), Global.Phase) && Is On Ground(Event Player) && Normalized Health(
+		Else If(Global.AutoTakeoff && Array Contains(Array(1, 3), Global.Phase) && Is On Ground(Event Player) && Normalized Health(
 				Event Player) < 0.750 && Event Player.TakeoffCooldown == 0 && !Event Player.IsHacked);
 			Event Player.State = Custom String("StartingTakeoff");
 		Else;
@@ -5513,7 +5514,7 @@ rule("Enter State: StartingTakeoff")
 		Ultimate Charge Percent(Event Player) > 95;
 		Has Status(Event Player, Stunned) == False;
 		Event Player.IsHacked == False;
-		(Global.TestMode[1] || Is Crouching(Event Player)) == True;
+		(Global.AutoTakeoff || Is Crouching(Event Player)) == True;
 	}
 
 	actions
@@ -6631,7 +6632,7 @@ rule("Stop Holding Primary Fire")
 	actions
 	{
 		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
-		Abort If(Global.Phase != 4 || !Global.TestMode[0]);
+		Abort If(Global.Phase != 4 || !Global.TestMode);
 		Press Button(Event Player, Button(Ability 2));
 	}
 }
@@ -6779,7 +6780,7 @@ rule("AiStep")
 		Else;
 			If(Global.Add.State == Custom String("Rise"));
 				If(Y Component Of(Position Of(Global.Add)) > 15);
-					If(!Global.TestMode[0] || Array Contains(Global.Bosses, Host Player));
+					If(!Global.TestMode || Array Contains(Global.Bosses, Host Player));
 						Global.Add.Master[2] = True;
 					End;
 					Global.Add.State = Custom String("Idle");
@@ -7044,7 +7045,7 @@ rule("Add. Setup")
 			Play Effect(All Players(All Teams), Reaper Wraith Form Sound, Team 2, Position Of(Event Player), 100);
 			Event Player.ShowBossAbilityInfo = Array(Ability Icon String(Hero(Wrecking Ball), Button(Ability 1)), False, False, False,
 				Ability Icon String(Hero(Wrecking Ball), Button(Primary Fire)), False, False, False);
-			Event Player.Master[2] = !Global.TestMode[0] || Array Contains(Global.Bosses, Host Player);
+			Event Player.Master[2] = !Global.TestMode || Array Contains(Global.Bosses, Host Player);
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Zenyatta));
 			Set Knockback Received(Event Player, 55);
@@ -7066,7 +7067,7 @@ rule("Add. Setup")
 			Play Effect(All Players(All Teams), Sigma Accretion Impact Sound, Team 2, Position Of(Event Player), 100);
 			Event Player.ShowBossAbilityInfo = Array(Ability Icon String(Hero(Sojourn), Button(Ability 1)), False, False, False, False,
 				Ability Icon String(Hero(Zenyatta), Button(Secondary Fire)), False, False);
-			Event Player.Master[2] = !Global.TestMode[0] || Array Contains(Global.Bosses, Host Player);
+			Event Player.Master[2] = !Global.TestMode || Array Contains(Global.Bosses, Host Player);
 			Event Player.State = Custom String("Idle");
 		Else If(Hero Of(Event Player) == Hero(Tracer));
 			Set Knockback Received(Event Player, 70);
