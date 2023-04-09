@@ -245,6 +245,7 @@ variables
 		99: SpecialOfferWeights
 		100: IsHealingModificationBugged
 		101: AutoTakeoff
+		102: Arena
 
 	player:
 		0: Ids
@@ -440,6 +441,7 @@ rule("Global setup")
 		End;
 		Global.TestMode = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Test Mode"), False, 0);
 		Global.AutoTakeoff = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Auto-takeoff"), False, 1);
+		Global.Arena = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Arena Boundary"), True, 2);
 		Global.Difficulty[2] = Workshop Setting Combo(Custom String("3) Difficulty"), Custom String(
 			"Extra Hard Mode (overrides difficulty)"), 0, Array(Custom String("Disabled"), Custom String("1) -50% starting health"),
 			Custom String("2) Fall damage"), Custom String("3) +40% enemy speed"), Custom String("4) -50% healing"), Custom String(
@@ -600,7 +602,9 @@ rule("Global setup")
 			"Life"), Custom String("Power"));
 		Global.ZenyattaNames = Array(Custom String("Stone"), Custom String("Silver"), Custom String("Speed"), Custom String("Volatility"),
 			Custom String("Stability"), Custom String("Dance"), Custom String("Song"));
-		Create Effect(All Players(All Teams), Light Shaft, Color(Sky Blue), Vector(0, 0, 0), 1.060 * Global.ArenaRadius, Visible To);
+		If(Global.Arena);
+			Create Effect(All Players(All Teams), Light Shaft, Color(Sky Blue), Vector(0, 0, 0), 1.060 * Global.ArenaRadius, Visible To);
+		End;
 		Create Effect(All Players(All Teams), Ring, Color(Gray), Vector(0, 0, 0), 57, Visible To);
 		Create Beam Effect(Count Of(Global.LightningStrikes) ? All Players(All Teams) : Null, Bad Beam, Update Every Frame(
 			Global.LightningStrikes[1] + 30 * Up), Update Every Frame(Global.LightningStrikes[1] + Down), Color(White),
@@ -1534,6 +1538,7 @@ rule("Inwards")
 
 	conditions
 	{
+		Global.Arena == True;
 		Event Player.IsSetup == True;
 		(Team Of(Event Player) == Team 2 || Global.State == Custom String("BossFight")) == True;
 		Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player)) * Up) > Global.ArenaRadius;
@@ -1564,7 +1569,7 @@ rule("Not Inwards")
 	conditions
 	{
 		Event Player.IsSetup == True;
-		((Team Of(Event Player) == Team 2 || Global.State == Custom String("BossFight")) && Magnitude Of(Position Of(Event Player)
+		(Global.Arena && (Team Of(Event Player) == Team 2 || Global.State == Custom String("BossFight")) && Magnitude Of(Position Of(Event Player)
 			- Y Component Of(Position Of(Event Player)) * Up) + 1 > Global.ArenaRadius) == False;
 	}
 
@@ -7262,7 +7267,7 @@ rule("Golem dash")
 	{
 		Is Button Held(Event Player, Button(Ability 1)) == True;
 		Is Firing Secondary(Event Player) == False;
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+		(Global.Arena && Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 		Event Player.State != Custom String("Dashing");
 		Event Player.DashCooldown == 0;
@@ -7712,7 +7717,7 @@ rule("Master controlled throttle")
 	conditions
 	{
 		Event Player.Master[1] != Null;
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+		(Global.Arena && Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 		Event Player.State != Custom String("Dashing");
 	}
@@ -7736,7 +7741,7 @@ rule("AI Throttle")
 	conditions
 	{
 		Event Player.Master[1] == Null;
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+		(Global.Arena && Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 		Event Player.State != Custom String("Dashing");
 		Magnitude Of(Event Player.AI[4]) != 0;
@@ -7760,7 +7765,7 @@ rule("Stop Throttle in direction")
 	conditions
 	{
 		Event Player.Master[1] == Null;
-		(Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
+		(Global.Arena && Global.State == Custom String("BossFight") && Magnitude Of(Position Of(Event Player) - Y Component Of(Position Of(Event Player))
 			* Up) + 1 > Global.ArenaRadius) == False;
 		Event Player.State != Custom String("Dashing");
 		Magnitude Of(Event Player.AI[4]) == 0;
