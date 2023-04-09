@@ -440,8 +440,8 @@ rule("Global setup")
 			Abort;
 		End;
 		Global.TestMode = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Test Mode"), False, 0);
-		Global.AutoTakeoff = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Auto-takeoff"), False, 1);
-		Global.Arena = Workshop Setting Toggle(Custom String("5) Developer"), Custom String("Arena Boundary"), True, 2);
+		Global.AutoTakeoff = First Of(Mapped Array(Workshop Setting Combo(Custom String("5) Developer"), Custom String("Auto-takeoff"), 0, Array(Custom String("Default"), Custom String("Enabled"), Custom String("Disabled")), 1), Current Array Element ? Current Array Element == 1 : Global.TestMode));
+		Global.Arena = First Of(Mapped Array(Workshop Setting Combo(Custom String("5) Developer"), Custom String("Arena Boundary"), 0, Array(Custom String("Default"), Custom String("Enabled"), Custom String("Disabled")), 2), Current Array Element ? Current Array Element == 1 : !Global.TestMode));
 		Global.Difficulty[2] = Workshop Setting Combo(Custom String("3) Difficulty"), Custom String(
 			"Extra Hard Mode (overrides difficulty)"), 0, Array(Custom String("Disabled"), Custom String("1) -50% starting health"),
 			Custom String("2) Fall damage"), Custom String("3) +40% enemy speed"), Custom String("4) -50% healing"), Custom String(
