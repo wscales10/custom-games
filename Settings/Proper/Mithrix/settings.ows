@@ -994,7 +994,7 @@ rule("Boss Setup")
 			Health Of Type(Event Player, Shields) ? (Normalized Health(Event Player.Target) > 0.900 ? Color(Blue) : Custom Color(46, 172,
 			246, 255)) : (Normalized Health(Event Player.Target) > 0.900 ? Color(Green) : Color(Lime Green)), Visible To String and Color,
 			Default Visibility);
-		Create HUD Text(Event Player.Target == Null || Is Dead(Event Player.Target) ? Null : Event Player, Null, Custom String(
+		Create HUD Text(Event Player.Target == Null || Is Dead(Event Player.Target) || !Is True For Any(All Living Players(Team 2), Current Array Element.Master[2] && !Current Array Element.Master[1]) ? Null : Event Player, Null, Custom String(
 			"Hold [{0}] to control a different minion", Input Binding String(Button(Interact))), Null, Left, 3.200, Color(White), Color(
 			White), Color(White), Visible To String and Color, Default Visibility);
 		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3)
