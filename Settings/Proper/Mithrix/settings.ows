@@ -375,6 +375,7 @@ variables
 		124: RegenTime
 		125: TargetPosition
 		126: TargetTime
+		127: LookInvincible
 }
 
 subroutines
@@ -3044,6 +3045,11 @@ rule("Update Item Stack (Add)")
 				Lime Green), Evaluate Once(Global.ItemStackUpdateInfo[2]).HealingField[1], Evaluate Once(Global.ItemStackUpdateInfo[2])
 				.HealingFieldRadius, Visible To Position and Radius);
 			Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]] = Last Created Entity;
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Extra Life"));
+			If(!Global.ItemStackUpdateInfo[2].LookInvincible[1]);
+				Create Effect(Evaluate Once(Global.ItemStackUpdateInfo[2]).LookInvincible[0] ? All Players(All Teams) : Null, Baptiste Immortality Field Protected Effect, Team Of(Evaluate Once(Global.ItemStackUpdateInfo[2])), Global.ItemStackUpdateInfo[2], 1, Visible To);
+				Global.ItemStackUpdateInfo[2].LookInvincible[1] = Last Created Entity;
+			End;
 		End;
 	}
 }
@@ -8934,9 +8940,12 @@ rule("Player Died")
 					&& Global.ItemStackOwners[Current Array Element] == Event Player)[0], 0, -1, Event Player, True));
 			End;
 			Resurrect(Event Player);
+			Event Player.LookInvincible[0] = True;
 			Set Status(Event Player, Null, Invincible, 3);
 			Wait(0.100, Ignore Condition);
 			Set Player Health(Event Player, Max Health(Event Player));
+			Wait(2.900, Ignore Condition);
+			Event Player.LookInvincible[0] = False;
 		Else;
 			Event Player.IsDead = True;
 			Abort If(!Event Player.IsMook);
