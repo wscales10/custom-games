@@ -3167,6 +3167,9 @@ rule("Update Item Stack (Remove)")
 			Global.ItemStackUpdateInfo[2].Crit[3] = True;
 		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Healing Field"));
 			Destroy Effect(Global.ItemStackEffects[Global.ItemStackUpdateInfo[0]]);
+		Else If(Global.ItemStackUpdateInfo[1] == Custom String("Fast Travel"));
+			Global.ItemStackUpdateInfo[2].MoveSpeedBuffs[6] = 0;
+			Global.ItemStackUpdateInfo[2].ShouldUpdateMoveSpeed = True;
 		End;
 	}
 }
