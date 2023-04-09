@@ -4514,7 +4514,7 @@ rule("On Enter State: Buy")
 			"A random utility item\n(common)"), Custom String("A random damage item\n(rare)"), Custom String(
 			"A random healing item\n(rare)"), Custom String("A random utility item\n(rare)")));
 		Global.ItemShopPrices = Global.Options[3] ? Mapped Array(Global.Items, Array(25, 50, 400, Custom String("∞"))
-			[Global.ItemRarities[Current Array Index] - 1]) : Append To Array(Mapped Array(Global.Items, Array(50, 75, 500, Custom String(
+			[Global.ItemRarities[Current Array Index] - 1]) : Append To Array(Mapped Array(Global.Items, Array(45, 75, 450, Custom String(
 			"∞"))[Global.ItemRarities[Current Array Index] - 1]), Array(25, 50, 400, 30, 30, 30, 60, 60, 60));
 		Global.ItemShopPrices = Sorted Array(Global.ItemShopPrices, Global.ItemShopRarities[Current Array Index] + (Index Of Array Value(
 			Global.Items, Global.ItemShops[Current Array Index]) + Current Array Index / Count Of(Global.ItemShopPrices)) / Count Of(
