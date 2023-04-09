@@ -1898,10 +1898,6 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 			If(Event Player.CachedHealth[0]);
 				Event Player.CachedHealth = Array(True, True, Health(Event Player), Max Health(Event Player));
 			End;
-			If(Event Player.TotalHPUnits == 0);
-				Small Message(Host Player, Custom String("Error reading TotalHPUnits"));
-				Wait(5, Ignore Condition);
-			End;
 			Event Player.IntendedMaxHealth = Mapped Array(Array(0.533, 0.467), Event Player.TotalHPUnits * Current Array Element);
 			Set Damage Dealt(Event Player.Bots[0], 100 * Event Player.BaseDamageMultiplier[1] * 0.600 * 12 / ((12 - 3 * (
 				Global.Difficulty[0] - 1)) * 12));
@@ -1974,10 +1970,6 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 		Event Player.CachedHealth[4] = Has Status(Event Player, Phased Out);
 		Clear Status(Event Player, Phased Out);
 		Event Player.CachedHealth[5] = Max Health(Event Player) - (Event Player.CachedHealth[3] - Event Player.CachedHealth[2]);
-		If(Event Player.CachedHealth[5] < 0);
-			Small Message(Host Player, Custom String("Error reading CachedHealth[5]"));
-			Wait(5, Ignore Condition);
-		End;
 		Log To Inspector(Custom String("{0}: {1} -> {2}", Event Player, Custom String("{0} / {1}", Event Player.CachedHealth[2],
 			Event Player.CachedHealth[3]), Custom String("{0} / {1}", Event Player.CachedHealth[5], Max Health(Event Player))));
 		Set Player Health(Event Player, Event Player.CachedHealth[5]);
@@ -2398,12 +2390,6 @@ rule("On hit effects")
 		End;
 		If(Attacker.Master[0].MyItemStacks[0] && Attacker.Master[0] != Victim);
 			If(Is Alive(Victim));
-				disabled Small Message(Attacker, Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-					Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
-					Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
-					Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
-					Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-					: Current Array Element)[0]);
 				"Debuff Focus"
 				If(Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
 					Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
@@ -2555,12 +2541,16 @@ rule("On hit effects")
 					If(Is Alive(Victim));
 						Victim.CauseOfDeath = Array(Attacker.Master[0], Custom String("Ice Blast"));
 						Damage(Victim, Global.NullPlayer[Index Of Array Value(Array(Team 2, Team 1), Team Of(Victim))],
-							2.500 * Attacker.Master[0].MyItemStackSizes[7] * Event Damage / Victim.DamageReceivedMultiplier[1]);
+							2.500 * Attacker.Master[0].MyItemStackSizes[7] * Event Damage / ((Event Was Critical Hit ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (
+						Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker)
+						&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1) * Victim.DamageReceivedMultiplier[1]));
 					End;
 				End;
 				If(Attacker.Master[0].MyItemStackSizes[8]);
 					Attacker.Master[0].BlastCooldown = 10;
-					Attacker.Master[0].FlameTornadoDamage = Event Damage / Victim.DamageReceivedMultiplier[1];
+					Attacker.Master[0].FlameTornadoDamage = Event Damage / ((Event Was Critical Hit ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (
+						Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker)
+						&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1) * Victim.DamageReceivedMultiplier[1]);
 					Attacker.Master[0].FlameTornadoPosition = Position Of(Victim);
 					Attacker.Master[0].FlameTornadoExpirationTime = Total Time Elapsed + 3;
 					Create Effect(All Players(All Teams), Bad Aura, Color(Red), Attacker.Master[0].FlameTornadoPosition, 5, Visible To);
@@ -2587,7 +2577,9 @@ rule("On hit effects")
 				: Current Array Element)[0]);
 				Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Team Of(Attacker), Eye Position(Victim), 100);
 				Modify Global Variable(LightningStrikes, Append To Array, Array(Total Time Elapsed + 0.250, Eye Position(Victim),
-					Attacker.Master[0], 5 * Attacker.Master[0].MyItemStackSizes[16] * Event Damage / Victim.DamageReceivedMultiplier[1],
+					Attacker.Master[0], 5 * Attacker.Master[0].MyItemStackSizes[16] * Event Damage / ((Event Was Critical Hit ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (
+						Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker)
+						&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1) * Victim.DamageReceivedMultiplier[1]),
 					Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
 					Current Array Element == -1 ? -1 : Attacker.Hero[1] * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
 					Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
@@ -2604,7 +2596,9 @@ rule("On hit effects")
 				: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
 				^ 2 / 700)) : Current Array Element)[0]);
 				Modify Global Variable(DamageBeamInfo, Append To Array, Array(Custom String("Chain Lightning"), Attacker.Master[0],
-					Event Damage * 0.800 / Victim.DamageReceivedMultiplier[1], Victim));
+					Event Damage * 0.800 / ((Event Was Critical Hit ? (Attacker.Hero[0] == Hero(Kiriko) ? 3 : (
+						Attacker.Hero[0] == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero[0] == Hero(Widowmaker)
+						&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1) * Victim.DamageReceivedMultiplier[1]), Victim));
 				Modify Global Variable(DamageBeamInfo, Append To Array, Array Slice(Randomized Array(Filtered Array(Players Within Radius(Victim,
 					6 + 2.500 * (Attacker.Master[0].MyItemStackSizes[22] - 1), Team Of(Victim), Surfaces),
 					Current Array Element != Victim && Is Alive(Current Array Element) && !Has Status(Current Array Element, Phased Out)
@@ -2891,7 +2885,6 @@ rule("Create Item Stack Subroutine")
 				: Current Array Element), Null, Left, 4 + (Index Of Array Value(Local Player.MyItemStacks, Evaluate Once(
 				Global.ItemDistributionInfo)) + 1) / (Count Of(Global.Items) + 1), Evaluate Once(Global.ItemColours[Global.NewItemStackIndex]),
 				Color(White), Color(White), Visible To Sort Order String and Color, Default Visibility);
-			Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
 		End;
 		Global.NewItemStackIndex = Count Of(Global.ItemStacks);
 		Global.ItemStacks[Global.NewItemStackIndex] = Global.ItemDistributionInfo[0];
@@ -2911,7 +2904,6 @@ rule("Create Item Stack Subroutine")
 				Global.NewItemStackIndex + 1) / (Count Of(Global.ItemStacks) + 1), Evaluate Once(Global.ItemColours[Index Of Array Value(
 				Global.Items, Global.ItemDistributionInfo[0])]), Color(White), Color(White), Visible To Sort Order String and Color,
 				Default Visibility);
-			Global.ItemStackHUDs[Global.NewItemStackIndex] = Last Text ID;
 		End;
 		Modify Global Variable(ItemStackUpdateInfos, Append To Array, Array(Global.NewItemStackIndex, 1, Global.ItemDistributionInfo[2],
 			Global.ItemStackOwners[Global.NewItemStackIndex], False));
@@ -7259,7 +7251,6 @@ rule("Golem fast")
 		Event Player.ShouldUpdateMoveSpeed = True;
 		Start Throttle In Direction(Event Player, Mapped Array(Throttle Of(Event Player), Magnitude Of(Current Array Element)
 			? Current Array Element : Forward), 1, To Player, Replace existing throttle, None);
-		Log To Inspector(Custom String("{0}: dash throttle", Event Player.Ids[0]));
 		Wait(1.200, Abort When False);
 		Event Player.State = Custom String("Idle");
 	}
@@ -7737,7 +7728,6 @@ rule("Master controlled throttle")
 	{
 		Start Throttle In Direction(Event Player, Throttle Of(Event Player.Master[1]), Magnitude Of(Throttle Of(Event Player.Master[1])),
 			To Player, Replace existing throttle, Direction and Magnitude);
-		Log To Inspector(Custom String("{0}: controlled throttle", Event Player.Ids[0]));
 	}
 }
 
@@ -7762,7 +7752,6 @@ rule("AI Throttle")
 	actions
 	{
 		Start Throttle In Direction(Event Player, Event Player.AI[4], 1, To Player, Replace existing throttle, Direction and Magnitude);
-		Log To Inspector(Custom String("{0}: ai throttle", Event Player.Ids[0]));
 	}
 }
 
@@ -7787,7 +7776,6 @@ rule("Stop Throttle in direction")
 	actions
 	{
 		Stop Throttle In Direction(Event Player);
-		Log To Inspector(Custom String("{0}: stop throttle", Event Player.Ids[0]));
 	}
 }
 
@@ -8499,8 +8487,6 @@ rule("On Enter Phase: 4 (Global)")
 				Global.ItemStackBeingStolenIndex = Filtered Array(Mapped Array(Global.ItemStacks, Current Array Index),
 					Global.ItemStacks[Current Array Element] == Global.CurrentStealee.MyItemStacks[0] && Global.ItemStackOwners[Current Array Element] == Global.CurrentStealee);
 				If(Count Of(Global.ItemStackBeingStolenIndex) == 0);
-					Small Message(Host Player, Custom String("Error stealing {0} from {1}", Global.CurrentStealee.MyItemStacks[0],
-						Global.CurrentStealee.Ids[0]));
 					Modify Global Variable(Stealees, Remove From Array By Index, Global.StealeeIndex);
 				Else;
 					Global.ItemStackBeingStolenIndex = Global.ItemStackBeingStolenIndex[0];
