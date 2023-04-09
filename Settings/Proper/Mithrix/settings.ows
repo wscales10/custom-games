@@ -8617,6 +8617,8 @@ rule("Enter State: Orbs")
 		Global.Phase == 4;
 		Event Player.CanUseOrbs == True;
 		Event Player.State == Custom String("Idle");
+		Has Status(Event Player, Stunned) == False;
+		Event Player.IsHacked == False;
 		Is Button Held(Event Player, Button(Ability 2)) == True;
 		Is On Ground(Event Player) == True;
 	}
