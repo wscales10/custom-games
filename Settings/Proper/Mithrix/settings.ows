@@ -256,7 +256,7 @@ variables
 		5: IsDead
 		6: Master
 		7: Target
-		8: Bots
+		8: Bot
 		9: Victims
 		10: ShouldUpdateDamageReceived
 		11: ArmourModifiers
@@ -1691,7 +1691,7 @@ rule("Update Crit (From Flag)")
 
 	actions
 	{
-		Event Player.Bots[0].Crit[3] = True;
+		Event Player.Bot.Crit[3] = True;
 		Wait(0.100, Ignore Condition);
 		Event Player.Crit[3] = False;
 		Start Rule(UpdateCrit, Restart Rule);
@@ -1902,7 +1902,7 @@ rule("Update Max HPs, healing and damage (after setting TotalHPUnits, BaseDamage
 				Event Player.CachedHealth = Array(True, True, Health(Event Player), Max Health(Event Player));
 			End;
 			Event Player.IntendedMaxHealth = Mapped Array(Array(0.533, 0.467), Event Player.TotalHPUnits * Current Array Element);
-			Set Damage Dealt(Event Player.Bots[0], 100 * Event Player.BaseDamageMultiplier[1] * 0.600 * 12 / ((12 - 3 * (
+			Set Damage Dealt(Event Player.Bot, 100 * Event Player.BaseDamageMultiplier[1] * 0.600 * 12 / ((12 - 3 * (
 				Global.Difficulty[0] - 1)) * 12));
 		Else;
 			If(Event Player.IsHero);
@@ -2087,7 +2087,7 @@ rule("Disable Fast Travel")
 
 	conditions
 	{
-		(Event Player.MyItemStackSizes[31] == 0 || Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bots[0]))
+		(Event Player.MyItemStackSizes[31] == 0 || Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bot))
 			== True;
 	}
 
@@ -2110,7 +2110,7 @@ rule("Enable Fast Travel")
 	conditions
 	{
 		Event Player.MyItemStackSizes[31] > 0;
-		(Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bots[0])) == False;
+		(Event Player.State == Custom String("Orbs") || Is Firing Primary(Event Player.Bot)) == False;
 	}
 
 	actions
@@ -6522,7 +6522,7 @@ rule("Needler Bot")
 
 	actions
 	{
-		Event Player.Master[0].Bots[0] = Event Player;
+		Event Player.Master[0].Bot = Event Player;
 		Event Player.Master[1] = Event Player.Master[0];
 		Wait(0.250, Ignore Condition);
 		Start Forcing Dummy Bot Name(Event Player, Event Player.Master[0]);
@@ -6582,7 +6582,7 @@ rule("Start Holding Primary Fire")
 	actions
 	{
 		Event Player.NeedleCooldown = Global.Difficulty[2] >= 6 ? 3 : 6;
-		Start Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		Start Holding Button(Event Player.Bot, Button(Primary Fire));
 		Chase Player Variable At Rate(Event Player, NeedleAmmo, 0, 10, None);
 	}
 }
@@ -6603,7 +6603,7 @@ rule("Stop Holding Primary Fire")
 
 	actions
 	{
-		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		Stop Holding Button(Event Player.Bot, Button(Primary Fire));
 		Abort If(Global.Phase != 4 || !Global.TestMode);
 		Press Button(Event Player, Button(Ability 2));
 	}
@@ -6625,7 +6625,7 @@ rule("Stop Holding Primary Fire")
 
 	actions
 	{
-		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		Stop Holding Button(Event Player.Bot, Button(Primary Fire));
 		Abort If(Global.Phase != 4 || !Global.TestMode);
 		Press Button(Event Player, Button(Ability 2));
 	}
@@ -6647,7 +6647,7 @@ rule("Stop Holding Primary Fire")
 
 	actions
 	{
-		Stop Holding Button(Event Player.Bots[0], Button(Primary Fire));
+		Stop Holding Button(Event Player.Bot, Button(Primary Fire));
 	}
 }
 
