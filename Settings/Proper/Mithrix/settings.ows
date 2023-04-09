@@ -6798,7 +6798,7 @@ rule("AiStep")
 						Direction and Turn Rate);
 				Else If(Hero Of(Global.Add) == Hero(Tracer));
 					Start Facing(Global.Add, Direction Towards(Eye Position(Evaluate Once(Global.Add)), Evaluate Once(Global.Add).TargetPosition),
-						Is Firing Primary(Evaluate Once(Global.Add)) ? 12.600 : 45, To World, Direction and Turn Rate);
+						Is Firing Primary(Evaluate Once(Global.Add)) ? 15 : 45, To World, Direction and Turn Rate);
 				End;
 			End;
 		End;
@@ -6942,7 +6942,7 @@ rule("TryShoot")
 	{
 		Abort If(Distance Between(Eye Position(Global.Add), Global.Add.TargetPosition) > (Hero Of(Global.Add) == Hero(Wrecking Ball)
 			? 18 : 25) || (Distance Between(Eye Position(Global.Add), Global.Add.TargetPosition) < 15 && Ultimate Charge Percent(
-			Global.Add) == 100) || (Hero Of(Global.Add) == Hero(Tracer) && !Is In View Angle(Global.Add, Global.Add.TargetPosition, 35))
+			Global.Add) == 100) || (Hero Of(Global.Add) == Hero(Tracer) && !Is In View Angle(Global.Add, Global.Add.TargetPosition, 30))
 			|| (Hero Of(Global.Add) == Hero(Wrecking Ball) && Ammo(Global.Add, 0) < Max Ammo(Global.Add, 0)) || (Hero Of(Global.Add)
 			== Hero(Wrecking Ball) && !Is In View Angle(Global.Add, Global.Add.TargetPosition, 40)));
 		Global.Add.State = Custom String("Shoot");
