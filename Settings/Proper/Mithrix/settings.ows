@@ -1036,7 +1036,7 @@ rule("Boss Setup")
 			Event Player, Phased Out) ? All Players(All Teams) : Null, Event Player, Heart, Visible To and Position, Color(Yellow), False);
 		Create Beam Effect(Event Player.Target && !Is In Alternate Form(Event Player.Target) ? Event Player : Null, Bad Beam, Update Every Frame(Eye Position(Event Player.Target) + Facing Direction Of(Event Player.Target)
 			* 0.100), Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.Target), Eye Position(Event Player.Target)
-			+ Facing Direction Of(Event Player.Target) * 100, All Players(All Teams), Event Player.Target, True)), Color(Green),
+			+ Facing Direction Of(Event Player.Target) * 100, All Players(All Teams), Event Player.Target, True)), Color(Blue),
 			Visible To Position and Radius);
 		Modify Global Variable(BotCreationQueue, Append To Array, Array(Hero(Orisa), Event Player));
 		Set Knockback Received(Event Player, 0);
