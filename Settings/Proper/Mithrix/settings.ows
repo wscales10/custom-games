@@ -649,13 +649,13 @@ rule("Global setup")
 				Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Local Player),
 				Eye Position(Local Player) + 4 * Facing Direction Of(Local Player), Null, Local Player, False),
 				Global.ItemShopPositions[Current Array Element]))[0]] < 4 ? Custom String("[{0}] Buy", Input Binding String(Button(Interact)))
-				: Custom String(" "), Custom String("£{0}", Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions,
+				: Custom String(" "), Mapped Array(Sorted Array(Mapped Array(Global.ItemShopPositions,
 				Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Local Player), Eye Position(Local Player)
-				+ 4 * Facing Direction Of(Local Player), Null, Local Player, False), Global.ItemShopPositions[Current Array Element]))[0]]),
-				Top, 1, Color(White), Color(White), Array Contains(Global.SpecialOffers, Sorted Array(Mapped Array(Global.ItemShopPositions,
+				+ 4 * Facing Direction Of(Local Player), Null, Local Player, False), Global.ItemShopPositions[Current Array Element]))[0], Global.ItemShopRarities[Current Array Element] == 4 && Global.Options[3] ? Custom String("€1") : Custom String("£{0}", Global.ItemShopPrices[Current Array Element])),
+				Top, 1, Color(White), Color(White), Mapped Array(Sorted Array(Mapped Array(Global.ItemShopPositions,
 				Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Local Player), Eye Position(Local Player)
-				+ 4 * Facing Direction Of(Local Player), Null, Local Player, False), Global.ItemShopPositions[Current Array Element]))[0])
-				? Color(Yellow) : Color(White), Visible To String and Color, Default Visibility);
+				+ 4 * Facing Direction Of(Local Player), Null, Local Player, False), Global.ItemShopPositions[Current Array Element]))[0], Array Contains(Global.SpecialOffers, Current Array Element) || Global.ItemShopRarities[Current Array Element] == 4 && Global.Options[3]
+				? Color(Yellow) : Color(White)), Visible To String and Color, Default Visibility);
 			"Description"
 			Create HUD Text(Global.State == Custom String("Buy") && Local Player.IsHero && Is True For Any(Global.ItemShopPositions,
 				Distance Between(Ray Cast Hit Position(Eye Position(Local Player), Eye Position(Local Player) + 4 * Facing Direction Of(
@@ -936,7 +936,7 @@ rule("Boss Setup")
 		Create HUD Text(Event Player.ShowBossAbilityInfo[6] ? Event Player : Null, Event Player.ShowBossAbilityInfo[6], Custom String(
 			"[{0}]", Input Binding String(Button(Ultimate))), Mapped Array(Event Player.Target ? 100 - Ultimate Charge Percent(
 			Event Player.Target) : Event Player.SlamCooldown, Current Array Element ? (Event Player.Target ? String("{0}%",
-			100 - Current Array Element) : Round To Integer(Current Array Element, Up)) : Custom String(" "))[0], Right, 0.300,
+			100 - Current Array Element) : Round To Integer(Current Array Element, Up)) : Custom String(" ")), Right, 0.300,
 			Event Player.Target ? (Ultimate Charge Percent(Event Player.Target) == 100 ? Custom Color(204 + 51 * Cosine From Degrees(
 			360 * Total Time Elapsed), 204 + 51 * Cosine From Degrees(360 * Total Time Elapsed), 255, 255) : Color(Gray)) : (
 			Event Player.CanSlam[0] ? (Event Player.SlamCooldown ? Color(Orange) : Color(Gray)) : Color(Red)),
@@ -945,7 +945,7 @@ rule("Boss Setup")
 		"Sprint"
 		Create HUD Text(Event Player.ShowBossAbilityInfo[0] ? Event Player : Null, Event Player.ShowBossAbilityInfo[0], Custom String(
 			"[{0}]", Input Binding String(Button(Ability 1))), Mapped Array(Event Player.Target.DashCooldown,
-			Current Array Element ? Round To Integer(Current Array Element, Up) : Custom String(" "))[0], Right, 0.400,
+			Current Array Element ? Round To Integer(Current Array Element, Up) : Custom String(" ")), Right, 0.400,
 			Event Player.Target || Event Player.CanSprint ? (Event Player.State == Custom String("ClosingIn")
 			|| Event Player.Target.State == Custom String("Dashing") || Is In Alternate Form(Event Player.Target) ? Color(Orange) : Color(
 			Gray)) : Color(Red), Event Player.Target || Event Player.CanSprint ? Color(White) : Custom Color(127, 127, 127, 170), Color(
@@ -1265,13 +1265,13 @@ rule("Hero Setup")
 				Global.ItemShopPositions, Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player),
 				Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null, Event Player, False),
 				Global.ItemShopPositions[Current Array Element]))[0]] < 4 ? Custom String("[{0}] Buy", Input Binding String(Button(Interact)))
-				: Custom String(" "), Custom String("£{0}", Global.ItemShopPrices[Sorted Array(Mapped Array(Global.ItemShopPositions,
+				: Custom String(" "), Mapped Array(Sorted Array(Mapped Array(Global.ItemShopPositions,
 				Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
-				+ 4 * Facing Direction Of(Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0]]),
-				Top, 1, Color(White), Color(White), Array Contains(Global.SpecialOffers, Sorted Array(Mapped Array(Global.ItemShopPositions,
+				+ 4 * Facing Direction Of(Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0], Global.ItemShopRarities[Current Array Element] == 4 && Global.Options[3] ? Custom String("€1") : Custom String("£{0}", Global.ItemShopPrices[Current Array Element])),
+				Top, 1, Color(White), Color(White), Mapped Array(Sorted Array(Mapped Array(Global.ItemShopPositions,
 				Current Array Index), Distance Between(Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
-				+ 4 * Facing Direction Of(Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0])
-				? Color(Yellow) : Color(White), Visible To String and Color, Default Visibility);
+				+ 4 * Facing Direction Of(Event Player), Null, Event Player, False), Global.ItemShopPositions[Current Array Element]))[0], Array Contains(Global.SpecialOffers, Current Array Element) || Global.ItemShopRarities[Current Array Element] == 4 && Global.Options[3]
+				? Color(Yellow) : Color(White)), Visible To String and Color, Default Visibility);
 			"Description"
 			Create HUD Text(Global.State == Custom String("Buy") && Is True For Any(Global.ItemShopPositions, Distance Between(
 				Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player) + 4 * Facing Direction Of(Event Player), Null,
@@ -2396,11 +2396,11 @@ rule("On hit effects")
 			If(Is Alive(Victim));
 				"Debuff Focus"
 				If(Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-					Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+					Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element) + 1],
 					Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 					Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 					Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-					: Current Array Element)[0] > 0 && Attacker.Master[0].MyItemStackSizes[28] && Victim.DebuffFocusTime == 0 && Count Of(
+					: Current Array Element) > 0 && Attacker.Master[0].MyItemStackSizes[28] && Victim.DebuffFocusTime == 0 && Count Of(
 					Filtered Array(Array(Victim.SlowTime > 0, Victim.BleedTime > 0, Victim.IsBurning, Has Status(Victim, Hacked), Has Status(
 					Victim, Frozen), Has Status(Victim, Asleep), Has Status(Victim, Knocked Down), Has Status(Victim, Rooted),
 					Victim.CrippleTime > 0, Victim.ArmourPiercingStacks[0] > 0, Victim.ArmourPiercingStacks[1] > 0), Current Array Element)) >= 4);
@@ -2410,10 +2410,10 @@ rule("On hit effects")
 					Else;
 						Modify Player Variable(Victim, DebuffFocusTime, Max, 7 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(
 							Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons)
-							+ Current Array Element)[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
+							+ Current Array Element) + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
 							Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200)
 							: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
-							^ 2 / 700)) : Current Array Element)[0]);
+							^ 2 / 700)) : Current Array Element));
 						Victim.ShouldUpdateDamageReceived = True;
 					End;
 				End;
@@ -2433,11 +2433,11 @@ rule("On hit effects")
 						Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker))],
 							Attacker.Master[0].HealthScale[0] * (4 + 4 * Attacker.Master[0].MyItemStackSizes[25]) * Mapped Array(
 							Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-							Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+							Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element) + 1],
 							Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 							Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 							Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-							: Current Array Element)[0] * Attacker.Master[0].HealingModifiers[1]);
+							: Current Array Element) * Attacker.Master[0].HealingModifiers[1]);
 					End;
 					"Crit bleed"
 					If(Attacker.Master[0].MyItemStackSizes[27] && Is Alive(Victim));
@@ -2447,10 +2447,10 @@ rule("On hit effects")
 						Else;
 							Modify Player Variable(Victim, BleedTime, Max, 3 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
 								Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)
-								[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+								 + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 								Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 								Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-								: Current Array Element)[0]);
+								: Current Array Element));
 							Victim.BleedInfo = Array(Victim.BleedInfo[0] + 1, Max(Attacker.Master[0].BaseDamageMultiplier[1], (
 								Attacker.Master[0].BaseDamageMultiplier[1] + Victim.BleedInfo[1]) / 2), Attacker.Master[0], Attacker.Master[0]);
 						End;
@@ -2487,10 +2487,10 @@ rule("On hit effects")
 							Victim.ArmourPiercingStacks[0] += 1;
 							Modify Player Variable(Victim, APTime, Max, 2 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons,
 								Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)
-								[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
+								 + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 								Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 								Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-								: Current Array Element)[0]);
+								: Current Array Element));
 						Else;
 							Victim.ArmourPiercingStacks[0] += 1;
 							Victim.APTime = 8 * Attacker.Master[0].MyItemStackSizes[4];
@@ -2502,10 +2502,10 @@ rule("On hit effects")
 				If(Attacker.Master.MyItemStackSizes[10] && !Victim.IsBoss && Random Real(0, 1) < (1 - 1 / (
 					0.050 * Attacker.Master[0].MyItemStackSizes[10] + 1)) * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(
 					Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons)
-					+ Current Array Element)[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
+					+ Current Array Element) + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
 					Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200)
 					: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
-					^ 2 / 700)) : Current Array Element)[0]);
+					^ 2 / 700)) : Current Array Element));
 					Set Status(Victim, Attacker.Master[0], Stunned, 2);
 				End;
 				"Armour Reduction"
@@ -2525,10 +2525,10 @@ rule("On hit effects")
 				Attacker.Hero == Hero(Widowmaker) && Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1))
 				>= Attacker.Master[0].BaseDamageMultiplier[1] * 4 && Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(
 				Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons)
-				+ Current Array Element)[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
+				+ Current Array Element) + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200,
 				Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200)
 				: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
-				^ 2 / 700)) : Current Array Element)[0] > 0);
+				^ 2 / 700)) : Current Array Element) > 0);
 				If(Attacker.Master[0].MyItemStackSizes[7] && Is Alive(Victim));
 					Attacker.Master[0].BlastCooldown = 10;
 					Play Effect(All Players(All Teams), Buff Impact Sound, Color(White), Victim, 100);
@@ -2567,25 +2567,25 @@ rule("On hit effects")
 				Heal(Attacker.Master[0], Global.NullPlayer[Index Of Array Value(Array(Team 1, Team 2), Team Of(Attacker))],
 					Attacker.Master[0].HealthScale[0] * Attacker.Master[0].MyItemStackSizes[9] * Mapped Array(Global.ProcCoefs[Mapped Array(
 					Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(
-					Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(
+					Global.Buttons) + Current Array Element) + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(
 					0.200, Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200)
 					: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
-					^ 2 / 700)) : Current Array Element)[0] * Attacker.Master[0].HealingModifiers[1]);
+					^ 2 / 700)) : Current Array Element) * Attacker.Master[0].HealingModifiers[1]);
 			End;
 			If(!Array Contains(Global.LightningStrikes, Attacker.Master[0]) && Attacker.Master[0].MyItemStackSizes[16] && Random Real(0, 1)
 				< 0.100 * Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-				Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+				Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element) + 1],
 				Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 				Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-				: Current Array Element)[0]);
+				: Current Array Element));
 				Play Effect(All Players(All Teams), DVa Self Destruct Explosion Sound, Team Of(Attacker), Eye Position(Victim), 100);
 				Modify Global Variable(LightningStrikes, Append To Array, Array(Total Time Elapsed + 0.250, Eye Position(Victim),
 					Attacker.Master[0], 5 * Attacker.Master[0].MyItemStackSizes[16] * Event Damage / ((Event Was Critical Hit && Attacker.Hero != Hero(Reinhardt) ? (Attacker.Hero == Hero(Kiriko) ? 3 : (
 						Attacker.Hero == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero == Hero(Widowmaker)
 						&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1) * Victim.DamageReceivedMultiplier[1]),
 					Mapped Array(Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-					Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+					Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element) + 1],
 					Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 					Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 					Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
@@ -2595,10 +2595,10 @@ rule("On hit effects")
 			If(!Array Contains(Global.DamageBeamInfo, Attacker.Master[0]) && !Array Contains(Global.ChainLightningBans, Attacker.Master[0])
 				&& Attacker.Master[0].MyItemStackSizes[22] && Random Real(0, 1) < 0.250 * Mapped Array(Global.ProcCoefs[Mapped Array(
 				Index Of Array Value(Global.Buttons, Event Ability), Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(
-				Global.Buttons) + Current Array Element)[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(
+				Global.Buttons) + Current Array Element) + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(
 				0.200, Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200)
 				: 1 - Absolute Value(Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40)
-				^ 2 / 700)) : Current Array Element)[0]);
+				^ 2 / 700)) : Current Array Element));
 				Modify Global Variable(DamageBeamInfo, Append To Array, Array(Custom String("Chain Lightning"), Attacker.Master[0],
 					Event Damage * 0.800 / ((Event Was Critical Hit && Attacker.Hero != Hero(Reinhardt) ? (Attacker.Hero == Hero(Kiriko) ? 3 : (
 						Attacker.Hero == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero == Hero(Widowmaker)
@@ -2632,11 +2632,11 @@ rule("Normal Bleed")
 	{
 		Abort If(Is Dead(Victim) || Random Real(0, 1) >= 0.100 * Attacker.Master[0].MyItemStackSizes[3] * Mapped Array(
 			Global.ProcCoefs[Mapped Array(Index Of Array Value(Global.Buttons, Event Ability),
-			Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element)[0] + 1],
+			Current Array Element == -1 ? -1 : Attacker.HeroIndex * Count Of(Global.Buttons) + Current Array Element) + 1],
 			Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 			Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 			Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-			: Current Array Element)[0]);
+			: Current Array Element));
 		If(Victim.DebuffShield[0] > 0);
 			Victim.DebuffShield[0] -= 1;
 			Victim.DebuffShield[3] += 1;
@@ -2646,7 +2646,7 @@ rule("Normal Bleed")
 				[0] + 1], Current Array Element == -1 ? Max(0, Min(1, Event Ability == Null ? Max(0.200, Event Damage / (
 				Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) * 0.260 - 11.200) : 1 - Absolute Value(
 				Event Damage / (Victim.DamageReceivedMultiplier[1] * Attacker.Master[0].BaseDamageMultiplier[0]) - 40) ^ 2 / 700))
-				: Current Array Element)[0]);
+				: Current Array Element));
 			Victim.BleedInfo[0] += 1;
 			Victim.BleedInfo[1] = Max(Attacker.Master[0].BaseDamageMultiplier[1], (
 				Attacker.Master[0].BaseDamageMultiplier[1] + Victim.BleedInfo[1]) / 2);
@@ -3701,8 +3701,7 @@ rule("Double jump?")
 			Stunned));
 		Event Player.DoubleJumps[2] += 1;
 		Abort If((Event Player.Hero == Hero(Genji) && Event Player.DoubleJumps[2] == 1) || (Event Player.Hero == Hero(Hanzo)
-			&& Mapped Array(Ability Cooldown(Event Player, Button(Jump)), Current Array Element == 0 || Current Array Element > 4.900)
-			[0]));
+			&& Mapped Array(Ability Cooldown(Event Player, Button(Jump)), Current Array Element == 0 || Current Array Element > 4.900)));
 		Event Player.DoubleJumps[1] += 1;
 		Apply Impulse(Event Player, Up, 10, To World, Cancel Contrary Motion);
 	}
@@ -6410,7 +6409,7 @@ rule("Is On Ground")
 					Damage(Event Player, Global.NullPlayer[1], Mapped Array(Event Player.FallDamage[0] * Event Player.FallDamage[3] * (
 						Max Health Of Type(Event Player, Health) + Max Health Of Type(Event Player, Armor)) * Event Player.DamageReceivedMultiplier[0],
 						Global.Options[5] || Global.Difficulty[2] >= 2 ? Current Array Element : Min(Health(Event Player) - 1, Current Array Element))
-						[0] / Event Player.DamageReceivedMultiplier[1]);
+						 / Event Player.DamageReceivedMultiplier[1]);
 				End;
 			End;
 		End;
@@ -6866,10 +6865,10 @@ rule("Evaluate add horizontal throttle")
 			Global.Add.AI[4] = Vector(Random Integer(-1, 1), 0, -1);
 		Else If(Global.Add.AI[3] == 5);
 			Global.Add.AI[4] = Vector(Mapped Array(Horizontal Angle Towards(Global.Add, Global.Add.TargetPosition),
-				Current Array Element ? 1 : (Current Array Element ? -1 : 0))[0], 0, 0);
+				Current Array Element ? 1 : (Current Array Element ? -1 : 0)), 0, 0);
 		Else If(Global.Add.AI[3] == 6);
 			Global.Add.AI[4] = Vector(Mapped Array(Horizontal Angle Towards(Global.Add, Global.Add.TargetPosition),
-				Current Array Element ? -1 : (Current Array Element ? 1 : 0))[0], 0, 0);
+				Current Array Element ? -1 : (Current Array Element ? 1 : 0)), 0, 0);
 		Else;
 			Global.Add.AI[4] = Vector(0, 0, 0);
 		End;
@@ -7040,7 +7039,7 @@ rule("Add. Setup")
 				Current Array Element ? Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element))
 				* Up + Random Real(10, 30) * Direction From Angles(Random Integer(-179, 179), 0) : Random Real(0, Global.ArenaRadius - 10)
 				* Direction From Angles(Random Integer(-179, 179), 0)), Min(Global.ArenaRadius - 1, Magnitude Of(Current Array Element))
-				* Normalize(Current Array Element))[0]);
+				* Normalize(Current Array Element)));
 			Event Player.Ids[0] = Random Value In Array(Remove From Array(Global.BallNames, Mapped Array(All Players(Team 2),
 				Current Array Element.Ids[0])));
 			Event Player.Ids[0] = Event Player.Ids[0] ? Event Player.Ids[0] : Random Value In Array(Global.BallNames);
@@ -8643,11 +8642,11 @@ rule("Enter State: Orbs")
 			Wait(0.032, Ignore Condition);
 			Create Effect(All Players(All Teams), Orb, Color(White), Mapped Array(Global.OrbDisplayPositions[Evaluate Once(
 				Event Player.NewOrbGlobalIndex)], Current Array Element ? Current Array Element : Global.OrbInitialPositions[Evaluate Once(
-				Event Player.NewOrbGlobalIndex)])[0], 0.750, Visible To Position and Radius);
+				Event Player.NewOrbGlobalIndex)]), 0.750, Visible To Position and Radius);
 			Global.OrbEffects[Event Player.NewOrbGlobalIndex * 2] = Last Created Entity;
 			Create Effect(All Players(All Teams), Orisa Amplifier Sound, Team 2, Mapped Array(Global.OrbDisplayPositions[Evaluate Once(
 				Event Player.NewOrbGlobalIndex)], Current Array Element ? Current Array Element : Global.OrbInitialPositions[Evaluate Once(
-				Event Player.NewOrbGlobalIndex)])[0], 100, Visible To Position and Radius);
+				Event Player.NewOrbGlobalIndex)]), 100, Visible To Position and Radius);
 			Global.OrbSounds[Event Player.NewOrbGlobalIndex] = Last Created Entity;
 			Modify Player Variable(Event Player, OrbCreationIndex, Append To Array, Event Player.NewOrbGlobalIndex);
 			Event Player.OrbCreationIndex[0] += 1;
