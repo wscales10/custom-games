@@ -5389,7 +5389,7 @@ rule("Enable Sprint")
 	conditions
 	{
 		Event Player.State == Custom String("Idle");
-		Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Distance Between(Position Of(
+		Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer), Has Spawned(Current Array Element) && Distance Between(Position Of(
 			Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up, Event Player) < 13) == False;
 		Event Player.IsHacked == False;
 	}
@@ -5413,7 +5413,7 @@ rule("Disable Sprint")
 	{
 		Event Player.State != Custom String("ClosingIn");
 		(Event Player.State == Custom String("Idle") && !Is True For Any(Remove From Array(All Living Players(Team 1), Global.NullPlayer),
-			Distance Between(Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up, Event Player)
+			Has Spawned(Current Array Element) && Distance Between(Position Of(Current Array Element) - Y Component Of(Position Of(Current Array Element)) * Up, Event Player)
 			< 13) && !Event Player.IsHacked) == False;
 	}
 
