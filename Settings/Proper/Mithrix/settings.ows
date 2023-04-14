@@ -1854,7 +1854,7 @@ rule("Calculate Stats")
 				"OW HP = 0.6 * RoR2 HP, all Team 2 HP is / 2.4"
 				Event Player.TotalHPUnits = Event Player.HealthScale[3] * (850 + 255 * (Event Player.Level - 1)) / Global.BossCount / 25;
 				Event Player.BaseDamageMultiplier[1] = Global.HealthScalar * (15 + 3 * (Event Player.Level - 1));
-				Event Player.BaseDamageMultiplier[0] = Event Player.BaseDamageMultiplier[1] / 75.600;
+				Event Player.BaseDamageMultiplier[0] = Event Player.BaseDamageMultiplier[1] / 71;
 			End;
 		End;
 		Event Player.BaseDamageMultiplier[2] = Event Player.BaseDamageMultiplier[1] / Event Player.BaseDamageMultiplier[0];
@@ -7446,7 +7446,7 @@ rule("Wisp is not shooting")
 	actions
 	{
 		If(Magnitude Of(Event Player.WispAcceleration));
-			Event Player.WispAcceleration = 10 * Normalize(Event Player.WispAcceleration);
+			Event Player.WispAcceleration = 9 * Normalize(Event Player.WispAcceleration);
 		End;
 		"Was 115, but nerfed slightly to make them grouping up take longer"
 		Event Player.BaseMoveSpeedModifier = 100;
@@ -7473,7 +7473,7 @@ rule("Wisp descent")
 
 	actions
 	{
-		Event Player.WispAcceleration = Down * (Is Firing Primary(Event Player) ? 4 : 10);
+		Event Player.WispAcceleration = Down * (Is Firing Primary(Event Player) ? 4 : 9);
 		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
@@ -7497,7 +7497,7 @@ rule("Wisp ascent")
 
 	actions
 	{
-		Event Player.WispAcceleration = Up * (Is Firing Primary(Event Player) ? 4 : 10);
+		Event Player.WispAcceleration = Up * (Is Firing Primary(Event Player) ? 4 : 9);
 		Start Rule(DetermineAcceleration, Restart Rule);
 	}
 }
