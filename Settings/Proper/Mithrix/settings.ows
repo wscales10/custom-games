@@ -1034,7 +1034,7 @@ rule("Boss Setup")
 		Event Player.PizzaIndex = Custom String("Dormant");
 		Create Icon(Event Player.ArmourModifiers[1] && Has Spawned(Event Player) && !Event Player.HasLostThisPhase && !Has Status(
 			Event Player, Phased Out) ? All Players(All Teams) : Null, Event Player, Heart, Visible To and Position, Color(Yellow), False);
-		Create Beam Effect(Event Player.Target && !Is In Alternate Form(Event Player.Target) ? Event Player : Null, Bad Beam, Update Every Frame(Eye Position(Event Player.Target) + Facing Direction Of(Event Player.Target)
+		Create Beam Effect(Event Player.Target && Is Alive(Event Player.Target) && !Is In Alternate Form(Event Player.Target) ? Event Player : Null, Bad Beam, Update Every Frame(Eye Position(Event Player.Target) + Facing Direction Of(Event Player.Target)
 			* 0.100), Update Every Frame(Ray Cast Hit Position(Eye Position(Event Player.Target), Eye Position(Event Player.Target)
 			+ Facing Direction Of(Event Player.Target) * 100, All Players(All Teams), Event Player.Target, True)), Color(Blue),
 			Visible To Position and Radius);
