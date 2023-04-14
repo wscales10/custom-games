@@ -4804,6 +4804,8 @@ rule("On Enter State: Suspended")
 	{
 		Event Player.CanSwing = 0;
 		Start Forcing Player Position(Event Player, Vector(1, 2.500, 0), False);
+		Start Facing(Event Player, Left, 10000, To World, None);
+		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -4898,8 +4900,6 @@ rule("On Enter State: Cutscene (Boss)")
 
 	actions
 	{
-		Start Facing(Event Player, Left, 10000, To World, None);
-		Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 		Stop Forcing Player Position(Event Player);
 		Clear Status(Event Player, Phased Out);
 		Apply Impulse(Event Player, Down, 70, To World, Cancel Contrary Motion);
