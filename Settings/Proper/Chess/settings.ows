@@ -1,0 +1,1029 @@
+settings
+{
+	lobby
+	{
+		Max Spectators: 12
+		Max Team 1 Players: 1
+		Max Team 2 Players: 1
+	}
+
+	modes
+	{
+		disabled Control
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		disabled Push
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		Skirmish
+		{
+			enabled maps
+			{
+				Workshop Island Night 972777519512064579
+			}
+		}
+	}
+
+	extensions
+	{
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: MoveStartPosition
+		1: MoveEndPosition
+		2: i
+		3: j
+		4: AllPieces
+		5: Teams
+		6: Turn
+		7: PieceCreationQueue
+		8: PieceTypes
+		9: PieceHeroes
+		10: Mode
+		11: k
+		12: SetLegalMovesTeamIndex
+		13: TeamColours
+		14: IsChecked
+		15: IsCheckmated
+		16: TeamNames
+
+	player:
+		0: IsMyTurn
+		1: IsDragging
+		2: ContinuousBasePosition
+		3: CameraPosition
+		4: IsMouseDown
+		5: DiscretePosition
+		6: HandPosition
+		7: EyeToHandDistance
+		8: DragCandidate
+		9: PiecePosition
+		10: HighlightPosition
+		11: IsBeingDragged
+		12: PieceType
+		13: LegalMoves
+		14: CandidateMove
+		15: CandidateMoveDelta
+		16: ShouldSetLegalMoves
+		17: PieceTeam
+		18: MyPieces
+		19: ForwardDirection
+		20: ShouldSetMyPieces
+		21: HasSetLegalMoves
+		22: IsCaptured
+		23: SquaresThreatening
+		24: IllegalSquares
+		25: PiecesThatMightBlockCheck1
+		26: PiecesThatMightBlockCheck2
+		27: AbsolutePinDirection
+		28: i
+		29: CheckingPieces
+		30: CheckedPieces
+		31: FriendlyChecks
+		32: j
+		33: CheckedPosition
+		34: CheckerPosition
+		35: IsAttemptingMove
+		36: PromotingPieceType
+		37: PieceHasMoved
+		38: FriendlyRooks
+		39: NewPiecePosition
+		40: VulnerableToFrenchMove
+}
+
+subroutines
+{
+	0: Position
+	1: SetLegalMoves
+	2: AddBishopMoves
+	3: AddRookMoves
+	4: AddMoves
+	5: NextTurn
+	6: UnlockPlayers
+	7: SetLegalMovesGlobal
+	8: EndMoveAttempt
+	9: CheckCastleMove
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Mode = 1;
+		Global.AllPieces = Empty Array;
+		Global.PieceCreationQueue = Empty Array;
+		Global.PieceTypes = Array(Custom String("Pawn"), Custom String("Knight"), Custom String("Bishop"), Custom String("Rook"),
+			Custom String("Queen"), Custom String("King"));
+		Global.PieceHeroes = Array(Hero(Genji), Hero(Orisa), Hero(Zenyatta), Hero(Bastion), Hero(Junker Queen), Hero(Torbjörn));
+		Global.Teams = Array(Team 1, Team 2);
+		Global.TeamNames = Array(Custom String("White"), Custom String("Black"));
+		Global.TeamColours = Array(Color(White), Color(Black));
+		Create Effect(Global.MoveStartPosition ? All Players(All Teams) : Null, Sphere, Color(Blue), Vector(14 - 4 * X Component Of(
+			Global.MoveStartPosition), -4.375, 4 * Y Component Of(Global.MoveStartPosition) - 14), 4.625, Visible To Position and Radius);
+		Create Effect(Global.MoveEndPosition ? All Players(All Teams) : Null, Sphere, Color(Blue), Vector(14 - 4 * X Component Of(
+			Global.MoveEndPosition), -4.375, 4 * Y Component Of(Global.MoveEndPosition) - 14), 4.625, Visible To Position and Radius);
+		For Global Variable(j, 0, 8, 1);
+			For Global Variable(i, 0, 8, 1);
+				Create Effect(Local Player.IsDragging && Array Contains(Local Player.DragCandidate.LegalMoves, Evaluate Once(Vector(Global.i,
+					Global.j, 0))) ? Local Player : Null, Sphere, Color(Black), Vector(14 - 4 * Global.i, 0, 4 * Global.j - 14), 0.500,
+					Visible To);
+				Wait(0.016, Ignore Condition);
+			End;
+		End;
+		For Global Variable(j, 0, Count Of(Global.Teams), 1);
+			Create HUD Text(Global.IsChecked[Evaluate Once(Global.j)] ? All Players(All Teams) : Null, Global.IsCheckmated[Evaluate Once(
+				Global.j)] ? Custom String("#") : Custom String("+"), Null, Custom String("{0} is {1}", Evaluate Once(
+				Global.TeamNames[Global.j]), Global.IsCheckmated[Evaluate Once(Global.j)] ? Custom String("checkmated") : Custom String(
+				"in check")), Right, Global.j, Global.TeamColours[Global.j], Color(White), Color(White), Visible To and String,
+				Default Visibility);
+			Wait(0.016, Ignore Condition);
+		End;
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.PromotingPieceType), Hero Icon String(Hero(
+			Junker Queen)), Null, Custom String("[{0}] Queen", Input Binding String(Button(Ultimate))), Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.PromotingPieceType), Hero Icon String(Hero(Bastion)),
+			Null, Custom String("[{0}] Rook", Input Binding String(Button(Reload))), Left, 1, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.PromotingPieceType), Hero Icon String(Hero(Zenyatta)),
+			Null, Custom String("[{0}] Bishop", Input Binding String(Button(Ability 2))), Left, 2, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.PromotingPieceType), Hero Icon String(Hero(Orisa)),
+			Null, Custom String("[{0}] Knight", Input Binding String(Button(Ability 1))), Left, 3, Color(White), Color(White), Color(
+			White), Visible To and String, Default Visibility);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == False;
+	}
+
+	actions
+	{
+		Event Player.CameraPosition = Vector(0, 30, -0.600);
+		Start Camera(Event Player, Event Player.CameraPosition, Vector(0, 0, 0), 0);
+		Disable Hero HUD(Event Player);
+		Create Effect(Event Player, Sphere, Color(White), Event Player.HandPosition, 0.250, Visible To Position and Radius);
+		Chase Player Variable At Rate(Event Player, ContinuousBasePosition, Vector(((Horizontal Facing Angle Of(Event Player) * 2 + 360)
+			% 360 - 180) * 0.089, 0, Vertical Facing Angle Of(Event Player) * -0.180), Event Player.PromotingPieceType ? 0 : 3000,
+			Destination and Rate);
+		Create Beam Effect(Event Player.IsMyTurn ? Event Player : Null, Good Beam, Vector(16 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 16), Vector(12 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 16), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(Event Player.IsMyTurn ? Event Player : Null, Good Beam, Vector(12 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 16), Vector(12 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 12), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(Event Player.IsMyTurn ? Event Player : Null, Good Beam, Vector(12 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 12), Vector(16 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 12), Color(White),
+			Visible To Position and Radius);
+		Create Beam Effect(Event Player.IsMyTurn ? Event Player : Null, Good Beam, Vector(16 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 12), Vector(16 - 4 * X Component Of(
+			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 16), Color(White),
+			Visible To Position and Radius);
+		disabled Create HUD Text(Event Player, Event Player.DiscretePosition, Null, Event Player.ContinuousBasePosition, Left, 0, Color(White),
+			Color(White), Color(White), Visible To and String, Default Visibility);
+		Chase Player Variable At Rate(Event Player, EyeToHandDistance, (4 - Y Component Of(Event Player.CameraPosition)) / Y Component Of(
+			Direction Towards(Event Player.CameraPosition, Event Player.ContinuousBasePosition)), 3000, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, HandPosition,
+			Event Player.CameraPosition + Event Player.EyeToHandDistance * Direction Towards(Event Player.CameraPosition,
+			Event Player.ContinuousBasePosition), Event Player.PromotingPieceType ? 0 : 3000, Destination and Rate);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Ability 1 Enabled(Event Player, False);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Reload Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Set Status(Event Player, Null, Rooted, 9999);
+		Disallow Button(Event Player, Button(Jump));
+		Create Effect(Event Player.IsDragging ? Event Player : Null, Sphere, Color(Blue), Vector(14 - 4 * X Component Of(
+			Event Player.HighlightPosition), -4.375, 4 * Y Component Of(Event Player.HighlightPosition) - 14), 4.625,
+			Visible To Position and Radius);
+		Event Player.PieceType = Custom String("Player");
+		Wait Until(Has Spawned(Event Player), 99999);
+		Teleport(Event Player, Vector(X Component Of(Position Of(Event Player)) * 1.125, 0, Z Component Of(Position Of(Event Player))));
+	}
+}
+
+rule("Set Discrete Position Loop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsMyTurn == True;
+		(!Event Player.IsAttemptingMove || Event Player.IsDragging) == True;
+	}
+
+	actions
+	{
+		Event Player.DiscretePosition = Vector(Max(0, Min(7, Round To Integer((16 - X Component Of(Event Player.ContinuousBasePosition))
+			/ 4, Down))), Max(0, Min(7, Round To Integer((16 + Z Component Of(Event Player.ContinuousBasePosition)) / 4, Down))), 0);
+		Wait(0.100, Abort When False);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Is Holding LMB")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.IsMouseDown = True;
+	}
+}
+
+rule("Is Not Holding LMB")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Primary Fire)) == False;
+	}
+
+	actions
+	{
+		Event Player.IsMouseDown = False;
+		Event Player.IsDragging = False;
+	}
+}
+
+rule("IsMouseDown == True")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsMouseDown == True;
+	}
+
+	actions
+	{
+		Event Player.DragCandidate = Filtered Array(Event Player.MyPieces,
+			!Current Array Element.IsBeingDragged && Current Array Element.PiecePosition == Event Player.DiscretePosition)[0];
+		Abort If(Event Player.DragCandidate == Null);
+		Event Player.DragCandidate.IsBeingDragged = True;
+		Event Player.IsDragging = True;
+		Event Player.IsAttemptingMove = True;
+		Start Forcing Player Position(Event Player.DragCandidate, Event Player.ContinuousBasePosition + Up, True);
+		Event Player.HighlightPosition = Event Player.DragCandidate.PiecePosition;
+	}
+}
+
+rule("IsDragging == False")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsDragging == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.DragCandidate == Null);
+		If(Array Contains(Event Player.DragCandidate.LegalMoves, Event Player.DiscretePosition));
+			If(Event Player.DragCandidate.PieceType == Custom String("Pawn") && Array(Y Component Of(Event Player.DiscretePosition) == 7,
+				Y Component Of(Event Player.DiscretePosition) == 0, X Component Of(Event Player.DiscretePosition) == 7, X Component Of(
+				Event Player.DiscretePosition) == 0)[Index Of Array Value(Array(Up, Down, Left, Right),
+				Event Player.DragCandidate.ForwardDirection)]);
+				Event Player.PromotingPieceType = Custom String("Pawn");
+				Abort;
+			End;
+		End;
+		Start Rule(EndMoveAttempt, Restart Rule);
+	}
+}
+
+rule("End Move Attempt")
+{
+	event
+	{
+		Subroutine;
+		EndMoveAttempt;
+	}
+
+	actions
+	{
+		If(Event Player.DragCandidate);
+			If(Array Contains(Event Player.DragCandidate.LegalMoves, Event Player.DiscretePosition)
+				&& Event Player.PromotingPieceType != Custom String("Pawn"));
+				Global.MoveStartPosition = Event Player.DragCandidate.PiecePosition;
+				Event Player.DragCandidate.PiecePosition = Event Player.DiscretePosition;
+				Global.MoveEndPosition = Event Player.DiscretePosition;
+				Log To Inspector(Custom String("{0}{1}", Array(Custom String(""), Custom String("N"), Custom String("B"), Custom String("R"),
+					Custom String("Q"), Custom String("K"))[Index Of Array Value(Global.PieceTypes, Event Player.DragCandidate.PieceType)],
+					Custom String("{0}{1}", String Slice(Custom String("abcdefgh"), X Component Of(Global.MoveEndPosition), 1), Y Component Of(
+					Global.MoveEndPosition) + 1)));
+				Event Player.DragCandidate.PieceHasMoved = True;
+				If(Magnitude Of(Global.MoveEndPosition - Global.MoveStartPosition) > 1.500);
+					If(Event Player.DragCandidate.PieceType == Custom String("King"));
+						Filtered Array(Event Player.DragCandidate.FriendlyRooks, Direction Towards(Global.MoveStartPosition, Global.MoveEndPosition)
+							== Direction Towards(Global.MoveStartPosition, Current Array Element.PiecePosition))
+							.NewPiecePosition = Global.MoveEndPosition + Direction Towards(Global.MoveEndPosition, Global.MoveStartPosition);
+					Else If(Event Player.DragCandidate.PieceType == Custom String("Pawn"));
+						Event Player.DragCandidate.VulnerableToFrenchMove = True;
+					End;
+				End;
+				Filtered Array(Global.AllPieces,
+					Current Array Element.PieceTeam != Event Player.DragCandidate.PieceTeam && Current Array Element.PiecePosition == Event Player.DragCandidate.PiecePosition)
+					.IsCaptured = True;
+				If(Event Player.DragCandidate.PieceType == Custom String("Pawn") && Distance Between(Global.MoveStartPosition,
+					Global.MoveEndPosition) > 1.300 && Distance Between(Global.MoveStartPosition, Global.MoveEndPosition) < 1.700);
+					Filtered Array(Global.AllPieces,
+						Current Array Element.PieceTeam != Event Player.DragCandidate.PieceTeam && Current Array Element.VulnerableToFrenchMove && Current Array Element.PiecePosition == Event Player.DragCandidate.PiecePosition - Event Player.DragCandidate.ForwardDirection)
+						.IsCaptured = True;
+				End;
+				If(Event Player.PromotingPieceType);
+					Modify Global Variable(PieceCreationQueue, Append To Array, Array(Event Player.PromotingPieceType, Team Of(
+						Event Player.DragCandidate), Event Player.DragCandidate.PieceTeam, Event Player.DiscretePosition, True));
+					Event Player.DragCandidate.IsCaptured = True;
+					Wait Until(Count Of(Global.PieceCreationQueue) == 0, 99999);
+				End;
+				Event Player.IsMyTurn = False;
+				Start Rule(NextTurn, Restart Rule);
+			End;
+			Stop Forcing Player Position(Event Player.DragCandidate);
+			Event Player.DragCandidate.IsBeingDragged = False;
+			Event Player.DragCandidate = Null;
+			Event Player.PromotingPieceType = Null;
+		End;
+		Event Player.IsAttemptingMove = False;
+	}
+}
+
+rule("Next Turn")
+{
+	event
+	{
+		Subroutine;
+		NextTurn;
+	}
+
+	actions
+	{
+		Global.Turn = (Global.Turn + 1) % Count Of(Global.Teams);
+		Call Subroutine(UnlockPlayers);
+	}
+}
+
+rule("Unlock Players")
+{
+	event
+	{
+		Subroutine;
+		UnlockPlayers;
+	}
+
+	actions
+	{
+		If(Global.Mode == 2);
+			Filtered Array(All Players(Global.Teams[Global.Turn]), Current Array Element.PieceType == Custom String("Player")).IsMyTurn = True;
+		Else If(Global.Mode == 1);
+			Host Player.IsMyTurn = True;
+		End;
+		Filtered Array(Global.AllPieces, Current Array Element.PieceTeam == Global.Teams[Global.Turn]).VulnerableToFrenchMove = False;
+		Filtered Array(All Players(All Teams), Current Array Element.IsMyTurn).ShouldSetMyPieces = True;
+		Call Subroutine(SetLegalMovesGlobal);
+	}
+}
+
+rule("Position Subroutine")
+{
+	event
+	{
+		Subroutine;
+		Position;
+	}
+
+	actions
+	{
+		Teleport(Event Player, Vector(14 - 4 * X Component Of(Event Player.PiecePosition), 0, 4 * Y Component Of(
+			Event Player.PiecePosition) - 14));
+	}
+}
+
+rule("Piece Placed")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsBeingDragged == False;
+	}
+
+	actions
+	{
+		Abort If(!Array Contains(Global.AllPieces, Event Player));
+		Wait Until(!Is True For Any(Remove From Array(Global.AllPieces, Event Player),
+			Current Array Element.PiecePosition == Event Player.PiecePosition), 9999);
+		Call Subroutine(Position);
+	}
+}
+
+rule("Piece Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Scaling Player(Event Player, 1.500, False);
+		Event Player.PieceTeam = Global.PieceCreationQueue[2];
+		Event Player.PiecePosition = Global.PieceCreationQueue[3];
+		Event Player.PieceHasMoved = Global.PieceCreationQueue[4];
+		Event Player.ForwardDirection = Event Player.PieceTeam == Team 1 ? Up : Down;
+		Call Subroutine(Position);
+		Start Facing(Event Player, Event Player.PieceTeam == Team 1 ? Forward : Backward, 100, To World, Direction and Turn Rate);
+		Event Player.PieceType = Global.PieceTypes[Index Of Array Value(Global.PieceHeroes, Hero Of(Event Player))];
+		Modify Global Variable(AllPieces, Append To Array, Event Player);
+		Disable Nameplates(Event Player, All Players(All Teams));
+		Wait(0.100, Ignore Condition);
+		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Global.TeamColours[Index Of Array Value(Global.Teams,
+			Event Player.PieceTeam)], Always);
+		Global.PieceCreationQueue[0] = Null;
+	}
+}
+
+rule("Spawn Pieces")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Has Spawned(Host Player) == True;
+	}
+
+	actions
+	{
+		For Global Variable(k, 0, 7, 1);
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 1, Team 1, Vector(Global.k, 1, 0),
+				False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 2, Team 2, Vector(Global.k, 6, 0),
+				False));
+		End;
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 1, Team 1, Vector(4, 0, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 2, Team 2, Vector(4, 7, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 1, Team 1, Vector(3, 0, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 2, Team 2, Vector(3, 7, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, Team 1, Vector(0, 0, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, Team 1, Vector(7, 0, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, Team 2, Vector(7, 7, 0), False));
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, Team 2, Vector(0, 7, 0), False));
+		Wait Until(Count Of(Global.PieceCreationQueue) == 0, 9999);
+		Call Subroutine(UnlockPlayers);
+	}
+}
+
+rule("Spawn Pieces")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		"PieceType, OW Team, Chess Team"
+		Count Of(Global.PieceCreationQueue) > 1;
+	}
+
+	actions
+	{
+		Create Dummy Bot(Global.PieceHeroes[Index Of Array Value(Global.PieceTypes, Global.PieceCreationQueue[0])],
+			Global.PieceCreationQueue[1], -1, Vector(0, 0, 0), Vector(0, 0, 0));
+		Wait Until(Global.PieceCreationQueue[0] == Null, 9999);
+		Global.PieceCreationQueue = Array Slice(Global.PieceCreationQueue, 5, 1000);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Set Legal Moves")
+{
+	event
+	{
+		Subroutine;
+		SetLegalMoves;
+	}
+
+	actions
+	{
+		Event Player.LegalMoves = Empty Array;
+		If(Event Player.PieceType == Custom String("Pawn"));
+			If(!Is True For Any(All Players(All Teams),
+				Current Array Element.PiecePosition == Event Player.PiecePosition + Event Player.ForwardDirection));
+				Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.PiecePosition + Event Player.ForwardDirection);
+				If((Event Player.PieceTeam == Team 1 ? Y Component Of(Event Player.PiecePosition) == 1 : Y Component Of(Event Player.PiecePosition)
+					== 6) && !Is True For Any(All Players(All Teams),
+					Current Array Element.PiecePosition == Event Player.PiecePosition + 2 * Event Player.ForwardDirection));
+					Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.PiecePosition + 2 * Event Player.ForwardDirection);
+				End;
+			End;
+			Event Player.SquaresThreatening = Array(Event Player.PiecePosition + Right + Event Player.ForwardDirection,
+				Event Player.PiecePosition + Left + Event Player.ForwardDirection);
+			If(Is True For Any(Global.AllPieces, (
+				Current Array Element.PieceTeam != Event Player.PieceTeam && Current Array Element.PiecePosition == Event Player.PiecePosition + Right + Event Player.ForwardDirection)
+				|| (
+				Current Array Element.VulnerableToFrenchMove && Current Array Element.PiecePosition == Event Player.PiecePosition + Right)));
+				Modify Player Variable(Event Player, LegalMoves, Append To Array,
+					Event Player.PiecePosition + Right + Event Player.ForwardDirection);
+			End;
+			If(Is True For Any(Global.AllPieces, (
+				Current Array Element.PieceTeam != Event Player.PieceTeam && Current Array Element.PiecePosition == Event Player.PiecePosition + Left + Event Player.ForwardDirection)
+				|| (
+				Current Array Element.VulnerableToFrenchMove && Current Array Element.PiecePosition == Event Player.PiecePosition + Left)));
+				Modify Player Variable(Event Player, LegalMoves, Append To Array,
+					Event Player.PiecePosition + Left + Event Player.ForwardDirection);
+			End;
+		Else If(Event Player.PieceType == Custom String("Knight"));
+			Event Player.LegalMoves = Mapped Array(Array(Vector(-1, 2, 0), Vector(1, 2, 0), Vector(2, 1, 0), Vector(2, -1, 0), Vector(1, -2,
+				0), Vector(-1, -2, 0), Vector(-2, -1, 0), Vector(-2, 1, 0)), Current Array Element + Event Player.PiecePosition);
+		Else If(Event Player.PieceType == Custom String("Bishop"));
+			Call Subroutine(AddBishopMoves);
+		Else If(Event Player.PieceType == Custom String("Rook"));
+			Call Subroutine(AddRookMoves);
+		Else If(Event Player.PieceType == Custom String("Queen"));
+			Call Subroutine(AddBishopMoves);
+			Call Subroutine(AddRookMoves);
+		Else If(Event Player.PieceType == Custom String("King"));
+			Event Player.LegalMoves = Mapped Array(Array(Vector(-1, 0, 0), Vector(-1, 1, 0), Vector(0, 1, 0), Vector(1, 1, 0), Vector(1, 0, 0),
+				Vector(1, -1, 0), Vector(0, -1, 0), Vector(-1, -1, 0)), Current Array Element + Event Player.PiecePosition);
+			If(!Event Player.PieceHasMoved);
+				Event Player.FriendlyRooks = Filtered Array(Global.AllPieces,
+					Current Array Element.PieceTeam == Event Player.PieceTeam && Current Array Element.PieceType == Custom String("Rook"));
+				For Player Variable(Event Player, j, 0, Count Of(Event Player.FriendlyRooks), 1);
+					Call Subroutine(CheckCastleMove);
+					Wait(0.016, Ignore Condition);
+				End;
+			End;
+		End;
+		Event Player.LegalMoves = Filtered Array(Event Player.LegalMoves, Absolute Value(X Component Of(Current Array Element) - 3.500)
+			< 4 && Absolute Value(Y Component Of(Current Array Element) - 3.500) < 4);
+		If(Event Player.PieceType == Custom String("Pawn"));
+			Event Player.SquaresThreatening = Filtered Array(Event Player.SquaresThreatening, Absolute Value(X Component Of(
+				Current Array Element) - 3.500) < 4 && Absolute Value(Y Component Of(Current Array Element) - 3.500) < 4);
+		Else;
+			Event Player.SquaresThreatening = Event Player.LegalMoves;
+		End;
+		Modify Player Variable(Filtered Array(Global.AllPieces,
+			Current Array Element.PieceTeam != Event Player.PieceTeam && Current Array Element.PieceType == Custom String("King")),
+			IllegalSquares, Append To Array, Event Player.SquaresThreatening);
+		Event Player.LegalMoves = Remove From Array(Event Player.LegalMoves, Mapped Array(Filtered Array(Global.AllPieces,
+			Current Array Element.PieceTeam == Event Player.PieceTeam), Current Array Element.PiecePosition));
+		Modify Player Variable(Event Player, LegalMoves, Remove From Array By Value, Event Player.IllegalSquares);
+		If(Event Player.AbsolutePinDirection);
+			Event Player.LegalMoves = Filtered Array(Event Player.LegalMoves, Magnitude Of(Cross Product(Event Player.AbsolutePinDirection,
+				Current Array Element - Event Player.PiecePosition)) == 0);
+		End;
+		Modify Player Variable(Filtered Array(Global.AllPieces, Current Array Element.PieceType == Custom String("King")
+			&& Current Array Element.PieceTeam != Event Player.PieceTeam && Array Contains(Event Player.SquaresThreatening,
+			Current Array Element.PiecePosition)), CheckingPieces, Append To Array, Event Player);
+		If(Array Contains(Array(Custom String("Bishop"), Custom String("Rook"), Custom String("Queen")), Event Player.PieceType));
+			Event Player.CheckedPieces = Filtered Array(Global.AllPieces, Current Array Element.PieceType == Custom String("King")
+				&& Current Array Element.PieceTeam != Event Player.PieceTeam && Array Contains(Event Player.SquaresThreatening,
+				Current Array Element.PiecePosition));
+			For Player Variable(Event Player, j, 0, Count Of(Event Player.CheckedPieces), 1);
+				Modify Player Variable(Event Player.CheckedPieces[Event Player.j], IllegalSquares, Append To Array, Mapped Array(Mapped Array(
+					Event Player.CheckedPieces[Event Player.j].PiecePosition - Event Player.PiecePosition, (X Component Of(Current Array Element)
+					* Y Component Of(Current Array Element) == 0 ? 1 : Square Root(2)) * Normalize(Current Array Element)
+					+ Event Player.CheckedPieces[Event Player.j].PiecePosition), Vector(Round To Integer(X Component Of(Current Array Element),
+					To Nearest), Round To Integer(Y Component Of(Current Array Element), To Nearest), 0)));
+			End;
+		End;
+		Event Player.FriendlyChecks = Empty Array;
+		Event Player.CheckedPieces = Filtered Array(Remove From Array(Global.AllPieces, Event Player),
+			Current Array Element.PieceTeam == Event Player.PieceTeam && Count Of(Current Array Element.CheckingPieces));
+		For Player Variable(Event Player, j, 0, Count Of(Event Player.CheckedPieces), 1);
+			For Player Variable(Event Player, i, 0, Count Of(Event Player.CheckedPieces[Event Player.j].CheckingPieces), 1);
+				Modify Player Variable(Event Player, FriendlyChecks, Append To Array, Array(Event Player.CheckedPieces[Event Player.j],
+					Event Player.CheckedPieces[Event Player.j].CheckingPieces[Event Player.i]));
+			End;
+		End;
+		For Player Variable(Event Player, i, 0, Count Of(Event Player.FriendlyChecks), 2);
+			Event Player.CheckedPosition = Event Player.FriendlyChecks[Event Player.i].PiecePosition;
+			Event Player.CheckerPosition = Event Player.FriendlyChecks[Event Player.i + 1].PiecePosition;
+			Event Player.LegalMoves = Filtered Array(Event Player.LegalMoves, Magnitude Of(Cross Product(
+				Event Player.CheckerPosition - Event Player.CheckedPosition, Current Array Element - Event Player.CheckedPosition))
+				== 0 && Dot Product(Event Player.CheckerPosition - Event Player.CheckedPosition,
+				Current Array Element - Event Player.CheckedPosition) > 0 && Dot Product(
+				Event Player.CheckerPosition - Event Player.CheckedPosition, Current Array Element - Event Player.CheckedPosition)
+				<= Distance Between(Event Player.CheckedPosition, Event Player.CheckerPosition) ^ 2);
+		End;
+		Event Player.HasSetLegalMoves = True;
+	}
+}
+
+rule("Check if castling move is legal")
+{
+	event
+	{
+		Subroutine;
+		CheckCastleMove;
+	}
+
+	actions
+	{
+		Abort If(Event Player.FriendlyRooks[Event Player.j].PieceHasMoved);
+		Abort If(Is True For Any(Global.AllPieces, Magnitude Of(Cross Product(
+			Current Array Element.PiecePosition - Event Player.PiecePosition,
+			Event Player.FriendlyRooks[Event Player.j].PiecePosition - Current Array Element.PiecePosition)) == 0 && Dot Product(
+			Event Player.FriendlyRooks[Event Player.j].PiecePosition - Event Player.PiecePosition,
+			Current Array Element.PiecePosition - Event Player.PiecePosition) > 0 && Dot Product(
+			Event Player.FriendlyRooks[Event Player.j].PiecePosition - Event Player.PiecePosition,
+			Current Array Element.PiecePosition - Event Player.PiecePosition) < Distance Between(Event Player.PiecePosition,
+			Event Player.FriendlyRooks[Event Player.j].PiecePosition) ^ 2));
+		For Player Variable(Event Player, i, 0, 3, 1);
+			Abort If(Is True For Any(Global.AllPieces, Current Array Element.PieceTeam != Event Player.PieceTeam && Array Contains(
+				Current Array Element.SquaresThreatening, Event Player.PiecePosition + Event Player.i * Normalize(
+				Event Player.FriendlyRooks[Event Player.j].PiecePosition - Event Player.PiecePosition))));
+		End;
+		Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.PiecePosition + 2 * Normalize(
+			Event Player.FriendlyRooks[Event Player.j].PiecePosition - Event Player.PiecePosition));
+	}
+}
+
+rule("AddMoves")
+{
+	event
+	{
+		Subroutine;
+		AddMoves;
+	}
+
+	actions
+	{
+		Event Player.PiecesThatMightBlockCheck2 = Empty Array;
+		Event Player.CandidateMove = Event Player.PiecePosition;
+		While(Absolute Value(X Component Of(Event Player.CandidateMove) - 3.500) < 4 && Absolute Value(Y Component Of(
+			Event Player.CandidateMove) - 3.500) < 4);
+			Event Player.CandidateMove += Event Player.CandidateMoveDelta;
+			Event Player.PiecesThatMightBlockCheck1 = Filtered Array(Global.AllPieces,
+				Current Array Element.PiecePosition == Event Player.CandidateMove);
+			"Anything there, mode, team, is king"
+			If(Count Of(Event Player.PiecesThatMightBlockCheck1));
+				If(Count Of(Event Player.PiecesThatMightBlockCheck2));
+					For Player Variable(Event Player, i, 0, Count Of(Event Player.PiecesThatMightBlockCheck1), 1);
+						If(Event Player.PiecesThatMightBlockCheck1[Event Player.i].PieceType == Custom String("King") && Count Of(
+							Event Player.PiecesThatMightBlockCheck2) == 1);
+							Filtered Array(Event Player.PiecesThatMightBlockCheck2,
+								Current Array Element.PieceTeam == Event Player.PiecesThatMightBlockCheck1[Event Player.i].PieceTeam)
+								.AbsolutePinDirection = Event Player.CandidateMoveDelta;
+						End;
+					End;
+					Break;
+				Else;
+					If(Is True For Any(Event Player.PiecesThatMightBlockCheck1, Current Array Element.PieceTeam == Event Player.PieceTeam));
+						Break;
+					Else;
+						Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.CandidateMove);
+						Event Player.PiecesThatMightBlockCheck2 = Event Player.PiecesThatMightBlockCheck1;
+					End;
+				End;
+			Else;
+				If(Count Of(Event Player.PiecesThatMightBlockCheck2) == 0);
+					Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.CandidateMove);
+				End;
+			End;
+		End;
+	}
+}
+
+rule("Add Bishop Moves")
+{
+	event
+	{
+		Subroutine;
+		AddBishopMoves;
+	}
+
+	actions
+	{
+		Event Player.CandidateMoveDelta = Vector(1, 1, 0);
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Vector(1, -1, 0);
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Vector(-1, -1, 0);
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Vector(-1, 1, 0);
+		Call Subroutine(AddMoves);
+	}
+}
+
+rule("Add Rook Moves")
+{
+	event
+	{
+		Subroutine;
+		AddRookMoves;
+	}
+
+	actions
+	{
+		Event Player.CandidateMoveDelta = Up;
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Left;
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Down;
+		Call Subroutine(AddMoves);
+		Event Player.CandidateMoveDelta = Right;
+		Call Subroutine(AddMoves);
+	}
+}
+
+rule("Turn Start")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ShouldSetMyPieces == True;
+	}
+
+	actions
+	{
+		Event Player.ShouldSetMyPieces = False;
+		If(Global.Mode == 2);
+			Event Player.MyPieces = Filtered Array(Global.AllPieces, Current Array Element.PieceTeam == Team Of(Event Player));
+		Else If(Global.Mode == 1);
+			Event Player.MyPieces = Filtered Array(Global.AllPieces, Current Array Element.PieceTeam == Global.Teams[Global.Turn]);
+		End;
+	}
+}
+
+rule("Should Set Legal Moves")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ShouldSetLegalMoves == True;
+	}
+
+	actions
+	{
+		Event Player.ShouldSetLegalMoves = False;
+		Start Rule(SetLegalMoves, Restart Rule);
+	}
+}
+
+rule("Piece Is Captured")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsCaptured == True;
+	}
+
+	actions
+	{
+		Modify Global Variable(AllPieces, Remove From Array By Value, Event Player);
+		Destroy Dummy Bot(Team Of(Event Player), Slot Of(Event Player));
+	}
+}
+
+rule("Set Legal Moves (Global)")
+{
+	event
+	{
+		Subroutine;
+		SetLegalMovesGlobal;
+	}
+
+	actions
+	{
+		Global.AllPieces.IllegalSquares = Empty Array;
+		Global.AllPieces.HasSetLegalMoves = False;
+		Global.AllPieces.AbsolutePinDirection = Null;
+		Global.AllPieces.CheckingPieces = Empty Array;
+		Global.SetLegalMovesTeamIndex = Global.Turn;
+		While(True);
+			Global.SetLegalMovesTeamIndex = (Global.SetLegalMovesTeamIndex + (Count Of(Global.Teams) - 1)) % Count Of(Global.Teams);
+			Filtered Array(Global.AllPieces, Current Array Element.PieceTeam == Global.Teams[Global.SetLegalMovesTeamIndex])
+				.ShouldSetLegalMoves = True;
+			Wait Until(Is True For All(Filtered Array(Global.AllPieces,
+				Current Array Element.PieceTeam == Global.Teams[Global.SetLegalMovesTeamIndex]), Current Array Element.HasSetLegalMoves),
+				99999);
+			Global.IsChecked[Global.SetLegalMovesTeamIndex] = Is True For Any(Global.AllPieces,
+				Current Array Element.PieceTeam == Global.Teams[Global.SetLegalMovesTeamIndex] && Count Of(
+				Current Array Element.CheckingPieces));
+			Global.IsCheckmated[Global.SetLegalMovesTeamIndex] = Is True For All(Global.AllPieces,
+				Current Array Element.PieceTeam != Global.Teams[Global.SetLegalMovesTeamIndex] || Count Of(Current Array Element.LegalMoves)
+				== 0);
+			Wait(0.016, Ignore Condition);
+			If(Global.SetLegalMovesTeamIndex == Global.Turn);
+				Break;
+			End;
+		End;
+	}
+}
+
+rule("Promote To Queen")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.PromotingPieceType);
+		Event Player.PromotingPieceType = Custom String("Queen");
+		Start Rule(EndMoveAttempt, Restart Rule);
+	}
+}
+
+rule("Promote To Rook")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.PromotingPieceType);
+		Event Player.PromotingPieceType = Custom String("Rook");
+		Start Rule(EndMoveAttempt, Restart Rule);
+	}
+}
+
+rule("Promote To Bishop")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 2)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.PromotingPieceType);
+		Event Player.PromotingPieceType = Custom String("Bishop");
+		Start Rule(EndMoveAttempt, Restart Rule);
+	}
+}
+
+rule("Promote To Knight")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Event Player.PromotingPieceType);
+		Event Player.PromotingPieceType = Custom String("Knight");
+		Start Rule(EndMoveAttempt, Restart Rule);
+	}
+}
+
+rule("New Piece Position")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.NewPiecePosition != Null;
+	}
+
+	actions
+	{
+		Event Player.PiecePosition = Event Player.NewPiecePosition;
+		Event Player.NewPiecePosition = Null;
+		Start Rule(Position, Restart Rule);
+	}
+}
