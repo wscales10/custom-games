@@ -1,0 +1,48 @@
+Current Crit Chance (CanHeadshot is 0)
+Extra Damage On Crit (including normal +100% if can't headshot)
+Should Update Crit
+Working Crit Chance (not including 1%)
+Working Extra Crit Damage
+Crit Index
+
+Widow headshots for 300 damage (120 * 2.5) - widow has a base crit damage number of +1.5
+If widow has 1 pair of crit glasses, then she has a crit damage number of +1.6
+Damage(Victim, Null, Event Damage * 0.010 / 2.500);
+
+Widow headshots for 300 damage (120 * 2.5) - widow has a base crit damage number of +1.5
+If widow has 5 pair of crit glasses, then she has a crit damage number of +2
+If she also holds 5 focus crystals, her damage is doubled at close range, so it should be 120 * (1 + 1.5 + Attacker.Crit[2]) * (1 + 0.2 * 5), so extra damage = (Event Damage / hsm) * ((hsm + Attacker.Crit[2]) * (1 + 0.2 * 5) - hsm)
+Damage(Victim, Null, Event Damage * 0.010 / 2.500);
+
+Winston crits on a 50 damage leap
+If winston has 1 laser scope, then
+Damage(Victim, Null, Event Damage * 2);
+
+Damage(Victim, Null, Intended Total Hit Damage - Event Damage);
+Intended Total Hit Damage = Attacker.Crit[0] ? (Event Damage / Headshot Multiplier) * Crit Multiplier : Event Damage * Crit Multiplier;
+Headshot Multiplier = Attacker.Hero == Hero(Kiriko) ? 3 : (Attacker.Hero == Hero(Sojourn) && Event Ability == Button(Primary Fire)) ? 1.500 : (Attacker.Hero == Hero(Widowmaker) && Is Firing Secondary(Attacker)) ? 2.500 : 2;
+Crit Multiplier = Attacker.Crit[0] ? Headshot Multiplier + 
+
+
+Intended Total Hit Damage = Event Damage * Crit Multiplier * Focus Crystal Multiplier
+= Event Damage * (1 + Attacker.Crit[2]) * (1 + 0.200 * NumCrystals)
+
+Random Crit: Extra Damage = Event Damage * ((1 + Attacker.Crit[2]) * (1 + (Is Close ? 0.200 * NumCrystals : 0)) - 1)
+Not crit: Extra Damage = Event Damage * ((1 + 0) * (1 + (Is Close ? 0.200 * NumCrystals : 0)) - 1)
+Headshot crit: Extra Damage = Event Damage * ((1 + Attacker.Crit[2]/h) * (1 + (Is Close ? 0.200 * NumCrystals : 0)) - 1)
+General Extra Damage = Event Damage * ((1 + (Attacker.Crit[0] ? (Event Was Critical Hit ? 1/h : 0) : (Random Real(0, 1) < Attacker.Crit[1] ? 1 : 0)) * Attacker.Crit[2]) * (1 + (Is Close ? 0.200 * NumCrystals : 0)) - 1)
+situ = (Attacker.Crit[0] ? (Event Was Critical Hit ? 1/h : 0) : (Random Real(0, 1) < Attacker.Crit[1] ? 1 : 0)) * Attacker.Crit[2]
+
+If(Attacker.Crit[0] ? Event Was Critical Hit : Random Real(0, 1) < Attacker.Crit[1]);
+	Damage(Victim, Null, Event Damage * ((1 + Attacker.Crit[2] / (Attacker.Crit[0] ? (Attacker.Hero == Hero(Kiriko) ? 3 : (
+	Attacker.Hero == Hero(Sojourn) && Event Ability == Button(Primary Fire) ? 1.500 : (Attacker.Hero == Hero(Widowmaker)
+	&& Is Firing Secondary(Attacker) ? 2.500 : 2))) : 1)) * (
+	1 + (Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(
+	Attacker.Master[0]), Eye Position(Victim)) < 13 ? 0.200 * Filtered Array(Global.ItemStackSizes,
+	Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
+	&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0] : 0)) - 1));
+Else If(Array Contains(Attacker.Master[0].MyItemStacks, Custom String("Close Range Damage")) && Distance Between(Eye Position(Attacker.Master[0]), Eye Position(Victim)) < 13);
+	Damage(Victim, Null, Event Damage * 0.200 * Filtered Array(Global.ItemStackSizes,
+		Current Array Element > 0 && Global.ItemStacks[Current Array Index] == Custom String("Close Range Damage")
+		&& Global.ItemStackOwners[Current Array Index] == Attacker.Master[0])[0]);
+End;

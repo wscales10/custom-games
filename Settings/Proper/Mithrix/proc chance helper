@@ -1,0 +1,109 @@
+settings
+{
+	modes
+	{
+		disabled Control
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		disabled Escort
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		disabled Hybrid
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+
+		Practice Range
+
+		disabled Push
+		{
+			Limit Roles: 1 Tank 2 Offense 2 Support
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Health: 500%
+			Movement Speed: 300%
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: Buttons
+		1: AllHeroes
+		2: ProcCoefs
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Buttons = Array(Button(Ability 1), Button(Ability 2), Button(Crouch), Button(Melee), Button(Primary Fire), Button(
+			Secondary Fire), Button(Ultimate));
+		Global.AllHeroes = Array(Hero(Ana), Hero(Ashe), Hero(Baptiste), Hero(Bastion), Hero(Brigitte), Hero(Cassidy), Hero(D.Va), Hero(
+			Doomfist), Hero(Echo), Hero(Genji), Hero(Hanzo), Hero(Junker Queen), Hero(Junkrat), Hero(Kiriko), Hero(Lúcio), Hero(Mei), Hero(
+			Mercy), Hero(Moira), Hero(Orisa), Hero(Pharah), Hero(Ramattra), Hero(Reaper), Hero(Reinhardt), Hero(Roadhog), Hero(Sigma),
+			Hero(Sojourn), Hero(Soldier: 76), Hero(Sombra), Hero(Symmetra), Hero(Torbjörn), Hero(Tracer), Hero(Widowmaker), Hero(Winston),
+			Hero(Wrecking Ball), Hero(Zarya), Hero(Zenyatta));
+		Global.ProcCoefs = Array(-1, 1, 1, 0, 1, 0.850, 0, 0, 0.500, -1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0.650, 0, 0, 0, 0, 0, 1, -1, 1, 1, 1,
+			0, 0, 1, 1, 0, 0, 0, -1, 0, 1, 1, 0.750, 1, 1, 0.650, 0, 1, 0.700, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0.500, 0, 1, 0.800, -1, 0, 1,
+			-1, 0, 1, 0.750, 0.800, 1, 1, 1, 0, 1, 1, 0, 0.850, 0, -1, 0, -1, 1, -1, -1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0,
+			1, 1, 1, 0, 0, 0, 0, 1, 0.350, 1, 0.100, 0, 0, 0, 1, 1, 0, 0, 0, 0.150, 0, 1, 0, 0.500, 0.500, 0, 0.650, 0, 1, 0.650, 1, 1, 0,
+			1, 0, 1, 1, 0, 0.100, 1, 0.100, 0, 1, 0.150, 0, 0.150, 0, 0, 0, 1, 1, 0, 0.950, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0.600,
+			0, 1, 0, 1, 1, 0, 1, 0, 0.200, 0, 1, 0.500, 1, 1, 0, 0, 0, 1, 0.700, 1, 0.700, 0, 0, 0, 1, 0.350, 0, 1, 0, 0, 0, 1, 0.500, 1,
+			0, 0, 0, 0, 1, 1, 1, 0.100, 0, 0, 0, 1, 0.200, 0, 1, 0, 0.100, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0.600, 1, 1, 0, 0, 1, 1, 0.300, 1, 1,
+			0, 0, 0, 1, 0.500, 1, 0.100, 0, 0, 0, 1, 1, 0.800, 0);
+	}
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Ability != Null;
+	}
+
+	actions
+	{
+		Log To Inspector(Vector(Event Damage * 5, 1, Global.ProcCoefs[Index Of Array Value(Global.AllHeroes, Hero Of(Attacker)) * Count Of(
+			Global.Buttons) + Index Of Array Value(Global.Buttons, Event Ability) + 1]));
+		Log To Inspector(Vector(Event Damage * 0.800, 0.200, Global.ProcCoefs[Index Of Array Value(Global.AllHeroes, Hero Of(Attacker))
+			* Count Of(Global.Buttons) + Index Of Array Value(Global.Buttons, Event Ability) + 1]));
+	}
+}
+
+rule("Rule 3")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Knockback Received(Event Player, 0);
+	}
+}

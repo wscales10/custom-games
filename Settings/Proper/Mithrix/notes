@@ -1,0 +1,56 @@
+each ukulele proc involves:
+damager
+original victim
+ukulele damage
+ukulele victims
+an end indicator ("0%END")
+
+an expiry time
+a beam effect for each ukulele victim
+an end indicator ("0%END")
+
+Modify Global Variable(ChainLightningInfo, Append To Array, Append To Array(Append To Array(Array(Attacker.Master[0], Victim, Event Damage * 0.800), Array Slice(Randomized Array(Filtered Array(Players Within Radius(Victim, 6 + 2 * (stack count - 1), Team Of(Victim), Surfaces), Array Contains(Array(Custom String("Hero"), Custom String("Boss"), Custom String("Add")), Current Array Element.Role))), 3 + 2 * (stack count - 1))), Custom String("0%END")));
+
+Modify Global Variable(ChainLightningEffects, Append To Array, Total Time Elapsed + 0.336);
+plus one beam effect for each victim
+Modify Global Variable(ChainLightningEffects, Append To Array, Custom String("0%END"));
+
+damager
+damage
+victim
+effect
+
+UltCharges:
+
+- Current Ult Charges
+- Max Ult Charges
+- Spawn Time
+- Ult Charge Time
+- Next Ult Charge Time
+
+100 * (1 - (1 - 0.15) ^ amount)
+
+when you get the item:
+0 => minimum
+
+(0, ultcharges5)
+(100, 1)
+
+y = 100 * ultcharges5 + (1 - ultcharges5)100
+
+index (-1 or greater)
+i == -1 ? D : x[i] == -1 ? D : x[i]
+
+mapped array(, something ? 
+variables{
+global:
+	0: Buttons
+	1: AllHeroes
+	2: ProcCoefs
+	}
+
+actions
+{
+	Log To Inspector(Vector(Event Damage * 5, 1, Global.ProcCoefs[Index Of Array Value(Global.AllHeroes, Hero Of(Attacker)) * Count Of(Global.Buttons) + Index Of Array Value(Global.Buttons, Event Ability) + 1]));
+	Log To Inspector(Vector(Event Damage * 0.800, 0.200, Global.ProcCoefs[Index Of Array Value(Global.AllHeroes, Hero Of(Attacker)) * Count Of(Global.Buttons) + Index Of Array Value(Global.Buttons, Event Ability) + 1]));
+}

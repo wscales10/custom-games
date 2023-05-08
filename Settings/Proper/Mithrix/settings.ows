@@ -216,7 +216,7 @@ variables
 		70: ItemShopRarities
 		71: Director
 		72: AiIndex
-		73: Adds
+		73: AiAdds
 		74: Add
 		75: Dialogue
 		76: UsedDialogue
@@ -246,6 +246,7 @@ variables
 		100: IsHealingModificationBugged
 		101: AutoTakeoff
 		102: Arena
+		103: AllAdds
 
 	player:
 		0: Ids
@@ -425,6 +426,7 @@ subroutines
 	43: ChooseHThrottle
 	44: PrepareForDebuffs
 	45: ChooseAdd
+	46: HandleAddChoice
 }
 
 rule("Global setup")
@@ -477,6 +479,7 @@ rule("Global setup")
 		Global.Entities = Array(False, False, 0);
 		Global.ArenaRadius = 80;
 		Global.StagesCompleted = 5;
+		Global.AllAdds = Empty Array;
 		Global.LightningStrikes = Empty Array;
 		Global.DamageBeamInfo = Empty Array;
 		Global.DamageBeamInstances = Empty Array;
@@ -992,7 +995,7 @@ rule("Boss Setup")
 			246, 255)) : (Normalized Health(Event Player.Target) > 0.900 ? Color(Green) : Color(Lime Green)), Visible To String and Color,
 			Default Visibility);
 		Create HUD Text(Event Player.Target == Null || Is Dead(Event Player.Target) || !Is True For Any(All Living Players(Team 2), Current Array Element.Master[2] && !Current Array Element.Master[1]) ? Null : Event Player, Null, Custom String(
-			"Hold [{0}] to control a different minion", Input Binding String(Button(Interact))), Null, Left, 3.200, Color(White), Color(
+			"Hold [{0}/{1}] to control a different minion", Input Binding String(Button(Reload)), Input Binding String(Button(Interact))), Null, Left, 3.200, Color(White), Color(
 			White), Color(White), Visible To String and Color, Default Visibility);
 		Create Effect(Is Alive(Event Player) && Event Player.State != Custom String("Absent") && (Global.Phase == 1 || Global.Phase == 3)
 			? Remove From Array(All Players(All Teams), Event Player) : Null, Moira Coalescence Sound, Team 2, Event Player, 100,
@@ -2722,6 +2725,7 @@ rule("Dummy Bot Setup")
 		Else If(Array Contains(Array(Hero(Wrecking Ball), Hero(Zenyatta), Hero(Tracer)), Hero Of(Event Player)));
 			Event Player.Role = Custom String("Add");
 			Event Player.IsMook = True;
+			Modify Global Variable(AllAdds, Append To Array, Event Player);
 			Event Player.IsCharacterBody = True;
 		Else If(Hero Of(Event Player) == Hero(Orisa));
 			Event Player.Role = Custom String("Needler");
@@ -5708,6 +5712,7 @@ rule("Low health")
 	{
 		Global.State == Custom String("BossFight");
 		Health(Event Player) < 2;
+		disabled Normalized Health(Event Player) < 0.95;
 		Event Player.CachedHealth[1] == False;
 	}
 
@@ -6737,10 +6742,10 @@ rule("AI Loop")
 
 	actions
 	{
-		Global.Adds = Filtered Array(All Living Players(Team 2),
+		Global.AiAdds = Filtered Array(All Living Players(Team 2),
 			Current Array Element.IsMook && Current Array Element.Master[1] == Null && Current Array Element.IsSetup);
-		For Global Variable(AiIndex, 0, Count Of(Global.Adds), 1);
-			Global.Add = Global.Adds[Global.AiIndex];
+		For Global Variable(AiIndex, 0, Count Of(Global.AiAdds), 1);
+			Global.Add = Global.AiAdds[Global.AiIndex];
 			Call Subroutine(AiStep);
 			Wait(0.080, Ignore Condition);
 		End;
@@ -7607,7 +7612,7 @@ rule("On enter Phase: 2 (Boss)")
 	conditions
 	{
 		Global.Phase == 2;
-		(Event Player.Target == Null || Is Dead(Event Player.Target) || Is Button Held(Event Player, Button(Interact))) == True;
+		(Event Player.Target == Null || Is Dead(Event Player.Target) || !Array Contains(Global.AllAdds, Event Player.Target) || Is Button Held(Event Player, Button(Interact)) || Is Button Held(Event Player, Button(Reload))) == True;
 	}
 
 	actions
@@ -7628,14 +7633,24 @@ rule("Choose Target Subroutine")
 	actions
 	{
 		Event Player.Target.Master[1] = Null;
-		Event Player.Target = Null;
-		While(Event Player.Target == Null && Global.Phase == 2);
-			Random Value In Array(Filtered Array(All Living Players(Team 2),
-				Current Array Element.IsMook && Current Array Element.Master[1] == Null && Current Array Element.Master[2]))
-				.Master[1] = Event Player;
-			Event Player.Target = Filtered Array(All Players(Team 2), Current Array Element.Master[1] == Event Player)[0];
-			Wait(0.500, Ignore Condition);
-		End;
+		First Of(Filtered Array(Append To Array(Array Slice(Global.AllAdds, (Index Of Array Value(Global.AllAdds, Event Player.Target) + Is Button Held(Event Player, Button(Reload)) ? Count Of(Global.AllAdds) - 1 : 1) % Count Of(Global.AllAdds), 1000), Array Slice(Global.AllAdds, 0, (Index Of Array Value(Global.AllAdds, Event Player.Target) + Is Button Held(Event Player, Button(Reload)) ? Count Of(Global.AllAdds) - 1 : 1) % Count Of(Global.AllAdds))), Is Alive(Current Array Element) && Current Array Element.Master[1] == Null && Current Array Element.Master[2])).Master[1] = Event Player;
+		Event Player.Target = First Of(Filtered Array(All Players(Team 2), Current Array Element.Master[1] == Event Player));
+		Wait(0.500, Ignore Condition);
+		Loop If(Event Player.Target == Null && Global.Phase == 2);
+		Start Rule(HandleAddChoice, Restart Rule);
+	}
+}
+
+rule("Handle Add Choice Subroutine")
+{
+	event
+	{
+		Subroutine;
+		HandleAddChoice;
+	}
+
+	actions
+	{
 		If(Event Player.Target == Null);
 			Start Forcing Throttle(Event Player, 0, 0, 0, 0, 0, 0);
 			Event Player.ShowBossAbilityInfo = False;
@@ -7664,9 +7679,6 @@ rule("Choose Target Subroutine")
 			End;
 			If(!Is Button Held(Event Player, Button(Crouch)));
 				Stop Holding Button(Event Player.Target, Button(Crouch));
-			End;
-			If(!Is Button Held(Event Player, Button(Reload)));
-				Stop Holding Button(Event Player.Target, Button(Reload));
 			End;
 		End;
 	}
@@ -8058,48 +8070,6 @@ rule("Add Stop Holding Crouch button")
 	actions
 	{
 		Stop Holding Button(Event Player.Target, Button(Crouch));
-	}
-}
-
-rule("Add Start Holding Reload button")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Event Player.Target != Null;
-		Is Button Held(Event Player, Button(Reload)) == True;
-	}
-
-	actions
-	{
-		Start Holding Button(Event Player.Target, Button(Reload));
-	}
-}
-
-rule("Add Stop Holding Reload button")
-{
-	event
-	{
-		Ongoing - Each Player;
-		Team 2;
-		Reinhardt;
-	}
-
-	conditions
-	{
-		Event Player.Target != Null;
-		Is Button Held(Event Player, Button(Reload)) == False;
-	}
-
-	actions
-	{
-		Stop Holding Button(Event Player.Target, Button(Reload));
 	}
 }
 
@@ -8965,6 +8935,7 @@ rule("Player Died")
 			Else;
 				Wait(3, Ignore Condition);
 			End;
+			Modify Global Variable(AllAdds, Remove From Array By Value, Event Player);
 			Call Subroutine(DestroyMe);
 		End;
 	}
