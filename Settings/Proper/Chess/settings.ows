@@ -62,8 +62,29 @@ variables
 		12: SetLegalMovesTeamIndex
 		13: TeamColours
 		14: IsChecked
-		15: IsCheckmated
+		15: IsFrozen
 		16: TeamNames
+		17: PlayerIsKing
+		18: StartingFEN
+		19: StringInput
+		20: NumberOutput
+		21: NumberChars
+		22: PositionInFEN
+		23: NextHyphenPosition
+		24: MoveNumber
+		25: File
+		26: IntendedPieceTypes
+		27: IntendedPiecePositions
+		28: PlacementSubstring
+		29: NextCommaPosition
+		30: Ranks
+		31: PieceTypeInitials
+		32: IntendedPieceTeams
+		33: IntendedPiecesHaveMoved
+		34: TeamFirstKingPosition
+		35: IsGlobalSetupDone
+		36: IsIntendedPieceQueued
+		37: FirstUnqueuedPieceIndex
 
 	player:
 		0: IsMyTurn
@@ -107,6 +128,7 @@ variables
 		38: FriendlyRooks
 		39: NewPiecePosition
 		40: VulnerableToFrenchMove
+		41: IsPiece
 }
 
 subroutines
@@ -121,6 +143,10 @@ subroutines
 	7: SetLegalMovesGlobal
 	8: EndMoveAttempt
 	9: CheckCastleMove
+	10: StringToNumber
+	11: ParsePiecePlacement
+	12: ParseRank
+	13: TryAddPieceToQueue
 }
 
 rule("Global Setup")
@@ -135,10 +161,44 @@ rule("Global Setup")
 		Global.Mode = 1;
 		Global.AllPieces = Empty Array;
 		Global.PieceCreationQueue = Empty Array;
+		Global.Teams = Array(Team 1, Team 2);
+		Global.NumberChars = Array(Custom String("0"), Custom String("1"), Custom String("2"), Custom String("3"), Custom String("4"),
+			Custom String("5"), Custom String("6"), Custom String("7"), Custom String("8"), Custom String("9"));
+		Global.PieceTypeInitials = Array(Custom String("P"), Custom String("N"), Custom String("B"), Custom String("R"), Custom String(
+			"Q"), Custom String("K"));
+		Global.PlayerIsKing = True;
+		Global.StartingFEN = Custom String(
+			"0-0,0-0-0R,2,0Q,0K,0B,0N,0R/0P,2,0P,0P,0P,0P,0P/8/8/8/8/1P,2,1P,1P,1P,1P,1P/1R,1,1B,1Q,1K,1,1N,1R");
+		"Turn"
+		Global.NextHyphenPosition = Index Of String Char(Global.StartingFEN, Custom String("-"));
+		Global.StringInput = String Slice(Global.StartingFEN, 0, Global.NextHyphenPosition);
+		Call Subroutine(StringToNumber);
+		Global.Turn = Global.NumberOutput;
+		Global.PositionInFEN = Global.NextHyphenPosition + 1;
+		"Players Eliminated"
+		Global.NextHyphenPosition = Index Of String Char(String Slice(Global.StartingFEN, Global.PositionInFEN, String Length(
+			Global.StartingFEN)), Custom String("-")) + Global.PositionInFEN;
+		Global.PositionInFEN = Global.NextHyphenPosition + 1;
+		"Move Number"
+		Global.NextHyphenPosition = Index Of String Char(String Slice(Global.StartingFEN, Global.PositionInFEN, String Length(
+			Global.StartingFEN)), Custom String("-")) + Global.PositionInFEN;
+		Global.StringInput = String Slice(Global.StartingFEN, Global.PositionInFEN, Global.NextHyphenPosition - Global.PositionInFEN);
+		Call Subroutine(StringToNumber);
+		Global.MoveNumber = Global.NumberOutput;
+		Global.PositionInFEN = Global.NextHyphenPosition + 1;
+		"Piece Placement"
+		Global.IntendedPiecePositions = Empty Array;
+		Global.IntendedPieceTeams = Empty Array;
+		Global.IntendedPieceTypes = Empty Array;
+		Global.IntendedPiecesHaveMoved = Empty Array;
 		Global.PieceTypes = Array(Custom String("Pawn"), Custom String("Knight"), Custom String("Bishop"), Custom String("Rook"),
 			Custom String("Queen"), Custom String("King"));
+		Call Subroutine(ParsePiecePlacement);
+		For Global Variable(j, 0, Count Of(Global.IntendedPieceTypes), 1);
+			Call Subroutine(TryAddPieceToQueue);
+			Wait(0.016, Ignore Condition);
+		End;
 		Global.PieceHeroes = Array(Hero(Genji), Hero(Orisa), Hero(Zenyatta), Hero(Bastion), Hero(Junker Queen), Hero(Torbjörn));
-		Global.Teams = Array(Team 1, Team 2);
 		Global.TeamNames = Array(Custom String("White"), Custom String("Black"));
 		Global.TeamColours = Array(Color(White), Color(Black));
 		Create Effect(Global.MoveStartPosition ? All Players(All Teams) : Null, Sphere, Color(Blue), Vector(14 - 4 * X Component Of(
@@ -154,9 +214,9 @@ rule("Global Setup")
 			End;
 		End;
 		For Global Variable(j, 0, Count Of(Global.Teams), 1);
-			Create HUD Text(Global.IsChecked[Evaluate Once(Global.j)] ? All Players(All Teams) : Null, Global.IsCheckmated[Evaluate Once(
+			Create HUD Text(Global.IsChecked[Evaluate Once(Global.j)] ? All Players(All Teams) : Null, Global.IsFrozen[Evaluate Once(
 				Global.j)] ? Custom String("#") : Custom String("+"), Null, Custom String("{0} is {1}", Evaluate Once(
-				Global.TeamNames[Global.j]), Global.IsCheckmated[Evaluate Once(Global.j)] ? Custom String("checkmated") : Custom String(
+				Global.TeamNames[Global.j]), Global.IsFrozen[Evaluate Once(Global.j)] ? Custom String("checkmated") : Custom String(
 				"in check")), Right, Global.j, Global.TeamColours[Global.j], Color(White), Color(White), Visible To and String,
 				Default Visibility);
 			Wait(0.016, Ignore Condition);
@@ -173,6 +233,7 @@ rule("Global Setup")
 		Create HUD Text(Filtered Array(All Players(All Teams), Current Array Element.PromotingPieceType), Hero Icon String(Hero(Orisa)),
 			Null, Custom String("[{0}] Knight", Input Binding String(Button(Ability 1))), Left, 3, Color(White), Color(White), Color(
 			White), Visible To and String, Default Visibility);
+		Global.IsGlobalSetupDone = True;
 	}
 }
 
@@ -192,12 +253,13 @@ rule("Player Setup")
 
 	actions
 	{
+		Disable Nameplates(Event Player, All Players(All Teams));
 		Event Player.CameraPosition = Vector(0, 30, -0.600);
 		Start Camera(Event Player, Event Player.CameraPosition, Vector(0, 0, 0), 0);
 		Disable Hero HUD(Event Player);
 		Create Effect(Event Player, Sphere, Color(White), Event Player.HandPosition, 0.250, Visible To Position and Radius);
 		Chase Player Variable At Rate(Event Player, ContinuousBasePosition, Vector(((Horizontal Facing Angle Of(Event Player) * 2 + 360)
-			% 360 - 180) * 0.089, 0, Vertical Facing Angle Of(Event Player) * -0.180), Event Player.PromotingPieceType ? 0 : 3000,
+			% 360 - 180) * -0.089 * (Z Component Of(Event Player.CameraPosition) > 0 ? 1 : -1), 0, Vertical Facing Angle Of(Event Player) * 0.180 * (Z Component Of(Event Player.CameraPosition) > 0 ? 1 : -1)), Event Player.PromotingPieceType ? 0 : 3000,
 			Destination and Rate);
 		Create Beam Effect(Event Player.IsMyTurn ? Event Player : Null, Good Beam, Vector(16 - 4 * X Component Of(
 			Event Player.DiscretePosition), 0, 4 * Y Component Of(Event Player.DiscretePosition) - 16), Vector(12 - 4 * X Component Of(
@@ -223,6 +285,7 @@ rule("Player Setup")
 			Event Player.CameraPosition + Event Player.EyeToHandDistance * Direction Towards(Event Player.CameraPosition,
 			Event Player.ContinuousBasePosition), Event Player.PromotingPieceType ? 0 : 3000, Destination and Rate);
 		Set Primary Fire Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
 		Set Ability 1 Enabled(Event Player, False);
 		Set Ability 2 Enabled(Event Player, False);
 		Set Reload Enabled(Event Player, False);
@@ -233,9 +296,17 @@ rule("Player Setup")
 		Create Effect(Event Player.IsDragging ? Event Player : Null, Sphere, Color(Blue), Vector(14 - 4 * X Component Of(
 			Event Player.HighlightPosition), -4.375, 4 * Y Component Of(Event Player.HighlightPosition) - 14), 4.625,
 			Visible To Position and Radius);
-		Event Player.PieceType = Custom String("Player");
-		Wait Until(Has Spawned(Event Player), 99999);
-		Teleport(Event Player, Vector(X Component Of(Position Of(Event Player)) * 1.125, 0, Z Component Of(Position Of(Event Player))));
+		If(Global.PlayerIsKing);
+			Start Forcing Player To Be Hero(Event Player, Hero(Torbjörn));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("?"), Event Player, Index Of Array Value(Global.Teams, Team Of(Event Player)), Null,
+				Null));
+			If(Global.Mode == 1);
+				Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("?"), Opposite Team Of(Team Of(Event Player)), Index Of Array Value(Global.Teams, Opposite Team Of(Team Of(Event Player))), Null, Null));
+			End;
+		Else;
+			Wait Until(Has Spawned(Event Player), 99999);
+			Teleport(Event Player, Vector(X Component Of(Position Of(Event Player)) * 1.125, 0, Z Component Of(Position Of(Event Player))));
+		End;
 	}
 }
 
@@ -280,6 +351,26 @@ rule("Is Holding LMB")
 	actions
 	{
 		Event Player.IsMouseDown = True;
+	}
+}
+
+rule("Flip Board")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.CameraPosition = Vector(X Component Of(Event Player.CameraPosition), Y Component Of(Event Player.CameraPosition), -1 * Z Component Of(Event Player.CameraPosition));
 	}
 }
 
@@ -402,7 +493,7 @@ rule("End Move Attempt")
 				End;
 				If(Event Player.PromotingPieceType);
 					Modify Global Variable(PieceCreationQueue, Append To Array, Array(Event Player.PromotingPieceType, Team Of(
-						Event Player.DragCandidate), Event Player.DragCandidate.PieceTeam, Event Player.DiscretePosition, True));
+						Event Player.DragCandidate), Index Of Array Value(Global.Teams, Event Player.DragCandidate.PieceTeam), Event Player.DiscretePosition, True));
 					Event Player.DragCandidate.IsCaptured = True;
 					Wait Until(Count Of(Global.PieceCreationQueue) == 0, 99999);
 				End;
@@ -444,7 +535,7 @@ rule("Unlock Players")
 	actions
 	{
 		If(Global.Mode == 2);
-			Filtered Array(All Players(Global.Teams[Global.Turn]), Current Array Element.PieceType == Custom String("Player")).IsMyTurn = True;
+			Filtered Array(All Players(Global.Teams[Global.Turn]), !Is Dummy Bot(Current Array Element)).IsMyTurn = True;
 		Else If(Global.Mode == 1);
 			Host Player.IsMyTurn = True;
 		End;
@@ -492,41 +583,6 @@ rule("Piece Placed")
 	}
 }
 
-rule("Piece Setup")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Dummy Bot(Event Player) == True;
-		Is Alive(Event Player) == True;
-		Has Spawned(Event Player) == True;
-	}
-
-	actions
-	{
-		Start Scaling Player(Event Player, 1.500, False);
-		Event Player.PieceTeam = Global.PieceCreationQueue[2];
-		Event Player.PiecePosition = Global.PieceCreationQueue[3];
-		Event Player.PieceHasMoved = Global.PieceCreationQueue[4];
-		Event Player.ForwardDirection = Event Player.PieceTeam == Team 1 ? Up : Down;
-		Call Subroutine(Position);
-		Start Facing(Event Player, Event Player.PieceTeam == Team 1 ? Forward : Backward, 100, To World, Direction and Turn Rate);
-		Event Player.PieceType = Global.PieceTypes[Index Of Array Value(Global.PieceHeroes, Hero Of(Event Player))];
-		Modify Global Variable(AllPieces, Append To Array, Event Player);
-		Disable Nameplates(Event Player, All Players(All Teams));
-		Wait(0.100, Ignore Condition);
-		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Global.TeamColours[Index Of Array Value(Global.Teams,
-			Event Player.PieceTeam)], Always);
-		Global.PieceCreationQueue[0] = Null;
-	}
-}
-
 rule("Spawn Pieces")
 {
 	event
@@ -536,25 +592,28 @@ rule("Spawn Pieces")
 
 	conditions
 	{
+		Global.IsGlobalSetupDone == True;
 		Has Spawned(Host Player) == True;
 	}
 
 	actions
 	{
-		For Global Variable(k, 0, 7, 1);
-			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 1, Team 1, Vector(Global.k, 1, 0),
-				False));
-			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 2, Team 2, Vector(Global.k, 6, 0),
-				False));
+		If(Global.StartingFEN == Null);
+			For Global Variable(k, 0, 7, 1);
+				Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 1, 0, Vector(Global.k, 1, 0),
+					False));
+				Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Pawn"), Team 2, 1, Vector(Global.k, 6, 0),
+					False));
+			End;
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 1, 0, Vector(4, 0, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 2, 1, Vector(4, 7, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 1, 0, Vector(3, 0, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 2, 1, Vector(3, 7, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, 0, Vector(0, 0, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, 0, Vector(7, 0, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, 1, Vector(7, 7, 0), False));
+			Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, 1, Vector(0, 7, 0), False));
 		End;
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 1, Team 1, Vector(4, 0, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("King"), Team 2, Team 2, Vector(4, 7, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 1, Team 1, Vector(3, 0, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Queen"), Team 2, Team 2, Vector(3, 7, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, Team 1, Vector(0, 0, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 1, Team 1, Vector(7, 0, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, Team 2, Vector(7, 7, 0), False));
-		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Custom String("Rook"), Team 2, Team 2, Vector(0, 7, 0), False));
 		Wait Until(Count Of(Global.PieceCreationQueue) == 0, 9999);
 		Call Subroutine(UnlockPlayers);
 	}
@@ -571,15 +630,85 @@ rule("Spawn Pieces")
 	{
 		"PieceType, OW Team, Chess Team"
 		Count Of(Global.PieceCreationQueue) > 1;
+		Global.IsGlobalSetupDone == True;
 	}
 
 	actions
 	{
-		Create Dummy Bot(Global.PieceHeroes[Index Of Array Value(Global.PieceTypes, Global.PieceCreationQueue[0])],
-			Global.PieceCreationQueue[1], -1, Vector(0, 0, 0), Vector(0, 0, 0));
+		Log To Inspector(Global.PieceCreationQueue[1]);
+		If(Global.PieceCreationQueue[0] == Custom String("?"));
+			Global.FirstUnqueuedPieceIndex = First Of(Filtered Array(Mapped Array(Global.IntendedPieceTypes, Current Array Index), !Global.IsIntendedPieceQueued[Current Array Element] && Global.IntendedPieceTeams[Current Array Element] == Global.PieceCreationQueue[2]));
+			Global.IsIntendedPieceQueued[Global.FirstUnqueuedPieceIndex] = True;
+			Global.PieceCreationQueue[0] = Global.IntendedPieceTypes[Global.FirstUnqueuedPieceIndex];
+			Global.PieceCreationQueue[3] = Global.IntendedPiecePositions[Global.FirstUnqueuedPieceIndex];
+			Global.PieceCreationQueue[4] = Global.IntendedPiecesHaveMoved[Global.FirstUnqueuedPieceIndex];
+		End;
+		If(Array Contains(All Players(All Teams), Global.PieceCreationQueue[1]));
+			Global.PieceCreationQueue[1].IsPiece = True;
+		Else;
+			Create Dummy Bot(Global.PieceHeroes[Index Of Array Value(Global.PieceTypes, Global.PieceCreationQueue[0])],
+				Global.PieceCreationQueue[1], -1, Vector(0, 0, 0), Vector(0, 0, 0));
+		End;
 		Wait Until(Global.PieceCreationQueue[0] == Null, 9999);
 		Global.PieceCreationQueue = Array Slice(Global.PieceCreationQueue, 5, 1000);
 		Loop If Condition Is True;
+	}
+}
+
+rule("Piece Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsPiece == True;
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		Start Scaling Player(Event Player, 1.500, False);
+		Event Player.PieceTeam = Global.Teams[Global.PieceCreationQueue[2]];
+		Event Player.PiecePosition = Global.PieceCreationQueue[3];
+		Event Player.PieceHasMoved = Global.PieceCreationQueue[4];
+		Event Player.ForwardDirection = Event Player.PieceTeam == Team 1 ? Up : Down;
+		If(Is Dummy Bot(Event Player));
+			Start Facing(Event Player, Event Player.PieceTeam == Team 1 ? Forward : Backward, 100, To World, Direction and Turn Rate);
+		End;
+		Call Subroutine(Position);
+		Event Player.PieceType = Global.PieceCreationQueue[0];
+		Modify Global Variable(AllPieces, Append To Array, Event Player);
+		Disable Nameplates(Event Player, All Players(All Teams));
+		Wait(0.100, Ignore Condition);
+		Start Forcing Player Outlines(Event Player, All Players(All Teams), True, Global.TeamColours[Index Of Array Value(Global.Teams,
+			Event Player.PieceTeam)], Always);
+		Global.PieceCreationQueue[0] = Null;
+	}
+}
+
+rule("Bot Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Dummy Bot(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.IsPiece = True;
 	}
 }
 
@@ -757,10 +886,10 @@ rule("AddMoves")
 					End;
 					Break;
 				Else;
+					Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.CandidateMove);
 					If(Is True For Any(Event Player.PiecesThatMightBlockCheck1, Current Array Element.PieceTeam == Event Player.PieceTeam));
 						Break;
 					Else;
-						Modify Player Variable(Event Player, LegalMoves, Append To Array, Event Player.CandidateMove);
 						Event Player.PiecesThatMightBlockCheck2 = Event Player.PiecesThatMightBlockCheck1;
 					End;
 				End;
@@ -907,12 +1036,19 @@ rule("Set Legal Moves (Global)")
 			Global.IsChecked[Global.SetLegalMovesTeamIndex] = Is True For Any(Global.AllPieces,
 				Current Array Element.PieceTeam == Global.Teams[Global.SetLegalMovesTeamIndex] && Count Of(
 				Current Array Element.CheckingPieces));
-			Global.IsCheckmated[Global.SetLegalMovesTeamIndex] = Is True For All(Global.AllPieces,
+			Global.IsFrozen[Global.SetLegalMovesTeamIndex] = Is True For All(Global.AllPieces,
 				Current Array Element.PieceTeam != Global.Teams[Global.SetLegalMovesTeamIndex] || Count Of(Current Array Element.LegalMoves)
 				== 0);
 			Wait(0.016, Ignore Condition);
 			If(Global.SetLegalMovesTeamIndex == Global.Turn);
 				Break;
+			End;
+		End;
+		If(Global.IsFrozen[Global.Turn]);
+			If(Global.IsChecked[Global.Turn]);
+				Big Message(All Players(All Teams), Custom String("Checkmate"));
+			Else;
+				Big Message(All Players(All Teams), Custom String("Stalemate"));
 			End;
 		End;
 	}
@@ -1025,5 +1161,107 @@ rule("New Piece Position")
 		Event Player.PiecePosition = Event Player.NewPiecePosition;
 		Event Player.NewPiecePosition = Null;
 		Start Rule(Position, Restart Rule);
+	}
+}
+
+rule("Convert String To Number")
+{
+	event
+	{
+		Subroutine;
+		StringToNumber;
+	}
+
+	actions
+	{
+		Global.NumberOutput = 0;
+		For Global Variable(i, 0, String Length(Global.StringInput), 1);
+			Global.NumberOutput += Index Of Array Value(Global.NumberChars, String Slice(Global.StringInput, String Length(Global.StringInput)
+				- (Global.i + 1), 1)) * 10 ^ Global.i;
+		End;
+	}
+}
+
+rule("Parse Piece Placement String")
+{
+	event
+	{
+		Subroutine;
+		ParsePiecePlacement;
+	}
+
+	actions
+	{
+		Global.Ranks = String Split(String Slice(Global.StartingFEN, Global.PositionInFEN, String Length(Global.StartingFEN)),
+			Custom String("/"));
+		For Global Variable(j, 0, Count Of(Global.Ranks), 1);
+			Global.PositionInFEN = 0;
+			Global.File = 0;
+			Call Subroutine(ParseRank);
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+rule("Parse Rank")
+{
+	event
+	{
+		Subroutine;
+		ParseRank;
+	}
+
+	actions
+	{
+		Global.NextCommaPosition = Index Of String Char(String Slice(Global.Ranks[Global.j], Global.PositionInFEN, String Length(
+			Global.Ranks[Global.j])), Custom String(",")) + Global.PositionInFEN;
+		If(Global.NextCommaPosition - Global.PositionInFEN == -1);
+			Global.NextCommaPosition = String Length(Global.Ranks[Global.j]);
+		End;
+		Global.PlacementSubstring = String Slice(Global.Ranks[Global.j], Global.PositionInFEN,
+			Global.NextCommaPosition - Global.PositionInFEN);
+		Global.i = 0;
+		While(Global.i <= String Length(Global.PlacementSubstring) && !Array Contains(Global.PieceTypeInitials, Char In String(
+			Global.PlacementSubstring, Global.i)));
+			Global.i += 1;
+			Wait(0.016, Ignore Condition);
+		End;
+		Global.StringInput = String Slice(Global.PlacementSubstring, 0, Global.i);
+		Call Subroutine(StringToNumber);
+		If(Global.i == String Length(Global.PlacementSubstring));
+			Global.File += Global.NumberOutput;
+		Else;
+			Modify Global Variable(IntendedPieceTypes, Append To Array, Global.PieceTypes[Index Of Array Value(Global.PieceTypeInitials,
+				Char In String(Global.PlacementSubstring, Global.i))]);
+			Modify Global Variable(IntendedPiecePositions, Append To Array, Vector(Global.File, Global.j, 0));
+			Modify Global Variable(IntendedPieceTeams, Append To Array, Global.NumberOutput);
+			Modify Global Variable(IntendedPiecesHaveMoved, Append To Array, String Length(Global.PlacementSubstring) > Global.i + 1);
+			Global.File += 1;
+		End;
+		Global.PositionInFEN = Global.NextCommaPosition + 1;
+		Wait(0.016, Ignore Condition);
+		Loop If(Global.NextCommaPosition < String Length(Global.Ranks[Global.j]));
+	}
+}
+
+rule("Try Add Piece To Queue")
+{
+	event
+	{
+		Subroutine;
+		TryAddPieceToQueue;
+	}
+
+	actions
+	{
+		If(Global.IntendedPieceTypes[Global.j] == Custom String("King") && !Global.TeamFirstKingPosition[Global.IntendedPieceTeams[Global.j]]);
+			Global.TeamFirstKingPosition[Global.IntendedPieceTeams[Global.j]] = Global.IntendedPiecePositions[Global.j];
+			Abort If(Global.PlayerIsKing);
+		End;
+		Modify Global Variable(PieceCreationQueue, Append To Array, Array(Global.IntendedPieceTypes[Global.j], Array Contains(Array(1, 2),
+			Global.Mode) ? Global.Teams[Global.IntendedPieceTeams[Global.j]] : All Teams,
+			Global.IntendedPieceTeams[Global.j], Global.IntendedPiecePositions[Global.j],
+			Global.IntendedPiecesHaveMoved[Global.j]));
+		Global.IsIntendedPieceQueued[Global.j] = True;
 	}
 }
