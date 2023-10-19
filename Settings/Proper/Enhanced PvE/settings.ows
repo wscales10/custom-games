@@ -1,0 +1,629 @@
+settings
+{
+	modes
+	{
+		Escort
+		{
+			enabled maps
+			{
+				Shambali Monastery 972777519512068153
+			}
+		}
+	}
+}
+
+variables
+{
+	global:
+		0: RoleButtonPositions
+		1: Roles
+		2: AlphaHeroes
+		3: DamageHeroes
+		4: SupportHeroes
+
+	player:
+		0: Role
+		1: ExtraHitPoints
+		2: ExtraHealthPools
+		3: Hero
+		4: Ability1Cooldown
+		5: NewRole
+		6: SecondaryFireCooldown
+		7: MoveSpeedBuffs
+		8: MoveSpeedDebuffs
+		9: MoveSpeedIndex
+		10: SlowTime
+		11: Ability2Cooldown
+}
+
+subroutines
+{
+	0: MapSetup
+	1: HeroSetup
+	2: AlphaSetup
+	3: DamageSetup
+	4: SupportSetup
+	5: ResetHero
+	6: UpdateMoveSpeed
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Call Subroutine(MapSetup);
+		Create HUD Text(Host Player, Ray Cast Hit Position(Eye Position(Host Player), Eye Position(Host Player) + 20 * Facing Direction Of(
+			Host Player), All Players(All Teams), Host Player, True), Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Global.Roles = Array(Custom String("Alpha"), Custom String("Damage"), Custom String("Support"));
+		Wait(5, Ignore Condition);
+		Create In-World Text(Filtered Array(All Players(All Teams), Is In Spawn Room(Current Array Element)), Ability Icon String(Hero(
+			Reinhardt), Button(Primary Fire)), Global.RoleButtonPositions[0], 2, Do Not Clip, Visible To Position and String, Color(White),
+			Default Visibility);
+		Create In-World Text(Filtered Array(All Players(All Teams), Is In Spawn Room(Current Array Element)), Ability Icon String(Hero(
+			Cassidy), Button(Primary Fire)), Global.RoleButtonPositions[1], 2, Do Not Clip, Visible To Position and String, Color(White),
+			Default Visibility);
+		Create In-World Text(Filtered Array(All Players(All Teams), Is In Spawn Room(Current Array Element)), Ability Icon String(Hero(
+			Baptiste), Button(Ability 1)), Global.RoleButtonPositions[2], 2, Do Not Clip, Visible To Position and String, Color(White),
+			Default Visibility);
+		Create Effect(All Players(All Teams), Sphere, Color(Rose), Global.RoleButtonPositions[0], 1.500, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Red), Global.RoleButtonPositions[1], 1, Visible To Position and Radius);
+		Create Effect(All Players(All Teams), Sphere, Color(Yellow), Global.RoleButtonPositions[2], 1, Visible To Position and Radius);
+		Global.AlphaHeroes = Append To Array(All Tank Heroes, Array(Hero(Bastion), Hero(Brigitte), Hero(Echo), Hero(Mei), Hero(Moira),
+			Hero(Reaper), Hero(Symmetra)));
+		Global.DamageHeroes = Append To Array(All Damage Heroes, Array(Hero(Kiriko), Hero(Zenyatta)));
+		Global.SupportHeroes = Append To Array(All Support Heroes, Array(Hero(Soldier: 76)));
+	}
+}
+
+rule("Map Setup")
+{
+	event
+	{
+		Subroutine;
+		MapSetup;
+	}
+
+	actions
+	{
+		If(Array Contains(Array(Map(Eichenwalde), Map(Eichenwalde Halloween)), Current Map));
+			Global.RoleButtonPositions = Array(Vector(-12.250, 3.900, 26.100), Vector(-16.250, 3.900, 25.600), Vector(-20.200, 3.900, 25.100));
+		End;
+	}
+}
+
+rule("Choose Role")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is In Spawn Room(Event Player) == True;
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Abort If(!Is True For Any(Global.RoleButtonPositions, Is In View Angle(Event Player, Current Array Element, 40)));
+		Event Player.NewRole = Global.Roles[First Of(Sorted Array(Mapped Array(Global.RoleButtonPositions, Current Array Index),
+			Angle Between Vectors(Facing Direction Of(Event Player), Direction Towards(Eye Position(Event Player),
+			Global.RoleButtonPositions[Current Array Element]))))];
+		Abort If(Event Player.NewRole == Event Player.Role);
+		Event Player.Role = Event Player.NewRole;
+		Call Subroutine(HeroSetup);
+	}
+}
+
+rule("Hero Setup")
+{
+	event
+	{
+		Subroutine;
+		HeroSetup;
+	}
+
+	actions
+	{
+		Event Player.Hero = Hero Of(Event Player);
+		Call Subroutine(ResetHero);
+		If(Event Player.Role == Custom String("Alpha"));
+			Call Subroutine(AlphaSetup);
+		Else If(Event Player.Role == Custom String("Damage"));
+			Call Subroutine(DamageSetup);
+		Else If(Event Player.Role == Custom String("Support"));
+			Call Subroutine(SupportSetup);
+		Else;
+			Big Message(All Players(All Teams), Custom String("error"));
+		End;
+	}
+}
+
+rule("Add Health Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[0] > 0;
+		Event Player.ExtraHealthPools[0] == Null;
+	}
+
+	actions
+	{
+		Add Health Pool To Player(Event Player, Health, Event Player.ExtraHitPoints[0], True, True);
+		Event Player.ExtraHealthPools[0] = Last Created Health Pool;
+	}
+}
+
+rule("Remove Health Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[0] <= 0;
+		Event Player.ExtraHealthPools[0] != Null;
+	}
+
+	actions
+	{
+		Remove Health Pool From Player(Event Player.ExtraHealthPools[0]);
+		Event Player.ExtraHealthPools[0] = Null;
+	}
+}
+
+rule("Add Armour Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[1] > 0;
+		Event Player.ExtraHealthPools[1] == Null;
+	}
+
+	actions
+	{
+		Add Health Pool To Player(Event Player, Armor, Event Player.ExtraHitPoints[1], True, True);
+		Event Player.ExtraHealthPools[1] = Last Created Health Pool;
+	}
+}
+
+rule("Remove Armour Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[1] <= 0;
+		Event Player.ExtraHealthPools[1] != Null;
+	}
+
+	actions
+	{
+		Remove Health Pool From Player(Event Player.ExtraHealthPools[1]);
+		Event Player.ExtraHealthPools[1] = Null;
+	}
+}
+
+rule("Add Shields Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[2] > 0;
+		Event Player.ExtraHealthPools[2] == Null;
+	}
+
+	actions
+	{
+		Add Health Pool To Player(Event Player, Shields, Event Player.ExtraHitPoints[2], True, True);
+		Event Player.ExtraHealthPools[2] = Last Created Health Pool;
+	}
+}
+
+rule("Remove Shields Pool")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.ExtraHitPoints[2] <= 0;
+		Event Player.ExtraHealthPools[2] != Null;
+	}
+
+	actions
+	{
+		Remove Health Pool From Player(Event Player.ExtraHealthPools[2]);
+		Event Player.ExtraHealthPools[2] = Null;
+	}
+}
+
+rule("Alpha Setup")
+{
+	event
+	{
+		Subroutine;
+		AlphaSetup;
+	}
+
+	actions
+	{
+		If(!Array Contains(All Tank Heroes, Hero Of(Event Player)));
+			Start Scaling Player(Event Player, 1.150, False);
+			Set Knockback Received(Event Player, 70);
+			If(Array Contains(All Damage Heroes, Hero Of(Event Player)));
+				Set Damage Dealt(Event Player, 70);
+			End;
+		End;
+		If(Hero Of(Event Player) == Hero(Bastion));
+			Event Player.ExtraHitPoints = Array(50, 50, 0);
+			Event Player.Ability1Cooldown = 7;
+			Event Player.SecondaryFireCooldown = 4;
+		Else If(Hero Of(Event Player) == Hero(Brigitte));
+			Set Max Health(Event Player, 200);
+		Else If(Hero Of(Event Player) == Hero(Echo));
+			Event Player.ExtraHitPoints = Array(50, 50, 50);
+		Else If(Hero Of(Event Player) == Hero(Mei));
+			Set Max Health(Event Player, 160);
+			Event Player.Ability2Cooldown = 1;
+		Else If(Hero Of(Event Player) == Hero(Moira));
+			Event Player.ExtraHitPoints = Array(200, 0, 0);
+		Else If(Hero Of(Event Player) == Hero(Reaper));
+			Event Player.ExtraHitPoints = Array(150, 0, 0);
+			Set Healing Dealt(Event Player, 150);
+		Else If(Hero Of(Event Player) == Hero(Symmetra));
+			Event Player.ExtraHitPoints = Array(25, 0, 100);
+		End;
+		Set Player Allowed Heroes(Event Player, Global.AlphaHeroes);
+	}
+}
+
+rule("Damage Setup")
+{
+	event
+	{
+		Subroutine;
+		DamageSetup;
+	}
+
+	actions
+	{
+		Start Scaling Player(Event Player, 0.900, False);
+		If(Hero Of(Event Player) == Hero(Kiriko));
+			Set Damage Dealt(Event Player, 120);
+			Set Projectile Speed(Event Player, 135);
+		Else If(Hero Of(Event Player) == Hero(Zenyatta));
+			Set Damage Dealt(Event Player, 116.667);
+			Set Knockback Dealt(Event Player, 130);
+		End;
+		Set Player Allowed Heroes(Event Player, Global.DamageHeroes);
+	}
+}
+
+rule("Support Setup")
+{
+	event
+	{
+		Subroutine;
+		SupportSetup;
+	}
+
+	actions
+	{
+		Start Scaling Player(Event Player, 0.900, False);
+		If(Hero Of(Event Player) == Hero(Soldier: 76));
+			Event Player.SecondaryFireCooldown = 10;
+			Event Player.Ability2Cooldown = 11;
+			Set Damage Dealt(Event Player, 85);
+			Set Healing Dealt(Event Player, 125);
+		End;
+		Set Player Allowed Heroes(Event Player, Global.SupportHeroes);
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create HUD Text(Event Player, Event Player.Role, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
+	}
+}
+
+rule("Reset Hero")
+{
+	event
+	{
+		Subroutine;
+		ResetHero;
+	}
+
+	actions
+	{
+		Event Player.ExtraHitPoints = Array(0, 0, 0);
+		Stop Scaling Player(Event Player);
+		Set Knockback Received(Event Player, 100);
+		Set Damage Dealt(Event Player, 100);
+		Set Healing Dealt(Event Player, 100);
+		Event Player.Ability1Cooldown = Null;
+		Event Player.Ability2Cooldown = Null;
+		Event Player.SecondaryFireCooldown = Null;
+		Set Max Health(Event Player, 100);
+		Set Projectile Speed(Event Player, 100);
+		Set Knockback Dealt(Event Player, 100);
+	}
+}
+
+rule("Switch Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Hero != Hero Of(Event Player);
+		Array Contains(All Heroes, Hero Of(Event Player)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.Role == Null);
+			If(Array Contains(All Tank Heroes, Hero Of(Event Player)));
+				Event Player.Role = Custom String("Alpha");
+			Else If(Array Contains(All Damage Heroes, Hero Of(Event Player)));
+				Event Player.Role = Custom String("Damage");
+			Else If(Array Contains(All Support Heroes, Hero Of(Event Player)));
+				Event Player.Role = Custom String("Support");
+			End;
+		End;
+		Call Subroutine(HeroSetup);
+	}
+}
+
+rule("Ability 1 Cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 1(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Ability1Cooldown == Null);
+		Set Ability Cooldown(Event Player, Button(Ability 1), Event Player.Ability1Cooldown);
+	}
+}
+
+rule("Secondary Fire Cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Firing Secondary(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.SecondaryFireCooldown == Null);
+		Set Ability Cooldown(Event Player, Button(Secondary Fire), Event Player.SecondaryFireCooldown);
+	}
+}
+
+rule("Ability 2 Cooldown")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Ability2Cooldown == Null);
+		Set Ability Cooldown(Event Player, Button(Ability 2), Event Player.Ability2Cooldown);
+	}
+}
+
+rule("Bastion Ult Slow")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Bastion;
+	}
+
+	conditions
+	{
+		Event Ability == Button(Ultimate);
+		Event Player.Role == Custom String("Alpha");
+	}
+
+	actions
+	{
+		Modify Player Variable(Victim, SlowTime, Max, 3);
+	}
+}
+
+rule("Moira Orb Slow")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Moira;
+	}
+
+	conditions
+	{
+		Event Ability == Button(Ability 2);
+		Event Player.Role == Custom String("Alpha");
+	}
+
+	actions
+	{
+		Modify Player Variable(Victim, SlowTime, Max, 1.250);
+	}
+}
+
+rule("Symmetra Beam Slow")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Symmetra;
+	}
+
+	conditions
+	{
+		Event Ability == Button(Primary Fire);
+		Event Player.Role == Custom String("Alpha");
+	}
+
+	actions
+	{
+		Modify Player Variable(Victim, SlowTime, Max, 0.600);
+	}
+}
+
+rule("Update Move Speed")
+{
+	event
+	{
+		Subroutine;
+		UpdateMoveSpeed;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedBuffs[1] = 1;
+		Event Player.MoveSpeedDebuffs[1] = 1;
+		For Player Variable(Event Player, MoveSpeedIndex, 2, Count Of(Event Player.MoveSpeedBuffs), 1);
+			"2: ?"
+			Event Player.MoveSpeedBuffs[1] += Event Player.MoveSpeedBuffs[Event Player.MoveSpeedIndex] / 100;
+		End;
+		For Player Variable(Event Player, MoveSpeedIndex, 2, Count Of(Event Player.MoveSpeedDebuffs), 1);
+			"2: Slow"
+			Event Player.MoveSpeedDebuffs[1] += Event Player.MoveSpeedDebuffs[Event Player.MoveSpeedIndex] / 100;
+		End;
+		Event Player.MoveSpeedBuffs[0] = Event Player.MoveSpeedBuffs[1];
+		Event Player.MoveSpeedDebuffs[0] = Event Player.MoveSpeedDebuffs[1];
+		Set Move Speed(Event Player, 100 * (Event Player.MoveSpeedBuffs[0] / Event Player.MoveSpeedDebuffs[0]));
+	}
+}
+
+rule("Slow")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SlowTime > 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[2] = 50;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+	}
+}
+
+rule("No Slow")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.SlowTime == 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedDebuffs[2] = 0;
+		Start Rule(UpdateMoveSpeed, Restart Rule);
+	}
+}
