@@ -2677,7 +2677,7 @@ rule("Create Queued Bots")
 	{
 		Count Of(Global.BotCreationQueue) > 1;
 		Count Of(Global.AvailableBotSlots) > 0;
-		Server Load Peak < 240;
+		Server Load Peak < 235;
 		Server Load Average < 165;
 	}
 
