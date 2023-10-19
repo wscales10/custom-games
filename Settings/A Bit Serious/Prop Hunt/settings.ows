@@ -1,0 +1,536 @@
+settings
+{
+	lobby
+	{
+		Max Team 1 Players: 4
+		Max Team 2 Players: 4
+	}
+
+	modes
+	{
+		Elimination
+		{
+			enabled maps
+			{
+				Ayutthaya 972777519512063901
+				Black Forest 972777519512063901
+				Black Forest Winter 972777519512063901
+				Castillo 972777519512063901
+				Ecopoint: Antarctica 972777519512068154
+				Ecopoint: Antarctica Winter 972777519512063901
+				Necropolis 972777519512068153
+			}
+		}
+
+		General
+		{
+			Capture Objective Tiebreaker: Off
+			Draw After Match Time Elapsed With No Tiebreaker: 120
+			Game Mode Start: Manual
+			Hero Selection: Random
+			Skins: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 500%
+			Damage Received: 500%
+		}
+	}
+
+	extensions
+	{
+		Buff and Debuff Sounds
+		Spawn More Dummy Bots
+	}
+}
+
+variables
+{
+	global:
+		0: Seekers
+		1: Hiders
+		2: Team1Spawns
+		3: Team2Spawns
+		4: Team1ForwardDirection
+		5: Team2ForwardDirection
+		6: HeroCostumes
+		7: SetHeroes
+
+	player:
+		0: DisguiseCooldown
+		1: StunCooldown
+		2: IsAnchored
+		3: Role
+		4: ForwardAngle
+		6: NextCostume
+		7: IsDashing
+		8: EyePosition
+		9: CloudPositions
+}
+
+subroutines
+{
+	0: SetNextCostume
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.HeroCostumes = Remove From Array(All Heroes, Array(Hero(Genji), Hero(Kiriko), Hero(Lifeweaver), Hero(Sombra)));
+		Global.Team1Spawns = Spawn Points(Team 1);
+		Global.Team2Spawns = Spawn Points(Team 2);
+		Global.Team1ForwardDirection = Facing Direction Of(Random Value In Array(Global.Team1Spawns));
+		Global.Team2ForwardDirection = Facing Direction Of(Random Value In Array(Global.Team2Spawns));
+		Create Dummy Bot(Hero(Ana), Team 2, -1, Position Of(Random Value In Array(Global.Team2Spawns)), Global.Team2ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 2, -1, Position Of(Random Value In Array(Global.Team2Spawns)), Global.Team2ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 2, -1, Position Of(Random Value In Array(Global.Team2Spawns)), Global.Team2ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 2, -1, Position Of(Random Value In Array(Global.Team2Spawns)), Global.Team2ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 1, -1, Position Of(Random Value In Array(Global.Team1Spawns)), Global.Team1ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 1, -1, Position Of(Random Value In Array(Global.Team1Spawns)), Global.Team1ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 1, -1, Position Of(Random Value In Array(Global.Team1Spawns)), Global.Team1ForwardDirection);
+		Create Dummy Bot(Hero(Ana), Team 1, -1, Position Of(Random Value In Array(Global.Team1Spawns)), Global.Team1ForwardDirection);
+		Disable Built-In Game Mode Completion;
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Chase Player Variable At Rate(Event Player, DisguiseCooldown, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, StunCooldown, 0, 1, None);
+		Create HUD Text(Event Player.Role == Custom String("Hider") ? Event Player : Null, Ability Icon String(Hero(Bastion), Button(
+			Ability 1)), Null, Round To Integer(Event Player.DisguiseCooldown, Up), Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+		Set Ability 2 Enabled(Event Player, False);
+		Set Primary Fire Enabled(Event Player, False);
+		Set Secondary Fire Enabled(Event Player, False);
+		Create Effect(Event Player.IsDashing ? All Players(Team Of(Event Player)) : Null, Smoke Sound, Color(White), Event Player, 100,
+			Visible To Position and Radius);
+		Create Effect(Event Player.IsDashing ? All Players(Team Of(Event Player)) : Null, Echo Cloning Sound, Color(White), Event Player,
+			100, Visible To Position and Radius);
+		Create Effect(Event Player.IsDashing ? All Players(Team Of(Event Player)) : Null, Smoke Sound, Color(White), Event Player, 100,
+			Visible To Position and Radius);
+		Create Effect(Event Player.IsDashing ? All Players(Team Of(Event Player)) : Null, Sparkles Sound, Color(White), Event Player, 100,
+			Visible To Position and Radius);
+		Create Effect(Event Player.CloudPositions[0] ? All Players(All Teams) : Null, Cloud, Color(Violet), Event Player.CloudPositions[0],
+			2.500, Visible To Position and Radius);
+		Create Effect(Event Player.CloudPositions[1] ? All Players(All Teams) : Null, Cloud, Color(Violet), Event Player.CloudPositions[1],
+			2.500, Visible To Position and Radius);
+	}
+}
+
+rule("Choose Team Roles")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+	}
+
+	actions
+	{
+		If(Global.Seekers == Null);
+			Global.Seekers = Random Value In Array(Array(Team 1, Team 2));
+		Else If(Global.Seekers == Team 1);
+			Global.Seekers = Team 2;
+		Else;
+			Global.Seekers = Team 1;
+		End;
+		Global.Hiders = Opposite Team Of(Global.Seekers);
+		Global.SetHeroes = True;
+	}
+}
+
+rule("Set Hero")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Global.SetHeroes == True;
+	}
+
+	actions
+	{
+		Event Player.Role = Team Of(Event Player) == Global.Seekers ? Custom String("Seeker") : Custom String("Hider");
+		Start Forcing Player To Be Hero(Event Player, Event Player.Role == Custom String("Seeker") ? Hero(Genji) : Hero(Kiriko));
+		Event Player.ForwardAngle = Horizontal Angle From Direction(Array(Global.Team1ForwardDirection, Global.Team2ForwardDirection)
+			[Index Of Array Value(Array(Team 1, Team 2), Team Of(Event Player))]);
+	}
+}
+
+rule("Host Presses Interact")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Start Game Mode;
+	}
+}
+
+rule("Host Presses Ult")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Button Held(Host Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Declare Round Victory(Random Value In Array(Array(Team 1, Team 2)));
+	}
+}
+
+rule("Between Rounds")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Between Rounds == True;
+	}
+
+	actions
+	{
+		Global.SetHeroes = False;
+	}
+}
+
+rule("Melee")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Abort If(Event Player.Role != Custom String("Seeker"));
+		Press Button(Event Player, Button(Melee));
+	}
+}
+
+rule("Host Player Crouch")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Crouching(Host Player) == True;
+	}
+
+	actions
+	{
+		Small Message(All Players(All Teams), Match Time);
+	}
+}
+
+rule("Team 1 Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(All Living Players(Team 2)) == 0;
+	}
+
+	actions
+	{
+		Declare Round Victory(Team 1);
+	}
+}
+
+rule("Team 2 Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Count Of(All Living Players(Team 1)) == 0;
+	}
+
+	actions
+	{
+		Declare Round Victory(Team 2);
+	}
+}
+
+rule("Hiders Victory")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is Game In Progress == True;
+		Match Time == 0;
+	}
+
+	actions
+	{
+		Abort If(Is Between Rounds);
+		Abort If(Count Of(All Living Players(Global.Hiders)) == 0);
+		Declare Round Victory(Global.Hiders);
+	}
+}
+
+rule("Disguise")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ability 1)) == True;
+		Event Player.Role == Custom String("Hider");
+		Event Player.DisguiseCooldown == 0;
+	}
+
+	actions
+	{
+		Event Player.DisguiseCooldown = 5;
+		Event Player.IsDashing = True;
+		Set Invisible(Event Player, All);
+		Event Player.CloudPositions[0] = Eye Position(Event Player);
+		Start Forcing Player To Be Hero(Event Player, Event Player.NextCostume);
+		Start Rule(SetNextCostume, Restart Rule);
+		Start Throttle In Direction(Event Player, Magnitude Of(Throttle Of(Event Player)) ? Throttle Of(Event Player) : Forward, 1,
+			To Player, Replace existing throttle, None);
+		Set Move Speed(Event Player, 350);
+		Wait(0.700, Ignore Condition);
+		Event Player.CloudPositions[1] = Eye Position(Event Player);
+		Wait(0.050, Ignore Condition);
+		Event Player.CloudPositions[0] = Null;
+		Set Move Speed(Event Player, 100);
+		Stop Throttle In Direction(Event Player);
+		Set Invisible(Event Player, None);
+		Event Player.IsDashing = False;
+		Wait(0.700, Ignore Condition);
+		Event Player.CloudPositions[1] = Null;
+	}
+}
+
+rule("Hider Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Role == Custom String("Hider");
+	}
+
+	actions
+	{
+		Set Ability 1 Enabled(Event Player, False);
+		Set Melee Enabled(Event Player, False);
+		Set Ultimate Ability Enabled(Event Player, False);
+		Chase Player Variable At Rate(Event Player, M, Event Player.IsAnchored ? 1 : 0, 2, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, F, Event Player.M * Direction From Angles((Horizontal Facing Angle Of(Event Player)
+			- Event Player.ForwardAngle) * 10 + Event Player.ForwardAngle, 0) + (1 - Event Player.M) * Facing Direction Of(Event Player),
+			125, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, EyePosition, Eye Position(Event Player), 125, Destination and Rate);
+		Start Camera(Event Player, Mapped Array(Distance Between(Event Player.EyePosition, Ray Cast Hit Position(Eye Position(
+			Event Player), Event Player.EyePosition - 6 * Event Player.F, Null, Event Player, True)), Event Player.EyePosition - Max(
+			Current Array Element - 1, Current Array Element / 2) * Event Player.F), Event Player.EyePosition, 30);
+		Start Rule(SetNextCostume, Restart Rule);
+	}
+}
+
+rule("Seeker Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Role == Custom String("Seeker");
+	}
+
+	actions
+	{
+		Set Ability 1 Enabled(Event Player, True);
+		Set Ultimate Ability Enabled(Event Player, True);
+		Set Melee Enabled(Event Player, True);
+		Stop Chasing Player Variable(Event Player, F);
+		Stop Camera(Event Player);
+	}
+}
+
+rule("Anchor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Role == Custom String("Hider");
+		Is Button Held(Event Player, Button(Secondary Fire)) == True;
+	}
+
+	actions
+	{
+		Event Player.IsAnchored = True;
+	}
+}
+
+rule("Unanchor")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		(Event Player.Role == Custom String("Hider") && Is Button Held(Event Player, Button(Secondary Fire))) == False;
+	}
+
+	actions
+	{
+		Event Player.IsAnchored = False;
+	}
+}
+
+rule("Is Anchored")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.IsAnchored == True;
+	}
+
+	actions
+	{
+		Set Status(Event Player, Null, Rooted, 9999);
+		Start Forcing Player Position(Event Player, Position Of(Event Player), False);
+		Set Aim Speed(Event Player, 10);
+		Wait Until(!Event Player.IsAnchored, 99999);
+		Clear Status(Event Player, Rooted);
+		Stop Forcing Player Position(Event Player);
+		Set Aim Speed(Event Player, 100);
+	}
+}
+
+rule("Hider Revert to Kiriko on death")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.Role == Custom String("Hider");
+	}
+
+	actions
+	{
+		Start Forcing Player To Be Hero(Event Player, Hero(Kiriko));
+	}
+}
+
+rule("Rule 20")
+{
+	event
+	{
+		Subroutine;
+		SetNextCostume;
+	}
+
+	actions
+	{
+		Event Player.NextCostume = Random Value In Array(Remove From Array(Global.HeroCostumes, Hero Of(Event Player)));
+		Preload Hero(Event Player, Event Player.NextCostume);
+	}
+}
