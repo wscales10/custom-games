@@ -1,0 +1,60 @@
+variables
+{
+	player:
+		0: CameraPos
+		1: CameraDirection
+		2: HudOrigin
+		3: iHUD
+		4: jHUD
+		5: HudDistance
+}
+
+rule("Rule 1")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Event Player.CameraPos = Eye Position(Event Player);
+		Event Player.CameraDirection = Facing Direction Of(Event Player);
+		Event Player.HudDistance = 1;
+		Event Player.HudOrigin = Event Player.CameraPos + Event Player.HudDistance * Event Player.CameraDirection;
+		Event Player.iHUD = 2.489 * Event Player.HudDistance * Direction From Angles(Horizontal Angle From Direction(
+			Event Player.CameraDirection) - 90, 0);
+		Event Player.jHUD = 1.400 * Event Player.HudDistance * Direction From Angles(Horizontal Angle From Direction(
+			Event Player.CameraDirection), Vertical Angle From Direction(Event Player.CameraDirection) - 90);
+	}
+}
+
+rule("Rule 2")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Event Player.CameraPos, Event Player.CameraPos + Event Player.CameraDirection, 25);
+		Create In-World Text(All Players(All Teams), Custom String("O"), Event Player.HudOrigin, 1, Do Not Clip,
+			Visible To Position and String, Color(White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("O"),
+			Event Player.HudOrigin + -0.500 * Event Player.iHUD + 0 * Event Player.jHUD, 1, Do Not Clip, Visible To Position and String,
+			Color(White), Default Visibility);
+		Create In-World Text(All Players(All Teams), Custom String("O"),
+			Event Player.HudOrigin + 0 * Event Player.iHUD + 0.250 * Event Player.jHUD, 1, Do Not Clip, Visible To Position and String,
+			Color(White), Default Visibility);
+	}
+}
