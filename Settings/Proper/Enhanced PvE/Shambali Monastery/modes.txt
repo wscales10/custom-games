@@ -1,0 +1,10 @@
+modes
+{
+	Escort
+	{
+		enabled maps
+		{
+			Shambali Monastery 972777519512068153
+		}
+	}
+}
