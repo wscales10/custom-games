@@ -30,6 +30,7 @@ if (Test-Path $mapSpecificSettingsFile) {
 }
 
 Set-Content $outputPath $output
+Set-Clipboard $output
 
 function MyArgumentCompleter {
     param ( $commandName,
