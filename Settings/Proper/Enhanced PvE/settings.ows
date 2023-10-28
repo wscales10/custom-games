@@ -40,8 +40,8 @@ variables
 		14: CameraPos
 		15: CameraDirection
 		16: CustomCamera
-		17: StealthCam
-		18: StealthCamTarget
+		17: SneakCam
+		18: SneakCamTarget
 }
 
 subroutines
@@ -395,7 +395,7 @@ rule("Player Setup")
 		Create HUD Text(Event Player, Event Player.Role, Null, Null, Left, 0, Color(White), Color(White), Color(White),
 			Visible To and String, Default Visibility);
 		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
-		Chase Player Variable At Rate(Event Player, StealthCam, Event Player.StealthCamTarget, 2, Destination And Rate);
+		Chase Player Variable At Rate(Event Player, SneakCam, Event Player.SneakCamTarget, 2, Destination And Rate);
 		Disable Game Mode In-World UI(Event Player);
 		Disable Game Mode HUD(Event Player);
 		Disable Messages(Event Player);
@@ -766,7 +766,7 @@ rule("Start/Stop Camera")
 	}
 }
 
-rule("Stealth Camera")
+rule("Sneak Camera")
 {
 	event
 	{
@@ -782,14 +782,14 @@ rule("Stealth Camera")
 
 	actions
 	{
-		If(Event Player.StealthCam == 0);
+		If(Event Player.SneakCam == 0);
 			Wait(1, Abort When False);
 		End;
-		Event Player.StealthCamTarget = 1;
+		Event Player.SneakCamTarget = 1;
 	}
 }
 
-rule("Stealth Camera")
+rule("Sneak Camera")
 {
 	event
 	{
@@ -800,7 +800,7 @@ rule("Stealth Camera")
 
 	conditions
 	{
-		Event Player.StealthCam > 0;
+		Event Player.SneakCam > 0;
 	}
 
 	actions
@@ -808,12 +808,12 @@ rule("Stealth Camera")
 		Event Player.CameraPos = Eye Position(Event Player);
 		Event Player.CameraDirection = Facing Direction Of(Event Player);
 		Event Player.CustomCamera = True;
-		Chase Player Variable At Rate(Event Player, CameraPos, Event Player.StealthCam * (Position Of(Event Player) + 1.500 * Up - 2 * Facing Direction Of(Event Player)) + (1 - Event Player.StealthCam) * Eye Position(Event Player), 70, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, CameraPos, Event Player.SneakCam * (Position Of(Event Player) + 1.500 * Up - 2 * Facing Direction Of(Event Player)) + (1 - Event Player.SneakCam) * Eye Position(Event Player), 70, Destination and Rate);
 		Chase Player Variable At Rate(Event Player, CameraDirection, Facing Direction Of(Event Player), 70, Destination and Rate);
 	}
 }
 
-rule("No Stealth Camera")
+rule("No Sneak Camera")
 {
 	event
 	{
@@ -830,15 +830,15 @@ rule("No Stealth Camera")
 
 	actions
 	{
-		If(Event Player.StealthCam == 1);
+		If(Event Player.SneakCam == 1);
 			Wait(0.150, Abort When False);
 		End;
 		Abort If(Is Crouching(Event Player));
-		Event Player.StealthCamTarget = 0;
+		Event Player.SneakCamTarget = 0;
 	}
 }
 
-rule("No Stealth Camera")
+rule("No Sneak Camera")
 {
 	event
 	{
@@ -849,7 +849,7 @@ rule("No Stealth Camera")
 
 	conditions
 	{
-		Event Player.StealthCam == 0;
+		Event Player.SneakCam == 0;
 	}
 
 	actions
