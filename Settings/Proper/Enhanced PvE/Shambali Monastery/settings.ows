@@ -1,0 +1,62 @@
+rule("Map Setup")
+{
+	event
+	{
+		Subroutine;
+		MapSetup;
+	}
+
+	actions
+	{
+		Modify Global Variable(BotPresetQueue, Append To Array, Hero(Cassidy));
+	}
+}
+
+rule("CreateBot")
+{
+	event
+	{
+		Subroutine;
+		CreateBot;
+	}
+
+	actions
+	{
+		If(Global.RequestedBot == Hero(Cassidy));
+			Global.BotSpawnPosition = Random Value In Array(Global.Team1SpawnPoints);
+			Create Dummy Bot(Hero(Cassidy), Team 1, -1, Position Of(Global.BotSpawnPosition), Facing Direction Of(Global.BotSpawnPosition));
+		End;
+	}
+}
+
+rule("Bot Setup")
+{
+	event
+	{
+		Subroutine;
+		SetupBot;
+	}
+
+	actions
+	{
+		If(Event Player.BotPreset == Hero(Cassidy));
+			Event Player.SpawnPosition = Vector(-9, 15.300, 85);
+		End;
+	}
+}
+
+rule("Game Start")
+{
+	event
+	{
+		Subroutine;
+		GameStart;
+	}
+
+	actions
+	{
+		If(Event Player.BotPreset == Hero(Cassidy));
+			Set Facing(Event Player, Right, To World);
+		End;
+	}
+}

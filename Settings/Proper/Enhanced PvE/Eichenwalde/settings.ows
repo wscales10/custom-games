@@ -1,0 +1,13 @@
+rule("Map Setup")
+{
+	event
+	{
+		Subroutine;
+		MapSetup;
+	}
+
+	actions
+	{
+		Global.RoleButtonPositions = Array(Vector(-12.250, 3.900, 26.100), Vector(-16.250, 3.900, 25.600), Vector(-20.200, 3.900, 25.100));
+	}
+}
