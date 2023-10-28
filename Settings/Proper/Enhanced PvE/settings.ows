@@ -71,6 +71,7 @@ rule("Global Setup")
 		Global.Team2SpawnPoints = Spawn Points(Team 2);
 		Global.BotPresetQueue = Empty Array;
 		Disable Built-In Game Mode Announcer;
+		Disable Built-In Game Mode Completion;
 		Call Subroutine(MapSetup);
 		Create HUD Text(Host Player, Ray Cast Hit Position(Eye Position(Host Player), Eye Position(Host Player) + 20 * Facing Direction Of(
 			Host Player), All Players(All Teams), Host Player, True), Null, Null, Left, 0, Color(White), Color(White), Color(White),
