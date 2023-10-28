@@ -65,6 +65,7 @@ rule("Global Setup")
 		Global.Team1SpawnPoints = Spawn Points(Team 1);
 		Global.Team2SpawnPoints = Spawn Points(Team 2);
 		Global.BotPresetQueue = Empty Array;
+		Disable Built-In Game Mode Announcer;
 		Call Subroutine(MapSetup);
 		Create HUD Text(Host Player, Ray Cast Hit Position(Eye Position(Host Player), Eye Position(Host Player) + 20 * Facing Direction Of(
 			Host Player), All Players(All Teams), Host Player, True), Null, Null, Left, 0, Color(White), Color(White), Color(White),
@@ -388,6 +389,9 @@ rule("Player Setup")
 		Create HUD Text(Event Player, Event Player.Role, Null, Null, Left, 0, Color(White), Color(White), Color(White),
 			Visible To and String, Default Visibility);
 		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
+		Disable Game Mode In-World UI(Event Player);
+		Disable Game Mode HUD(Event Player);
+		Disable Messages(Event Player);
 	}
 }
 
@@ -683,7 +687,7 @@ rule("Bot Setup")
 	}
 }
 
-rule("Bot Spawn")
+rule("Game In Progress (Player)")
 {
 	event
 	{
@@ -703,5 +707,32 @@ rule("Bot Spawn")
 			Teleport(Event Player, Event Player.SpawnPosition);
 		End;
 		CallSubroutine(GameStart);
+	}
+}
+
+rule("Enable/Disable Announcer")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	conditions
+	{
+		Is In Setup == True;
+		Match Time < 15;
+	}
+
+	actions
+	{
+		Disable Built-In Game Mode Music;
+		Wait(9, Ignore Condition);
+		Enable Messages(All Players(All Teams));
+		Enable Built-In Game Mode Announcer;
+		Wait Until(Match Time < 0.500, 99999);
+		Disable Built-In Game Mode Announcer;
+		Disable Messages(All Players(All Teams));
+		Wait(1, Ignore Condition);
+		Enable Messages(All Players(All Teams));
 	}
 }
