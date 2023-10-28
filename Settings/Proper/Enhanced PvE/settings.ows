@@ -37,6 +37,11 @@ variables
 		11: Ability2Cooldown
 		12: BotPreset
 		13: SpawnPosition
+		14: CameraPos
+		15: CameraDirection
+		16: CustomCamera
+		17: StealthCam
+		18: StealthCamTarget
 }
 
 subroutines
@@ -389,6 +394,7 @@ rule("Player Setup")
 		Create HUD Text(Event Player, Event Player.Role, Null, Null, Left, 0, Color(White), Color(White), Color(White),
 			Visible To and String, Default Visibility);
 		Chase Player Variable At Rate(Event Player, SlowTime, 0, 1, None);
+		Chase Player Variable At Rate(Event Player, StealthCam, Event Player.StealthCamTarget, 2, Destination And Rate);
 		Disable Game Mode In-World UI(Event Player);
 		Disable Game Mode HUD(Event Player);
 		Disable Messages(Event Player);
@@ -734,5 +740,123 @@ rule("Enable/Disable Announcer")
 		Disable Messages(All Players(All Teams));
 		Wait(1, Ignore Condition);
 		Enable Messages(All Players(All Teams));
+	}
+}
+
+rule("Start/Stop Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.CustomCamera == True;
+	}
+
+	actions
+	{
+		Start Camera(Event Player, Event Player.CameraPos, Event Player.CameraPos + Event Player.CameraDirection, 25);
+		Wait Until(!Event Player.CustomCamera, 99999);
+		Stop Camera(Event Player);
+	}
+}
+
+rule("Stealth Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Event Player.StealthCam == 0);
+			Wait(1, Abort When False);
+		End;
+		Event Player.StealthCamTarget = 1;
+	}
+}
+
+rule("Stealth Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StealthCam > 0;
+	}
+
+	actions
+	{
+		Event Player.CameraPos = Eye Position(Event Player);
+		Event Player.CameraDirection = Facing Direction Of(Event Player);
+		Event Player.CustomCamera = True;
+		Chase Player Variable At Rate(Event Player, CameraPos, Event Player.StealthCam * (Position Of(Event Player) + 1.500 * Up - 2 * Facing Direction Of(Event Player)) + (1 - Event Player.StealthCam) * Eye Position(Event Player), 70, Destination and Rate);
+		Chase Player Variable At Rate(Event Player, CameraDirection, Facing Direction Of(Event Player), 70, Destination and Rate);
+	}
+}
+
+rule("No Stealth Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Crouching(Event Player) == False;
+		(Is On Ground(Event Player) || Is Jumping(Event Player)) == True;
+	}
+
+	actions
+	{
+		If(Event Player.StealthCam == 1);
+			Wait(0.150, Abort When False);
+		End;
+		Abort If(Is Crouching(Event Player));
+		Event Player.StealthCamTarget = 0;
+	}
+}
+
+rule("No Stealth Camera")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.StealthCam == 0;
+	}
+
+	actions
+	{
+		Event Player.CustomCamera = False;
+		Stop Chasing Player Variable(Event Player, CameraPos);
+		Stop Chasing Player Variable(Event Player, CameraDirection);
+		Event Player.CameraPos = Null;
+		Event Player.CameraDirection = Null;
 	}
 }
