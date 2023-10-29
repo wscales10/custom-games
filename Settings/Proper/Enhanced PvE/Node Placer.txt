@@ -73,6 +73,35 @@ rule("Initialize Nodes & Edges")
 	}
 }
 
+rule("Set Nearest Node")
+{
+	event
+	{
+		Subroutine;
+		SetNearestNode;
+	}
+
+	actions
+	{
+		Global.NearestNode = Mapped Array(Global.Nodes, Current Array Index);
+		Global.NearestNode = Filtered Array(Global.NearestNode, Global.Nodes[Current Array Element]);
+		If(Count Of(Global.NearestNode) == 0);
+			Global.NearestNode = -1;
+		Else;
+			Global.NearestNode = First Of(Sorted Array(Global.NearestNode, Distance Between(Global.Nodes[Current Array Element],
+				Event Player)));
+		End;
+	}
+}
+
+disabled rule("**EDITING**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
 rule("Player Setup")
 {
 	event
@@ -252,120 +281,6 @@ rule("Destroy Specific Edge")
 	}
 }
 
-rule("BFS")
-{
-	event
-	{
-		Subroutine;
-		BFS;
-	}
-
-	actions
-	{
-		Global.Path = Empty Array;
-		Global.Queue = Array(Global.PathStart);
-		Global.VisitedNodes = Array(Vector(Global.PathStart, -1, 0));
-		While(Count Of(Global.Queue));
-			Global.CurrentNode = First Of(Global.Queue);
-			Modify Global Variable(Queue, Remove From Array By Index, 0);
-			If(Global.CurrentNode == Global.DestinationNode);
-				Global.Path = Array(Global.DestinationNode);
-				While(First Of(Global.Path) != Global.PathStart);
-					Global.Path = Append To Array(Y Component Of(First Of(Filtered Array(Global.VisitedNodes, X Component Of(Current Array Element)
-						== First Of(Global.Path)))), Global.Path);
-					Wait(0.016, Ignore Condition);
-				End;
-				Abort;
-			End;
-			Global.Neighbours = Append To Array(Mapped Array(Filtered Array(Global.Edges, X Component Of(Current Array Element)
-				== Global.CurrentNode && Z Component Of(Current Array Element) % 2 == 1), Y Component Of(Current Array Element)), Mapped Array(
-				Filtered Array(Global.Edges, Y Component Of(Current Array Element) == Global.CurrentNode && Z Component Of(
-				Current Array Element) > 1), X Component Of(Current Array Element)));
-			Modify Global Variable(Neighbours, Remove From Array By Value, Mapped Array(Global.VisitedNodes, X Component Of(
-				Current Array Element)));
-			Modify Global Variable(Queue, Append To Array, Global.Neighbours);
-			Modify Global Variable(VisitedNodes, Append To Array, Mapped Array(Global.Neighbours, Vector(Current Array Element,
-				Global.CurrentNode, 0)));
-			Wait(0.016, Ignore Condition);
-		End;
-	}
-}
-
-rule("Set Destination")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Communicating Any Spray(Event Player) == True;
-	}
-
-	actions
-	{
-		Call Subroutine(SetNearestNode);
-		Abort If(Global.NearestNode == -1);
-		Global.DestinationNode = Global.NearestNode;
-	}
-}
-
-rule("Set Nearest Node")
-{
-	event
-	{
-		Subroutine;
-		SetNearestNode;
-	}
-
-	actions
-	{
-		Global.NearestNode = Mapped Array(Global.Nodes, Current Array Index);
-		Global.NearestNode = Filtered Array(Global.NearestNode, Global.Nodes[Current Array Element]);
-		If(Count Of(Global.NearestNode) == 0);
-			Global.NearestNode = -1;
-		Else;
-			Global.NearestNode = First Of(Sorted Array(Global.NearestNode, Distance Between(Global.Nodes[Current Array Element],
-				Event Player)));
-		End;
-	}
-}
-
-rule("Pathfind")
-{
-	event
-	{
-		Ongoing - Each Player;
-		All;
-		All;
-	}
-
-	conditions
-	{
-		Is Communicating(Event Player, Ready) == True;
-	}
-
-	actions
-	{
-		Call Subroutine(SetNearestNode);
-		Abort If(Global.NearestNode == -1);
-		Global.PathStart = Global.NearestNode;
-		Call Subroutine(BFS);
-		Abort If(Count Of(Global.Path) == 0);
-		Global.Path = Mapped Array(Global.Path, Global.Nodes[Current Array Element]);
-		Start Throttle In Direction(Event Player, Vector Towards(Event Player, First Of(Global.Path)), 1, To World,
-			Replace existing throttle, Direction and Magnitude);
-		While(Count Of(Global.Path));
-			Wait Until(Distance Between(Event Player, First Of(Global.Path)) < 1, 99999);
-			Modify Global Variable(Path, Remove From Array By Index, 0);
-		End;
-		Stop Throttle In Direction(Event Player);
-	}
-}
-
 rule("Toggle one way mode")
 {
 	event
@@ -383,6 +298,14 @@ rule("Toggle one way mode")
 	actions
 	{
 		Global.OneWay = !Global.OneWay;
+	}
+}
+
+disabled rule("**VISUAL EFFECTS**")
+{
+	event
+	{
+		Ongoing - Global;
 	}
 }
 
@@ -445,5 +368,106 @@ rule("Draw Existing Nodes & Edges")
 			Global.NearestNode = Y Component Of(Global.Edges[Global.NewEdgeIndex]);
 			Call Subroutine(DrawEdge);
 		End;
+	}
+}
+
+disabled rule("**PATHFINDING**")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+}
+
+rule("BFS")
+{
+	event
+	{
+		Subroutine;
+		BFS;
+	}
+
+	actions
+	{
+		Global.Path = Empty Array;
+		Global.Queue = Array(Global.PathStart);
+		Global.VisitedNodes = Array(Vector(Global.PathStart, -1, 0));
+		While(Count Of(Global.Queue));
+			Global.CurrentNode = First Of(Global.Queue);
+			Modify Global Variable(Queue, Remove From Array By Index, 0);
+			If(Global.CurrentNode == Global.DestinationNode);
+				Global.Path = Array(Global.DestinationNode);
+				While(First Of(Global.Path) != Global.PathStart);
+					Global.Path = Append To Array(Y Component Of(First Of(Filtered Array(Global.VisitedNodes, X Component Of(Current Array Element)
+						== First Of(Global.Path)))), Global.Path);
+					Wait(0.016, Ignore Condition);
+				End;
+				Abort;
+			End;
+			Global.Neighbours = Append To Array(Mapped Array(Filtered Array(Global.Edges, X Component Of(Current Array Element)
+				== Global.CurrentNode && Z Component Of(Current Array Element) % 2 == 1), Y Component Of(Current Array Element)), Mapped Array(
+				Filtered Array(Global.Edges, Y Component Of(Current Array Element) == Global.CurrentNode && Z Component Of(
+				Current Array Element) > 1), X Component Of(Current Array Element)));
+			Modify Global Variable(Neighbours, Remove From Array By Value, Mapped Array(Global.VisitedNodes, X Component Of(
+				Current Array Element)));
+			Modify Global Variable(Queue, Append To Array, Global.Neighbours);
+			Modify Global Variable(VisitedNodes, Append To Array, Mapped Array(Global.Neighbours, Vector(Current Array Element,
+				Global.CurrentNode, 0)));
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+rule("Set Destination")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating Any Spray(Event Player) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		Global.DestinationNode = Global.NearestNode;
+	}
+}
+
+rule("Pathfind")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Ready) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		Global.PathStart = Global.NearestNode;
+		Call Subroutine(BFS);
+		Abort If(Count Of(Global.Path) == 0);
+		Global.Path = Mapped Array(Global.Path, Global.Nodes[Current Array Element]);
+		Start Throttle In Direction(Event Player, Vector Towards(Event Player, First Of(Global.Path)), 1, To World,
+			Replace existing throttle, Direction and Magnitude);
+		While(Count Of(Global.Path));
+			Wait Until(Distance Between(Event Player, First Of(Global.Path)) < 1, 99999);
+			Modify Global Variable(Path, Remove From Array By Index, 0);
+		End;
+		Stop Throttle In Direction(Event Player);
 	}
 }
