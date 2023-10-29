@@ -1,0 +1,449 @@
+variables
+{
+	global:
+		0: Nodes
+		1: EdgeStart
+		2: EdgeModifyMode
+		3: Edges
+		4: NearestNode
+		5: NodeToDestroy
+		6: NodeEffects
+		7: NodeLabels
+		8: NewNodeIndex
+		9: NewEdgeIndex
+		10: EdgeEffects
+		11: EdgesToDestroy
+		12: Queue
+		13: VisitedNodes
+		14: PathStart
+		15: CurrentNode
+		16: DestinationNode
+		17: Neighbours
+		18: Path
+		19: OneWay
+		20: EdgeToDestroy
+		21: EdgeDirectionEffects
+}
+
+subroutines
+{
+	0: BFS
+	1: SetNearestNode
+	2: DrawNode
+	3: DrawEdge
+	4: DrawExisting
+	5: InitializeNodesAndEdges
+}
+
+rule("Global Setup")
+{
+	event
+	{
+		Ongoing - Global;
+	}
+
+	actions
+	{
+		Global.Nodes = Empty Array;
+		Global.Edges = Empty Array;
+		Create HUD Text(All Players(All Teams), Custom String("One Way: {0}", Global.OneWay), Null, Null, Left, 0, Color(White), Color(
+			White), Color(White), Visible To and String, Default Visibility);
+		Call Subroutine(InitializeNodesAndEdges);
+		Call Subroutine(DrawExisting);
+	}
+}
+
+rule("Initialize Nodes & Edges")
+{
+	event
+	{
+		Subroutine;
+		InitializeNodesAndEdges;
+	}
+
+	actions
+	{
+		Global.Nodes = Array(Vector(-90.568, 38.640, 55.853), Vector(-96.921, 33.324, 57.178), Vector(-97.341, 33.152, 72.485), Vector(
+			-91.719, 32.194, 78.804), Vector(-83.882, 38.424, 64.966), Vector(-84.962, 38.641, 58.385), Vector(-86.270, 38.641, 52.258),
+			Vector(-81.302, 38.641, 54.215), Vector(-74.283, 31.998, 53.065), Vector(-85.026, 32.265, 79.896), Vector(-93.781, 32.273,
+			32.299), Vector(-99.990, 32.211, 35.518), Vector(-87.285, 38.455, 45.187));
+		Global.Edges = Array(Vector(0, 1, 1), Vector(1, 2, 3), Vector(2, 3, 3), Vector(3, 4, 3), Vector(4, 5, 3), Vector(5, 0, 3), Vector(
+			6, 0, 3), Vector(5, 6, 3), Vector(7, 5, 3), Vector(6, 7, 3), Vector(7, 8, 1), Vector(3, 9, 3), Vector(9, 8, 3), Vector(8, 10,
+			3), Vector(10, 11, 3), Vector(12, 6, 3), Vector(12, 11, 3));
+	}
+}
+
+rule("Player Setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Add Node")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Primary Fire)) == True;
+	}
+
+	actions
+	{
+		Global.NewNodeIndex = Index Of Array Value(Global.Nodes, Null);
+		If(Global.NewNodeIndex == -1);
+			Global.NewNodeIndex = Count Of(Global.Nodes);
+		End;
+		Global.Nodes[Global.NewNodeIndex] = Ray Cast Hit Position(Eye Position(Event Player), Eye Position(Event Player)
+			+ 100 * Facing Direction Of(Event Player), Null, Event Player, False);
+		Call Subroutine(DrawNode);
+	}
+}
+
+rule("Destroy All Nodes")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+	}
+
+	actions
+	{
+		Global.Nodes = Empty Array;
+		Global.Edges = Empty Array;
+		Global.EdgeModifyMode = 0;
+		Destroy All Effects;
+		Destroy All In-World Text;
+	}
+}
+
+rule("Add Edge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Interact)) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		If(Global.EdgeModifyMode == 1);
+			Global.NewEdgeIndex = Index Of Array Value(Global.Edges, Null);
+			If(Global.NewEdgeIndex == -1);
+				Global.NewEdgeIndex = Count Of(Global.Edges);
+			End;
+			Global.Edges[Global.NewEdgeIndex] = Vector(Global.EdgeStart, Global.NearestNode, Global.OneWay ? 1 : 3);
+			Call Subroutine(DrawEdge);
+			Global.EdgeModifyMode = 0;
+		Else;
+			Global.EdgeStart = Global.NearestNode;
+			Global.EdgeModifyMode = 1;
+		End;
+	}
+}
+
+rule("Destroy Specific Node")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Crouch)) == True;
+	}
+
+	actions
+	{
+		Global.NodeToDestroy = Mapped Array(Global.Nodes, Current Array Index);
+		Global.NodeToDestroy = Filtered Array(Global.NodeToDestroy, Global.Nodes[Current Array Element]);
+		Abort If(Count Of(Global.NodeToDestroy) == 0);
+		Global.NodeToDestroy = First Of(Sorted Array(Global.NodeToDestroy, Distance Between(Ray Cast Hit Position(Eye Position(
+			Event Player), Eye Position(Event Player) + 100 * Facing Direction Of(Event Player), Null, Event Player, False),
+			Global.Nodes[Current Array Element])));
+		Global.Nodes[Global.NodeToDestroy] = Null;
+		Destroy Effect(Global.NodeEffects[Global.NodeToDestroy]);
+		Destroy In-World Text(Global.NodeLabels[Global.NodeToDestroy]);
+	}
+}
+
+rule("Destroy Specific Edge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Melee)) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		If(Global.EdgeModifyMode == 2);
+			Global.EdgesToDestroy = Mapped Array(Global.Edges, Current Array Index);
+			Global.EdgesToDestroy = Filtered Array(Global.EdgesToDestroy, Global.Edges[Current Array Element]);
+			If(Global.OneWay);
+				Global.EdgesToDestroy = Filtered Array(Global.EdgesToDestroy, (X Component Of(Global.Edges[Current Array Element])
+					== Global.EdgeStart && Y Component Of(Global.Edges[Current Array Element]) == Global.NearestNode && Z Component Of(
+					Global.Edges[Current Array Element]) % 2 == 1) || (X Component Of(Global.Edges[Current Array Element])
+					== Global.NearestNode && Y Component Of(Global.Edges[Current Array Element]) == Global.EdgeStart && Z Component Of(
+					Global.Edges[Current Array Element]) > 1));
+			Else;
+				Global.EdgesToDestroy = Filtered Array(Global.EdgesToDestroy, (X Component Of(Global.Edges[Current Array Element])
+					== Global.EdgeStart && Y Component Of(Global.Edges[Current Array Element]) == Global.NearestNode) || (X Component Of(
+					Global.Edges[Current Array Element]) == Global.NearestNode && Y Component Of(Global.Edges[Current Array Element])
+					== Global.EdgeStart));
+			End;
+			While(Count Of(Global.EdgesToDestroy));
+				Global.EdgeToDestroy = Global.Edges[First Of(Global.EdgesToDestroy)];
+				If(Global.OneWay && Z Component Of(Global.EdgeToDestroy) == 3);
+					Global.Edges[First Of(Global.EdgesToDestroy)] = Vector(Global.EdgeStart, Global.NearestNode, Y Component Of(Global.EdgeToDestroy)
+						== Global.EdgeStart ? 1 : 2);
+				Else;
+					Global.Edges[First Of(Global.EdgesToDestroy)] = Null;
+					Destroy Effect(Global.EdgeEffects[First Of(Global.EdgesToDestroy)]);
+					Destroy Effect(Global.EdgeDirectionEffects[First Of(Global.EdgesToDestroy)]);
+				End;
+				Modify Global Variable(EdgesToDestroy, Remove From Array By Index, 0);
+			End;
+			Global.EdgeModifyMode = 0;
+		Else;
+			Global.EdgeStart = Global.NearestNode;
+			Global.EdgeModifyMode = 2;
+		End;
+	}
+}
+
+rule("BFS")
+{
+	event
+	{
+		Subroutine;
+		BFS;
+	}
+
+	actions
+	{
+		Global.Path = Empty Array;
+		Global.Queue = Array(Global.PathStart);
+		Global.VisitedNodes = Array(Vector(Global.PathStart, -1, 0));
+		While(Count Of(Global.Queue));
+			Global.CurrentNode = First Of(Global.Queue);
+			Modify Global Variable(Queue, Remove From Array By Index, 0);
+			If(Global.CurrentNode == Global.DestinationNode);
+				Global.Path = Array(Global.DestinationNode);
+				While(First Of(Global.Path) != Global.PathStart);
+					Global.Path = Append To Array(Y Component Of(First Of(Filtered Array(Global.VisitedNodes, X Component Of(Current Array Element)
+						== First Of(Global.Path)))), Global.Path);
+					Wait(0.016, Ignore Condition);
+				End;
+				Abort;
+			End;
+			Global.Neighbours = Append To Array(Mapped Array(Filtered Array(Global.Edges, X Component Of(Current Array Element)
+				== Global.CurrentNode && Z Component Of(Current Array Element) % 2 == 1), Y Component Of(Current Array Element)), Mapped Array(
+				Filtered Array(Global.Edges, Y Component Of(Current Array Element) == Global.CurrentNode && Z Component Of(
+				Current Array Element) > 1), X Component Of(Current Array Element)));
+			Modify Global Variable(Neighbours, Remove From Array By Value, Mapped Array(Global.VisitedNodes, X Component Of(
+				Current Array Element)));
+			Modify Global Variable(Queue, Append To Array, Global.Neighbours);
+			Modify Global Variable(VisitedNodes, Append To Array, Mapped Array(Global.Neighbours, Vector(Current Array Element,
+				Global.CurrentNode, 0)));
+			Wait(0.016, Ignore Condition);
+		End;
+	}
+}
+
+rule("Set Destination")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating Any Spray(Event Player) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		Global.DestinationNode = Global.NearestNode;
+	}
+}
+
+rule("Set Nearest Node")
+{
+	event
+	{
+		Subroutine;
+		SetNearestNode;
+	}
+
+	actions
+	{
+		Global.NearestNode = Mapped Array(Global.Nodes, Current Array Index);
+		Global.NearestNode = Filtered Array(Global.NearestNode, Global.Nodes[Current Array Element]);
+		If(Count Of(Global.NearestNode) == 0);
+			Global.NearestNode = -1;
+		Else;
+			Global.NearestNode = First Of(Sorted Array(Global.NearestNode, Distance Between(Global.Nodes[Current Array Element],
+				Event Player)));
+		End;
+	}
+}
+
+rule("Pathfind")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Communicating(Event Player, Ready) == True;
+	}
+
+	actions
+	{
+		Call Subroutine(SetNearestNode);
+		Abort If(Global.NearestNode == -1);
+		Global.PathStart = Global.NearestNode;
+		Call Subroutine(BFS);
+		Abort If(Count Of(Global.Path) == 0);
+		Global.Path = Mapped Array(Global.Path, Global.Nodes[Current Array Element]);
+		Start Throttle In Direction(Event Player, Vector Towards(Event Player, First Of(Global.Path)), 1, To World,
+			Replace existing throttle, Direction and Magnitude);
+		While(Count Of(Global.Path));
+			Wait Until(Distance Between(Event Player, First Of(Global.Path)) < 1, 99999);
+			Modify Global Variable(Path, Remove From Array By Index, 0);
+		End;
+		Stop Throttle In Direction(Event Player);
+	}
+}
+
+rule("Toggle one way mode")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Is Button Held(Event Player, Button(Reload)) == True;
+	}
+
+	actions
+	{
+		Global.OneWay = !Global.OneWay;
+	}
+}
+
+rule("Draw Node")
+{
+	event
+	{
+		Subroutine;
+		DrawNode;
+	}
+
+	actions
+	{
+		Create Effect(All Players(All Teams), Sphere, Color(Yellow), Global.Nodes[Global.NewNodeIndex], 0.700, Visible To);
+		Global.NodeEffects[Global.NewNodeIndex] = Last Created Entity;
+		Create In-World Text(All Players(All Teams), Global.NewNodeIndex, Global.Nodes[Global.NewNodeIndex] + Up, 3, Do Not Clip,
+			Visible To, Color(White), Default Visibility);
+		Global.NodeLabels[Global.NewNodeIndex] = Last Text ID;
+	}
+}
+
+rule("Draw Edge")
+{
+	event
+	{
+		Subroutine;
+		DrawEdge;
+	}
+
+	actions
+	{
+		Create Beam Effect(Global.Nodes[Evaluate Once(Global.EdgeStart)] && Global.Nodes[Evaluate Once(Global.NearestNode)] ? All Players(
+			All Teams) : Null, Good Beam, Global.Nodes[Evaluate Once(Global.EdgeStart)], Global.Nodes[Evaluate Once(Global.NearestNode)],
+			Color(Green), Visible To Position and Radius);
+		Global.EdgeEffects[Global.NewEdgeIndex] = Last Created Entity;
+		Create Effect(Z Component Of(Global.Edges[Evaluate Once(Global.NewEdgeIndex)]) == 3 ? Null : All Players(All Teams), Sphere, Color(
+			Blue), Global.Nodes[Evaluate Once(X Component Of(Global.Edges[Global.NewEdgeIndex]))] * Z Component Of(
+			Global.Edges[Evaluate Once(Global.NewEdgeIndex)]) / 3 + Global.Nodes[Evaluate Once(Y Component Of(
+			Global.Edges[Global.NewEdgeIndex]))] * (3 - Z Component Of(Global.Edges[Evaluate Once(Global.NewEdgeIndex)])) / 3, 0.500,
+			Visible To Position and Radius);
+		Global.EdgeDirectionEffects[Global.NewEdgeIndex] = Last Created Entity;
+	}
+}
+
+rule("Draw Existing Nodes & Edges")
+{
+	event
+	{
+		Subroutine;
+		DrawExisting;
+	}
+
+	actions
+	{
+		For Global Variable(NewNodeIndex, 0, Count Of(Global.Nodes), 1);
+			Call Subroutine(DrawNode);
+		End;
+		For Global Variable(NewEdgeIndex, 0, Count Of(Global.Edges), 1);
+			Global.EdgeStart = X Component Of(Global.Edges[Global.NewEdgeIndex]);
+			Global.NearestNode = Y Component Of(Global.Edges[Global.NewEdgeIndex]);
+			Call Subroutine(DrawEdge);
+		End;
+	}
+}
