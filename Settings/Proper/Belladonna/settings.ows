@@ -18,7 +18,6 @@ settings
 
 		General
 		{
-			Limit Roles: 1 Tank 2 Offense 2 Support
 			Respawn As Random Hero: On
 		}
 	}
@@ -45,13 +44,11 @@ settings
 
 			Illari
 			{
-				Projectile Speed: 500%
 				Spawn With Ultimate Ready: On
 			}
 
 			Junker Queen
 			{
-				Ammunition Clip Size Scalar: 25%
 				Commanding Shout: Off
 				Jagged Blade Cooldown Time: 0%
 			}
@@ -86,6 +83,12 @@ settings
 		}
 	}
 
+	workshop
+	{
+		Difficulty: [1]
+		Slow Motion Multiplier: 1.000
+	}
+
 	extensions
 	{
 		Spawn More Dummy Bots
@@ -97,6 +100,8 @@ variables
 	global:
 		1: BotSpeed
 		2: Augmented
+		3: Difficulty
+		4: SlowMo
 
 	player:
 		1: EnemiesSpawned
@@ -116,6 +121,7 @@ subroutines
 	7: Wave7
 	8: Wave8
 	9: Reset
+	10: SoftReset
 }
 
 rule("Global Setup")
@@ -129,6 +135,9 @@ rule("Global Setup")
 	{
 		Create Effect(Filtered Array(All Players(Team 1), Current Array Element.A), Light Shaft, Color(Lime Green), Vector(-5.500, 0, 0),
 			7.500, Visible To Position and Radius);
+		Global.Difficulty = Workshop Setting Combo(Custom String("General"), Custom String("Difficulty"), 0, Array(Custom String("Easy"),
+			Custom String("Normal"), Custom String("Hard")), 0);
+		Global.SlowMo = Workshop Setting Real(Custom String("General"), Custom String("Slow Motion Multiplier"), 1, 0.150, 1, 0);
 	}
 }
 
@@ -301,6 +310,23 @@ rule("Main")
 	}
 }
 
+rule("Soft Reset")
+{
+	event
+	{
+		Subroutine;
+		SoftReset;
+	}
+
+	actions
+	{
+		Set Projectile Speed(Event Player, 100);
+		Set Slow Motion(100 * Global.SlowMo);
+		Stop Modifying Hero Voice Lines(Event Player);
+		Set Move Speed(Event Player, 100);
+	}
+}
+
 rule("Reset")
 {
 	event
@@ -318,6 +344,7 @@ rule("Reset")
 		Set Status(Event Player, Null, Rooted, 9999);
 		Set Ultimate Ability Enabled(Event Player, True);
 		Set Gravity(Event Player, 100);
+		Call Subroutine(SoftReset);
 	}
 }
 
@@ -333,8 +360,10 @@ rule("Wave 1 (Junker Queen)")
 	{
 		Call Subroutine(Reset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Junker Queen));
+		Set Max Ammo(Event Player, 0, Array(8, 2, 0)[Global.Difficulty]);
+		Set Ammo(Event Player, 0, Min(Ammo(Event Player, 0), Max Ammo(Event Player, 0)));
 		Set Ultimate Ability Enabled(Event Player, False);
-		Set Damage Dealt(Event Player, 700);
+		Set Damage Dealt(Event Player, 800 - 100 * Global.Difficulty);
 		For Global Variable(A, 0, 6, 1);
 			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(-20, 0, Random Value In Array(Array(1, -1)) * Random Integer(4, 10)), Left);
 			Wait(0.600, Ignore Condition);
@@ -357,13 +386,14 @@ rule("Wave 2 (Symmetra)")
 
 	actions
 	{
+		Call Subroutine(SoftReset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Symmetra));
 		Set Damage Dealt(Event Player, 550);
-		For Global Variable(A, 0, 12, 1);
+		For Global Variable(A, 0, 10 + Global.Difficulty, 1);
 			Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-18, 0, Random Value In Array(Array(1, -1)) * Random Real(1, 5)), Left);
 			Wait(0.600, Ignore Condition);
 		End;
-		Wait(2.400, Ignore Condition);
+		Wait(3.600 - 0.600 * Global.Difficulty, Ignore Condition);
 	}
 }
 
@@ -377,35 +407,40 @@ rule("Wave 3 (Genji)")
 
 	actions
 	{
+		Call Subroutine(SoftReset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Genji));
+		Set Max Ammo(Event Player, 0, 30 - 12 * Global.Difficulty);
+		Set Ammo(Event Player, 0, Min(Ammo(Event Player, 0), Max Ammo(Event Player, 0)));
 		Set Gravity(Event Player, Global.Augmented ? 42 : 100);
 		Global.BotSpeed = Global.Augmented ? 75 : 90;
 		Event Player.A = True;
-		Set Aim Speed(Event Player, 150);
+		Set Aim Speed(Event Player, Global.Difficulty < 2 ? 150 : 100);
 		Set Ultimate Ability Enabled(Event Player, Global.Augmented);
 		Set Ultimate Charge(Event Player, Global.Augmented ? 100 : 0);
 		Clear Status(Event Player, Rooted);
 		Set Damage Dealt(Event Player, 450);
 		If(Global.Augmented);
-			Set Move Speed(Event Player, 105);
+			Set Move Speed(Event Player, Global.Difficulty < 2 ? 105 : 100);
 			Wait(0.950, Ignore Condition);
 			For Global Variable(A, 0, 5, 1);
 				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-16, 0, Random Integer(-6, 6)), Left);
-				Wait(0.850, Ignore Condition);
+				Wait(0.870, Ignore Condition);
 			End;
 			Wait(3.900, Ignore Condition);
 		Else;
 			Set Move Speed(Event Player, 100);
-			For Global Variable(A, 0, 5, 1);
+			For Global Variable(A, 0, Global.Difficulty < 2 ? 5 : 10, 1);
 				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-20, 0, Random Integer(-6, 6)), Left);
 				Wait(0.800, Ignore Condition);
 			End;
-			Wait(0.750, Ignore Condition);
-			For Global Variable(A, 0, 4, 1);
-				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-20, 0, Random Integer(-6, 6)), Left);
-				Wait(0.800, Ignore Condition);
+			If(Global.Difficulty < 2);
+				Wait(0.750, Ignore Condition);
+				For Global Variable(A, 0, 4, 1);
+					Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-20, 0, Random Integer(-6, 6)), Left);
+					Wait(0.800, Ignore Condition);
+				End;
 			End;
-			Wait(1.550, Ignore Condition);
+			Wait(Global.Difficulty < 2 ? 1.550 : 1.500, Ignore Condition);
 		End;
 	}
 }
@@ -422,14 +457,14 @@ rule("Wave 4 (D.Va)")
 	{
 		Call Subroutine(Reset);
 		Set Ultimate Ability Enabled(Event Player, False);
-		Global.BotSpeed = 125;
+		Global.BotSpeed = 120;
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
 		Set Damage Dealt(Event Player, 1000);
-		For Global Variable(A, 0, Global.Augmented ? 12 : 11, 1);
+		For Global Variable(A, 0, Global.Augmented ? 10 : 9, 1);
 			Create Dummy Bot(Hero(Echo), Team 2, -1, Vector(-16, 0, Random Real(-4, 4)), Left);
-			Wait(0.300, Ignore Condition);
+			Wait(Global.Augmented ? 0.300 : 0.330, Ignore Condition);
 		End;
-		Wait(Global.Augmented ? 1.200 : 1.500, Ignore Condition);
+		Wait(Global.Augmented ? 1.800 : 1.830, Ignore Condition);
 	}
 }
 
@@ -446,6 +481,7 @@ rule("D.Va auto-aim")
 	{
 		Is Button Held(Event Player, Button(Primary Fire)) == True;
 		Hero Of(Event Player) == Hero(D.Va);
+		Global.Difficulty < 2;
 	}
 
 	actions
@@ -497,12 +533,12 @@ rule("Wave 6 (Cassidy)")
 		Start Forcing Player To Be Hero(Event Player, Hero(Cassidy));
 		Set Damage Dealt(Event Player, 100);
 		Set Ultimate Charge(Event Player, 100);
-		For Global Variable(A, 0, 7, 1);
-			Create Dummy Bot(Hero(Pharah), Team 2, -1, Vector(-6.600, Random Real(20, 25), 0) + Random Real(20, 24) * Direction From Angles(
-				Random Integer(-130, -50), 0), Left);
+		For Global Variable(A, 0, 2 + Global.Difficulty * 5, 1);
+			Create Dummy Bot(Hero(Pharah), Team 2, -1, Vector(-7.350 + 0.750 * Global.Difficulty, Random Real(20, 25), 0) + Random Real(20, 24)
+				* Direction From Angles(Random Integer(-130, -50), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
-		Wait(4.650, Ignore Condition);
+		Wait(4.570 + 0.080 * Global.Difficulty, Ignore Condition);
 	}
 }
 
@@ -541,12 +577,13 @@ rule("Wave 7 (Illari)")
 
 	actions
 	{
-		Set Move Speed(Event Player, 100);
+		Call Subroutine(SoftReset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Illari));
+		Set Projectile Speed(Event Player, Global.Difficulty < 2 ? 500 : 100);
 		Event Player.A = True;
 		Clear Status(Event Player, Rooted);
 		Set Ultimate Charge(Event Player, 100);
-		Set Damage Dealt(Event Player, 200);
+		Set Damage Dealt(Event Player, Array(370, 200, 160)[Global.Difficulty]);
 		For Global Variable(A, 0, 7, 1);
 			Create Dummy Bot(Hero(Illari), Team 2, -1, Vector(-26, 0, 0) + Random Real(0, 6) * Direction From Angles(Random Integer(-179, 180),
 				0), Left);
@@ -566,9 +603,9 @@ rule("Wave 8 (Lúcio)")
 
 	actions
 	{
-		Set Move Speed(Event Player, 100);
+		Call Subroutine(SoftReset);
 		Start Modifying Hero Voice Lines(Event Player, 0.900, False);
-		Set Slow Motion(90);
+		Set Slow Motion(90 * Global.SlowMo);
 		Start Forcing Player To Be Hero(Event Player, Hero(Lúcio));
 		Set Damage Dealt(Event Player, 1000);
 		For Global Variable(A, 0, 6, 1);
@@ -577,7 +614,5 @@ rule("Wave 8 (Lúcio)")
 			Wait(0.016, Ignore Condition);
 		End;
 		Wait(4.050, Ignore Condition);
-		Stop Modifying Hero Voice Lines(Event Player);
-		Set Slow Motion(100);
 	}
 }
