@@ -1,5 +1,11 @@
 settings
 {
+	main
+	{
+		Description: "There is a difficulty setting in Custom Game Lobby > Settings > Workshop Settings."
+		Mode Name: "Defend the line"
+	}
+
 	lobby
 	{
 		Max Team 1 Players: 1
@@ -91,6 +97,9 @@ settings
 
 	extensions
 	{
+		Buff and Debuff Sounds
+		Explosion Sounds
+		Play More Effects
 		Spawn More Dummy Bots
 	}
 }
@@ -104,12 +113,18 @@ variables
 		4: SlowMo
 		5: EffectIndex
 		6: PillarBase
+		7: XOrigin
+		8: GameInProgress
+		9: Names
+		10: NameCounter
 
 	player:
 		1: EnemiesSpawned
 		2: EnemiesDefeated
 		3: EnemiesEscaped
 		4: Countdown
+		5: EscapeTimer
+		6: GoString
 }
 
 subroutines
@@ -138,23 +153,55 @@ rule("Global Setup")
 
 	actions
 	{
-		disabled Create Effect(Filtered Array(All Players(Team 1), Current Array Element.A), Light Shaft, Color(Lime Green), Vector(-5.500, 0, 0),
-			7.500, Visible To Position and Radius);
+		Global.XOrigin = -348;
 		Global.Difficulty = Workshop Setting Combo(Custom String("General"), Custom String("Difficulty"), 0, Array(Custom String("Easy"),
 			Custom String("Normal"), Custom String("Hard")), 0);
 		Global.SlowMo = Workshop Setting Real(Custom String("General"), Custom String("Slow Motion Multiplier"), 1, 0.150, 1, 0);
-		Create Beam Effect(All Players(All Teams), Good Beam, Vector(-20, 0.250, 4), Vector(400, 0.250, 4), Color(Blue), Visible To);
-		Create Beam Effect(All Players(All Teams), Good Beam, Vector(-20, 0.250, -4), Vector(400, 0.250, -4), Color(Blue), Visible To);
-		Create Beam Effect(All Players(All Teams), Good Beam, Vector(-20, 0.250, -22), Vector(-20, 0.250, 22), Color(Blue), Visible To);
-		Create Beam Effect(All Players(All Teams), Good Beam, Vector(-20, 0.250, -22), Vector(-24, 0.250, -22), Color(Blue), Visible To);
-		Create Beam Effect(All Players(All Teams), Good Beam, Vector(-20, 0.250, 22), Vector(-24, 0.250, 22), Color(Blue), Visible To);
-		For Global Variable(EffectIndex, -2, 2, 1);
-			Global.PillarBase = Vector(10 * Global.EffectIndex + 2, 0, -8);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 20, 0.250, 4), Vector(Global.XOrigin + 8, 0.100, 4),
+			Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 20, 0.250, -4), Vector(Global.XOrigin + 8, 0.100,
+			-4), Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 20, 0.250, -22), Vector(Global.XOrigin - 20, 0.250,
+			22), Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 20, 0.250, -22), Vector(Global.XOrigin - 24, 0.250,
+			-22), Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 24, 0.250, -22), Vector(Global.XOrigin - 36, 0.250,
+			0), Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 20, 0.250, 22), Vector(Global.XOrigin - 24, 0.250,
+			22), Color(Blue), Visible To);
+		Create Beam Effect(All Players(All Teams), Good Beam, Vector(Global.XOrigin - 24, 0.250, 22), Vector(Global.XOrigin - 36, 0.250,
+			0), Color(Blue), Visible To);
+		For Global Variable(EffectIndex, -2, 1, 1);
+			Global.PillarBase = Vector(10 * Global.EffectIndex + Global.XOrigin + 2, 0, -8);
 			Call Subroutine(CreatePillar);
-			Global.PillarBase = Vector(10 * Global.EffectIndex + 2, 0, 8);
+			Global.PillarBase = Vector(10 * Global.EffectIndex + Global.XOrigin + 2, 0, 8);
 			Call Subroutine(CreatePillar);
 			Wait(0.016, Ignore Condition);
 		End;
+		Create Effect(All Players(All Teams), Sphere, Color(Sky Blue), Vector(Global.XOrigin - 110, 33, 0), 60, Visible To);
+		Create Effect(All Players(All Teams), Sphere, Color(Orange), Vector(Global.XOrigin - 109, 32, -1), 58, Visible To);
+		Create Effect(All Players(All Teams), Sphere, Color(Rose), Vector(Global.XOrigin - 109, 32, 1), 58, Visible To);
+		Create Effect(All Players(All Teams), Sphere, Color(Violet), Vector(Global.XOrigin - 107, 34, 2), 57, Visible To);
+		Create Beam Effect(All Players(All Teams), Bad Beam, Vector(Global.XOrigin + 8, 0.100, -384), Vector(Global.XOrigin + 8, 0.100,
+			384), Color(Red), Visible To);
+		Create Effect(Global.GameInProgress ? Null : All Players(All Teams), Sphere, Color(Green), Vector(Global.XOrigin - 1.500, 0.900,
+			0), 0.300, Visible To);
+		Create Beam Effect(Global.GameInProgress ? Null : All Players(All Teams), Grapple Beam, Vector(Global.XOrigin - 1.500, 0, -0.100),
+			Vector(Global.XOrigin - 1.500, 0.800, -0.100), Color(White), Visible To);
+		Create Beam Effect(Global.GameInProgress ? Null : All Players(All Teams), Grapple Beam, Vector(Global.XOrigin - 1.500, 0, 0.100),
+			Vector(Global.XOrigin - 1.500, 0.800, 0.100), Color(White), Visible To);
+		Global.Names = Array(Custom String("01000010"), Custom String("01100101"), Custom String("01101100"), Custom String("01101100"),
+			Custom String("01100001"), Custom String("01100100"), Custom String("01101111"), Custom String("01101110"), Custom String(
+			"01101110"), Custom String("01100001"), Custom String("00100000"), Custom String("00101101"), Custom String("00100000"),
+			Custom String("01000111"), Custom String("01101111"), Custom String("01101100"), Custom String("01100100"), Custom String(
+			"00100000"), Custom String("01000111"), Custom String("01100101"), Custom String("01101001"), Custom String("01110011"),
+			Custom String("01101000"), Custom String("01100001"), Custom String("00100000"), Custom String("01111100"), Custom String(
+			"00100000"));
+		Pause Match Time;
+		Create In-World Text(Global.GameInProgress ? Null : Filtered Array(All Players(Team 1), Distance Between(Current Array Element,
+			Vector(Global.XOrigin - 1.500, 0, 0)) < 10.500), Custom String("[{0}] to start", Input Binding String(Button(Ultimate))),
+			Vector(Global.XOrigin - 1.500, 1, 0), 1, Clip Against Surfaces, Visible To Position and String, Color(White),
+			Default Visibility);
 	}
 }
 
@@ -186,22 +233,48 @@ rule("Team 1 Setup")
 
 	actions
 	{
-		disabled Create HUD Text(All Players(All Teams), Facing Direction Of(Event Player), Horizontal Facing Angle Of(Event Player), Position Of(
-			Event Player), Left, 0, Color(White), Color(White), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Event Player.EnemiesSpawned, Custom String("enemies spawned"), Null, Left, 0, Color(White), Color(
 			White), Color(White), Visible To and String, Default Visibility);
 		Create HUD Text(Event Player, Event Player.EnemiesDefeated, Custom String("enemies defeated"), Null, Left, 1, Color(White), Color(
 			White), Color(White), Visible To and String, Default Visibility);
-		Create HUD Text(Event Player, Event Player.EnemiesEscaped, Custom String("enemies escaped"), Null, Left, 2, Color(White), Color(
-			White), Color(White), Visible To and String, Default Visibility);
+		Create HUD Text(Event Player, Event Player.EnemiesEscaped, Custom String("enemies escaped"), Null, Left, 2, Custom Color(255,
+			255 * (1 - Event Player.EscapeTimer), 255 * (1 - Event Player.EscapeTimer), 255), Color(White), Color(White),
+			Visible To String and Color, Default Visibility);
 		Create HUD Text(Event Player, String("{0}%", Round To Integer(100 * (
 			1 - Event Player.EnemiesEscaped / Event Player.EnemiesSpawned), Down)), String("Score"), Null, Left, 3, Color(White), Color(
 			White), Color(White), Visible To and String, Default Visibility);
 		Chase Player Variable At Rate(Event Player, Countdown, 0, 1, None);
 		Create In-World Text(Event Player.Countdown ? Event Player : Null, Mapped Array(Round To Integer(Event Player.Countdown, Down),
-			Current Array Element ? Current Array Element : String("Go")), Vector(-10, 0.500, 0), 4, Clip Against Surfaces,
-			Visible To and String, Color(White), Default Visibility);
-		Start Forcing Player To Be Hero(Event Player, Hero(Pharah));
+			Current Array Element ? Current Array Element : Event Player.GoString), Vector(Global.XOrigin - 10, 2, 0), 4,
+			Clip Against Surfaces, Visible To and String, Color(White), Default Visibility);
+		Start Forcing Player To Be Hero(Event Player, Hero(Echo));
+		Chase Player Variable At Rate(Event Player, EscapeTimer, 0, 1, None);
+		Disable Game Mode HUD(Event Player);
+	}
+}
+
+rule("Team 1 Spawn Location")
+{
+	event
+	{
+		Ongoing - Each Player;
+		Team 1;
+		All;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+		Has Spawned(Event Player) == True;
+	}
+
+	actions
+	{
+		If(Global.GameInProgress);
+			Teleport(Event Player, Vector(Global.XOrigin, 0, 0));
+		Else;
+			Teleport(Event Player, Vector(Global.XOrigin + 28, 0, 0));
+		End;
 	}
 }
 
@@ -229,6 +302,10 @@ rule("Team 2 Setup")
 			Set Max Health(Event Player, 240);
 			Start Scaling Player(Event Player, 1.350, False);
 		End;
+		Start Forcing Dummy Bot Name(Event Player, Global.Names[Global.NameCounter % Count Of(Global.Names)]);
+		Global.NameCounter += 1;
+		Play Effect(All Players(All Teams), Moira Fade Reappear Sound, Color(Team 2), Eye Position(Event Player), 100);
+		Play Effect(All Players(All Teams), Bad Pickup Effect, Color(Black), Eye Position(Event Player), 2.500);
 	}
 }
 
@@ -243,11 +320,14 @@ rule("Start")
 
 	conditions
 	{
-		Is Button Held(Event Player, Button(Interact)) == True;
+		Is Button Held(Event Player, Button(Ultimate)) == True;
+		Distance Between(World Vector Of(Forward, Event Player, Rotation And Translation), Vector(Global.XOrigin - 1.500, 0, 0)) < 2.500;
 	}
 
 	actions
 	{
+		Abort If(Global.GameInProgress);
+		Global.GameInProgress = True;
 		All Players(Team 1).EnemiesSpawned = 0;
 		All Players(Team 1).EnemiesDefeated = 0;
 		All Players(Team 1).EnemiesEscaped = 0;
@@ -284,13 +364,17 @@ rule("Destroy Advanced")
 
 	conditions
 	{
-		X Component Of(Position Of(Event Player)) > 6.500;
+		X Component Of(Position Of(Event Player)) > Global.XOrigin + 6;
 		Is Alive(Event Player) == True;
 	}
 
 	actions
 	{
+		Wait(0.200, Abort When False);
+		Play Effect(All Players(All Teams), Wrecking Ball Piledriver Impact Sound, Color(Team 2), Eye Position(Event Player), 100);
+		Play Effect(All Players(All Teams), Wrecking Ball Piledriver Impact Sound, Color(Team 2), Eye Position(Event Player), 100);
 		All Players(Team 1).EnemiesEscaped += 1;
+		All Players(Team 1).EscapeTimer = 1;
 		Destroy Dummy Bot(Team 2, Slot Of(Event Player));
 	}
 }
@@ -305,13 +389,16 @@ rule("Main")
 
 	actions
 	{
+		Event Player.GoString = Random Value In Array(Array(String("Go"), Custom String("Stop Them"), Custom String("Hold the Line"),
+			Custom String("Stop the invaders"), 0, Custom String("(-(-_(-_-)_-)-)")));
+		Global.GameInProgress = True;
 		Global.Augmented = False;
 		Start Facing(Event Player, Right, 300, To World, None);
 		Call Subroutine(Wave1Setup);
 		Event Player.Countdown = 3.999;
 		Wait(0.600, Ignore Condition);
 		Stop Facing(Event Player);
-		Wait(1.350, Ignore Condition);
+		Wait(1.450, Ignore Condition);
 		Call Subroutine(Wave1);
 		Call Subroutine(Wave1);
 		Call Subroutine(Wave2);
@@ -350,8 +437,13 @@ rule("Main")
 		Global.Augmented = False;
 		Call Subroutine(Wave5);
 		Call Subroutine(Wave6);
+		Stop Facing(Event Player);
 		Call Subroutine(Wave7);
 		Call Subroutine(Wave8);
+		Wait Until(Number Of Living Players(Team 2) == 0, 99999);
+		Big Message(Event Player, Custom String("Final Score: {0}%", Round To Integer(100 * (
+			1 - Event Player.EnemiesEscaped / Event Player.EnemiesSpawned), Down)));
+		Global.GameInProgress = False;
 	}
 }
 
@@ -385,7 +477,7 @@ rule("Reset")
 		Global.BotSpeed = 100;
 		Set Aim Speed(Event Player, 100);
 		Event Player.A = False;
-		Teleport(Event Player, Vector(0, 0, 0));
+		Teleport(Event Player, Vector(Global.XOrigin, 0, 0));
 		Set Status(Event Player, Null, Rooted, 9999);
 		Set Ultimate Ability Enabled(Event Player, True);
 		Set Gravity(Event Player, 100);
@@ -423,13 +515,15 @@ rule("Wave 1 (Junker Queen)")
 	actions
 	{
 		For Global Variable(A, 0, 6, 1);
-			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(-20, 0, Random Value In Array(Array(1, -1)) * Random Integer(4, 10)), Left);
-			Wait(0.600, Ignore Condition);
+			Wait(0.300, Ignore Condition);
+			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 18.350, 0, Random Value In Array(Array(1, -1)) * (Random Real(
+				4, 8.500) + 0.750 * Global.Difficulty)), Left);
+			Wait(0.300, Ignore Condition);
 			Stop Facing(Event Player);
-			Create Dummy Bot(Hero(Tracer), Team 2, -1, Vector(-8, 0, Random Real(-1.500, 1.500)), Left);
+			Create Dummy Bot(Hero(Tracer), Team 2, -1, Vector(Global.XOrigin - 8, 0, Random Real(-1.500, 1.500)), Left);
 			Wait(0.600, Ignore Condition);
 		End;
-		Create Dummy Bot(Hero(Orisa), Team 2, -1, Vector(-14, 0, Random Integer(-2, 2)), Left);
+		Create Dummy Bot(Hero(Orisa), Team 2, -1, Vector(Global.XOrigin - 14, 0, Random Integer(-2, 2)), Left);
 		Wait(2.400, Ignore Condition);
 	}
 }
@@ -444,14 +538,16 @@ rule("Wave 2 (Symmetra)")
 
 	actions
 	{
+		Wait(0.600, Ignore Condition);
 		Call Subroutine(SoftReset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Symmetra));
 		Set Damage Dealt(Event Player, 550);
 		For Global Variable(A, 0, 10 + Global.Difficulty, 1);
-			Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-18, 0, Random Value In Array(Array(1, -1)) * Random Real(1, 5)), Left);
+			Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 18, 0, Random Value In Array(Array(1, -1)) * Random Real(1,
+				5)), Left);
 			Wait(0.600, Ignore Condition);
 		End;
-		Wait(3.600 - 0.600 * Global.Difficulty, Ignore Condition);
+		Wait(3 - 0.600 * Global.Difficulty, Ignore Condition);
 	}
 }
 
@@ -481,20 +577,20 @@ rule("Wave 3 (Genji)")
 			Set Move Speed(Event Player, Global.Difficulty < 2 ? 105 : 100);
 			Wait(0.950, Ignore Condition);
 			For Global Variable(A, 0, 5, 1);
-				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-16, 0, Random Integer(-6, 6)), Left);
+				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 16, 0, Random Integer(-6, 6)), Left);
 				Wait(0.870, Ignore Condition);
 			End;
 			Wait(3.900, Ignore Condition);
 		Else;
 			Set Move Speed(Event Player, 100);
 			For Global Variable(A, 0, Global.Difficulty < 2 ? 5 : 10, 1);
-				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-20, 0, Random Integer(-6, 6)), Left);
+				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 20, 0, Random Integer(-6, 6)), Left);
 				Wait(0.800, Ignore Condition);
 			End;
 			If(Global.Difficulty < 2);
 				Wait(0.750, Ignore Condition);
 				For Global Variable(A, 0, 4, 1);
-					Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(-20, 0, Random Integer(-6, 6)), Left);
+					Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 20, 0, Random Integer(-6, 6)), Left);
 					Wait(0.800, Ignore Condition);
 				End;
 			End;
@@ -519,7 +615,7 @@ rule("Wave 4 (D.Va)")
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
 		Set Damage Dealt(Event Player, 1000);
 		For Global Variable(A, 0, Global.Augmented ? 10 : 9, 1);
-			Create Dummy Bot(Hero(Echo), Team 2, -1, Vector(-16, 0, Random Real(-4, 4)), Left);
+			Create Dummy Bot(Hero(Echo), Team 2, -1, Vector(Global.XOrigin - 16, 0, Random Real(-4, 4)), Left);
 			Wait(Global.Augmented ? 0.300 : 0.330, Ignore Condition);
 		End;
 		Wait(Global.Augmented ? 1.800 : 1.830, Ignore Condition);
@@ -569,7 +665,7 @@ rule("Wave 5 (Reinhardt)")
 		Set Ultimate Charge(Event Player, 100);
 		Wait(0.300, Ignore Condition);
 		For Global Variable(A, 0, 7, 1);
-			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(-6.600, Random Real(7.100, 8.800), 0) + Random Real(1.400, 20)
+			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 6.600, Random Real(7.100, 8.800), 0) + Random Real(1.400, 20)
 				* Direction From Angles(Random Integer(-117, -63), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
@@ -592,8 +688,8 @@ rule("Wave 6 (Cassidy)")
 		Set Damage Dealt(Event Player, 100);
 		Set Ultimate Charge(Event Player, 100);
 		For Global Variable(A, 0, 2 + Global.Difficulty * 5, 1);
-			Create Dummy Bot(Hero(Pharah), Team 2, -1, Vector(-7.350 + 0.750 * Global.Difficulty, Random Real(20, 25), 0) + Random Real(20, 24)
-				* Direction From Angles(Random Integer(-130, -50), 0), Left);
+			Create Dummy Bot(Hero(Pharah), Team 2, -1, Vector(Global.XOrigin - 7.350 + 0.750 * Global.Difficulty, Random Real(20, 25), 0)
+				+ Random Real(20, 24) * Direction From Angles(Random Integer(-130, -50), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
 		Wait(4.570 + 0.080 * Global.Difficulty, Ignore Condition);
@@ -643,8 +739,8 @@ rule("Wave 7 (Illari)")
 		Set Ultimate Charge(Event Player, 100);
 		Set Damage Dealt(Event Player, Array(370, 200, 160)[Global.Difficulty]);
 		For Global Variable(A, 0, 7, 1);
-			Create Dummy Bot(Hero(Illari), Team 2, -1, Vector(-26, 0, 0) + Random Real(0, 6) * Direction From Angles(Random Integer(-179, 180),
-				0), Left);
+			Create Dummy Bot(Hero(Illari), Team 2, -1, Vector(Global.XOrigin - 26, 0, 0) + Random Real(0, 6) * Direction From Angles(
+				Random Integer(-179, 180), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
 		Wait(4.650, Ignore Condition);
@@ -667,8 +763,8 @@ rule("Wave 8 (Lúcio)")
 		Start Forcing Player To Be Hero(Event Player, Hero(Lúcio));
 		Set Damage Dealt(Event Player, 1000);
 		For Global Variable(A, 0, 6, 1);
-			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(-26, 0, 0) + Random Real(0, 6) * Direction From Angles(Random Integer(-179,
-				180), 0), Left);
+			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 26, 0, 0) + Random Real(0, 6) * Direction From Angles(
+				Random Integer(-179, 180), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
 		Wait(4.050, Ignore Condition);
