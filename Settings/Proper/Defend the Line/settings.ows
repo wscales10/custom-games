@@ -301,6 +301,8 @@ rule("Team 2 Setup")
 		If(Global.Augmented && Hero Of(Event Player) == Hero(Zenyatta));
 			Set Max Health(Event Player, 240);
 			Start Scaling Player(Event Player, 1.350, False);
+		Else If(Hero Of(Event Player) == Hero(Echo));
+			Set Max Health(Event Player, 90);
 		End;
 		Start Forcing Dummy Bot Name(Event Player, Global.Names[Global.NameCounter % Count Of(Global.Names)]);
 		Global.NameCounter += 1;
@@ -541,7 +543,7 @@ rule("Wave 2 (Symmetra)")
 		Wait(0.600, Ignore Condition);
 		Call Subroutine(SoftReset);
 		Start Forcing Player To Be Hero(Event Player, Hero(Symmetra));
-		Set Damage Dealt(Event Player, 550);
+		Set Damage Dealt(Event Player, 600);
 		For Global Variable(A, 0, 10 + Global.Difficulty, 1);
 			Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 18, 0, Random Value In Array(Array(1, -1)) * Random Real(1,
 				5)), Left);
@@ -572,7 +574,7 @@ rule("Wave 3 (Genji)")
 		Set Ultimate Ability Enabled(Event Player, Global.Augmented);
 		Set Ultimate Charge(Event Player, Global.Augmented ? 100 : 0);
 		Clear Status(Event Player, Rooted);
-		Set Damage Dealt(Event Player, 450);
+		Set Damage Dealt(Event Player, 500);
 		If(Global.Augmented);
 			Set Move Speed(Event Player, Global.Difficulty < 2 ? 105 : 100);
 			Wait(0.950, Ignore Condition);
