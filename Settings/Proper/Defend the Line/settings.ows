@@ -518,11 +518,15 @@ rule("Wave 1 (Junker Queen)")
 	{
 		For Global Variable(A, 0, 6, 1);
 			Wait(0.300, Ignore Condition);
-			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 18.350, 0, Random Value In Array(Array(1, -1)) * (Random Real(
-				4, 8.500) + 0.750 * Global.Difficulty)), Left);
+			If(!((Global.A == 0 || Global.A == 4) && Global.Difficulty == 0));
+				Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 18.350, 0, Random Value In Array(Array(1, -1)) * (Random Real(
+					4, 8.500) + 0.750 * Global.Difficulty)), Left);
+			End;
 			Wait(0.300, Ignore Condition);
 			Stop Facing(Event Player);
-			Create Dummy Bot(Hero(Tracer), Team 2, -1, Vector(Global.XOrigin - 8, 0, Random Real(-1.500, 1.500)), Left);
+			If(!(Global.A == 3 && Global.Difficulty == 0));
+				Create Dummy Bot(Hero(Tracer), Team 2, -1, Vector(Global.XOrigin - 8, 0, Random Real(-1.500, 1.500)), Left);
+			End;
 			Wait(0.600, Ignore Condition);
 		End;
 		Create Dummy Bot(Hero(Orisa), Team 2, -1, Vector(Global.XOrigin - 14, 0, Random Integer(-2, 2)), Left);
@@ -574,8 +578,8 @@ rule("Wave 3 (Genji)")
 		Set Ultimate Ability Enabled(Event Player, Global.Augmented);
 		Set Ultimate Charge(Event Player, Global.Augmented ? 100 : 0);
 		Clear Status(Event Player, Rooted);
-		Set Damage Dealt(Event Player, 500);
 		If(Global.Augmented);
+			Set Damage Dealt(Event Player, Global.Difficulty == 0 ? 550 : 500);
 			Set Move Speed(Event Player, Global.Difficulty < 2 ? 105 : 100);
 			Wait(0.950, Ignore Condition);
 			For Global Variable(A, 0, 5, 1);
@@ -584,6 +588,7 @@ rule("Wave 3 (Genji)")
 			End;
 			Wait(3.900, Ignore Condition);
 		Else;
+			Set Damage Dealt(Event Player, 500);
 			Set Move Speed(Event Player, 100);
 			For Global Variable(A, 0, Global.Difficulty < 2 ? 5 : 10, 1);
 				Create Dummy Bot(Hero(Zenyatta), Team 2, -1, Vector(Global.XOrigin - 20, 0, Random Integer(-6, 6)), Left);
@@ -617,7 +622,9 @@ rule("Wave 4 (D.Va)")
 		Start Forcing Player To Be Hero(Event Player, Hero(D.Va));
 		Set Damage Dealt(Event Player, 1000);
 		For Global Variable(A, 0, Global.Augmented ? 10 : 9, 1);
-			Create Dummy Bot(Hero(Echo), Team 2, -1, Vector(Global.XOrigin - 16, 0, Random Real(-4, 4)), Left);
+			If(!(Global.A == 0 && Global.Difficulty == 0));
+				Create Dummy Bot(Hero(Echo), Team 2, -1, Vector(Global.XOrigin - 16, 0, Random Real(-4, 4)), Left);
+			End;
 			Wait(Global.Augmented ? 0.300 : 0.330, Ignore Condition);
 		End;
 		Wait(Global.Augmented ? 1.800 : 1.830, Ignore Condition);
@@ -764,11 +771,11 @@ rule("Wave 8 (Lúcio)")
 		Set Slow Motion(90 * Global.SlowMo);
 		Start Forcing Player To Be Hero(Event Player, Hero(Lúcio));
 		Set Damage Dealt(Event Player, 1000);
-		For Global Variable(A, 0, 6, 1);
+		For Global Variable(A, 0, 5 + Global.Difficulty, 1);
 			Create Dummy Bot(Hero(Bastion), Team 2, -1, Vector(Global.XOrigin - 26, 0, 0) + Random Real(0, 6) * Direction From Angles(
 				Random Integer(-179, 180), 0), Left);
 			Wait(0.016, Ignore Condition);
 		End;
-		Wait(4.050, Ignore Condition);
+		Wait(4.066 - 0.016 * Global.Difficulty, Ignore Condition);
 	}
 }

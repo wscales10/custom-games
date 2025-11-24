@@ -1,0 +1,410 @@
+settings
+{
+	modes
+	{
+		Deathmatch
+		{
+			enabled maps
+			{
+				Workshop Chamber 972777519512064577
+			}
+		}
+
+		General
+		{
+			Hero Limit: Off
+		}
+	}
+
+	heroes
+	{
+		General
+		{
+			Damage Dealt: 125%
+
+			Doomfist
+			{
+				Damage Dealt: 250%
+				Power Block Cooldown Time: 85%
+				Primary Fire: Off
+				Rocket Punch Knockback Scalar: 300%
+			}
+		}
+	}
+
+	extensions
+	{
+		Buff Status Effects
+	}
+}
+
+variables
+{
+	player:
+		0: AirScore
+		1: MoveSpeedBuff
+		2: MoveSpeedResetCooldown
+}
+
+rule("Doomfist heal")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Normalized Health(Event Player) < 1;
+	}
+
+	actions
+	{
+		Wait(2.500, Abort When False);
+		Heal(Event Player, Null, 25 * Max(1, Count Of(Remove From Array(Opposite Team Of(Team Of(Event Player)), Event Player))));
+		Loop If Condition Is True;
+	}
+}
+
+rule("Enable primary fire during ult")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, True);
+	}
+}
+
+rule("Disable hand cannon")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ultimate(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Primary Fire Enabled(Event Player, False);
+	}
+}
+
+rule("Doomfist dealt damage")
+{
+	event
+	{
+		Player Dealt Damage;
+		All;
+		Doomfist;
+	}
+
+	actions
+	{
+		Set Ability Cooldown(Event Player, Button(Secondary Fire), Ability Cooldown(Event Player, Button(Secondary Fire)) - 0.500);
+		Set Ability Cooldown(Event Player, Button(Ability 1), Ability Cooldown(Event Player, Button(Ability 1)) - 1);
+		Set Ability Cooldown(Event Player, Button(Ability 2), Ability Cooldown(Event Player, Button(Ability 2)) - 0.500);
+	}
+}
+
+rule("Doomfist airtime")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is In Air(Event Player) == True;
+		Is Using Ability 1(Event Player) == False;
+		Is Jumping(Event Player) == False;
+	}
+
+	actions
+	{
+		Wait(0.100, Abort When False);
+		Event Player.AirScore += 5;
+		Set Ability Cooldown(Event Player, Button(Ability 1), Ability Cooldown(Event Player, Button(Ability 1)) - 0.200);
+		Loop If Condition Is True;
+	}
+}
+
+rule("Reset doomfist air score")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is On Ground(Event Player) == True;
+	}
+
+	actions
+	{
+		Event Player.AirScore = 0;
+	}
+}
+
+rule("Doomfist low gravity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) > 25;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 60);
+	}
+}
+
+rule("Doomfist normal gravity")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Altitude Of(Event Player) < 24;
+	}
+
+	actions
+	{
+		Set Gravity(Event Player, 100);
+	}
+}
+
+rule("Doomfist setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	actions
+	{
+		Add Health Pool To Player(Event Player, Health, 25, True, False);
+		Chase Player Variable At Rate(Event Player, MoveSpeedResetCooldown, 0, 1, None);
+		disabled Create HUD Text(Event Player, Event Player.MoveSpeedBuff, Null, Null, Left, 0, Color(White), Color(White), Color(White),
+			Visible To and String, Default Visibility);
+	}
+}
+
+rule("Not doomfist setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Hero Of(Event Player) != Hero(Doomfist);
+	}
+
+	actions
+	{
+		Remove All Health Pools From Player(Event Player);
+		Set Damage Received(Event Player, 100);
+	}
+}
+
+rule("Fast respawn")
+{
+	event
+	{
+		Player Died;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Wait Until(Is Alive(Event Player), 3);
+		Abort If(Is Alive(Event Player));
+		Wait Until(Is Alive(Event Player) || Is Button Held(Event Player, Button(Jump)), 20);
+		Abort If(Is Alive(Event Player));
+		Respawn(Event Player);
+	}
+}
+
+rule("Kills Buff Move Speed")
+{
+	event
+	{
+		Player Dealt Final Blow;
+		All;
+		Doomfist;
+	}
+
+	actions
+	{
+		Heal(Event Player, Null, 75);
+		Event Player.MoveSpeedBuff = Min(5, Event Player.MoveSpeedBuff + 5);
+		Event Player.MoveSpeedResetCooldown = 0.100 * (Count Of(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)) + 1);
+		Set Move Speed(Event Player, 100 + 25 * Event Player.MoveSpeedBuff);
+	}
+}
+
+rule("Reduce move speed buff")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	conditions
+	{
+		Event Player.MoveSpeedResetCooldown == 0;
+	}
+
+	actions
+	{
+		Event Player.MoveSpeedBuff = Max(0, Event Player.MoveSpeedBuff - 1);
+		Set Move Speed(Event Player, 100 + 25 * Event Player.MoveSpeedBuff);
+		Abort If(Event Player.MoveSpeedBuff == 0);
+		Event Player.MoveSpeedResetCooldown = 0.100 * (Count Of(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)) + 1);
+	}
+}
+
+rule("Damage reduction")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 0.850 ^ Count Of(Remove From Array(All Players(Opposite Team Of(Team Of(Event Player))),
+			Event Player)));
+	}
+}
+
+rule("Damage reduction")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Using Ability 2(Event Player) == False;
+	}
+
+	actions
+	{
+		Set Damage Received(Event Player, 100);
+	}
+}
+
+rule("Reset ultimate charge")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Is Alive(Event Player) == True;
+	}
+
+	actions
+	{
+		Set Ultimate Charge(Event Player, 0);
+	}
+}
+
+rule("die sombra die")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		Doomfist;
+	}
+
+	conditions
+	{
+		Has Status(Event Player, Hacked) == True;
+	}
+
+	actions
+	{
+		Kill(Players On Hero(Hero(Sombra), Opposite Team Of(Team Of(Event Player))), Event Player);
+		Clear Status(Event Player, Hacked);
+	}
+}
+
+rule("Player setup")
+{
+	event
+	{
+		Ongoing - Each Player;
+		All;
+		All;
+	}
+
+	actions
+	{
+		Create Effect(Event Player.MoveSpeedBuff ? Event Player : Null, Soldier: 76 Sprinting Effect, Color(White), Event Player, 1,
+			Visible To Position and Radius);
+	}
+}
