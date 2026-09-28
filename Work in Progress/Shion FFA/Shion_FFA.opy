@@ -70,6 +70,7 @@ globalvar AllBuffDescriptions 18
 globalvar BuffIndicesInShop 19
 globalvar PlayersToResurrect 20
 globalvar PlayerToEvaluate 21
+globalvar CurrentShopId 22
 globalvar IsObjectiveVisible 23
 globalvar PlayersWhoCapturedTheObjective 24
 globalvar RestoreChargeTo 25
@@ -83,51 +84,84 @@ globalvar AllBuffNames 32
 globalvar j 33
 globalvar LogDamageUpgradeDiagnostics 34
 globalvar EnableTestingControls 35
+globalvar NextTelemetryPlayerId 36
 
 #Player variables
 
+# Movement / traversal
 playervar CrouchCounter 0
 playervar MantleState 1
 playervar MantleTimer 2
 playervar TryingToMantle 3
 playervar CanDashJump 4
-playervar ObjectiveCaptureFraction 5
-playervar IsCapturingObjective 6
-playervar Charge 7
-playervar MaximumCharge 8
-playervar RechargePerTick 9
-playervar Ability2ChargeCost 10
-playervar Ability1ChargeCost 11
-playervar JumpChargeCost 12
-playervar AmmoChargeCost 13
-playervar MaxAmmo 14
-playervar MeleeChargeCost 15
-playervar UltimateChargeCost 16
-playervar AccxmulatedHealing 17
-playervar RegenMultiplier 18
-playervar IsOnChargingStation 19
-playervar SecondaryChargeCost 20
-playervar JumpCharge 21
-playervar HasBoughtFromShop 22
-playervar IsInShop 23
-playervar CountOfEachBuff 24
-playervar PrimaryBonusDamageVictims 25
-playervar MeleeBonusDamageVictims 26
-playervar RespawnAtTemporarySanctuary 28
-playervar IsDashJumping 30
-playervar RespawnTimer 31
-playervar FireRate 32
-playervar LastObjectiveCountdownSound 33
-playervar LowChargeWarningActive 34
-playervar IsInSanctuary 35
-playervar IsSelectingUpgrade 36
-playervar SelectedShopIndex 37
-playervar JoyrideImpactVictims 38
-playervar JoyrideImpactExpiryTimes 39
-playervar ExpiredJoyrideImpactIndex 40
-playervar TestSelectedUpgrade 41
+playervar IsDashJumping 5
+playervar JumpCharge 6
 
-#Subroutine names
+# Objective / sanctuary / respawn state
+playervar ObjectiveCaptureFraction 7
+playervar IsCapturingObjective 8
+playervar IsOnChargingStation 9
+playervar IsInSanctuary 10
+playervar RespawnAtTemporarySanctuary 11
+playervar RespawnTimer 12
+playervar LastObjectiveCountdownSound 13
+
+# Charge / resource system
+playervar Charge 14
+playervar MaximumCharge 15
+playervar RechargePerTick 16
+playervar Ability2ChargeCost 17
+playervar Ability1ChargeCost 18
+playervar JumpChargeCost 19
+playervar AmmoChargeCost 20
+playervar MeleeChargeCost 21
+playervar UltimateChargeCost 22
+playervar SecondaryChargeCost 23
+playervar MaxAmmo 24
+playervar LowChargeWarningActive 25
+
+# Combat / regeneration tuning
+playervar AccxmulatedHealing 26
+playervar RegenMultiplier 27
+playervar FireRate 28
+
+# Upgrades / shop
+playervar CountOfEachBuff 29
+playervar HasBoughtFromShop 30
+playervar IsInShop 31
+playervar IsSelectingUpgrade 32
+playervar SelectedShopIndex 33
+
+# Joyride Impact state
+playervar JoyrideImpactVictims 34
+playervar JoyrideImpactExpiryTimes 35
+playervar ExpiredJoyrideImpactIndex 36
+
+# Scripted damage dispatcher
+playervar ScriptedDamageQueueVictims 37
+playervar ScriptedDamageQueueAmounts 38
+playervar ScriptedDamageQueueSources 39
+playervar ScriptedDamageAttribUpgradeIds 40
+playervar ScriptedDamageAttribAmounts 41
+playervar ActiveScriptedDamageSource 42
+playervar ActiveScriptedDamageVictim 43
+
+# Telemetry identity / aggregate combat counters
+playervar TelemetryPlayerId 44
+playervar NativeDamageByAttackType 45
+playervar NativeHitCountsByAttackType 46
+playervar OtherNativeDamage 47
+playervar OtherNativeHitCount 48
+playervar ScriptedBonusDamageBySource 49
+playervar FinalBlowCount 50
+playervar DamageUpgradeActivationCounts 51
+playervar DamageUpgradePureDamage 52
+playervar DamageUpgradeTargetMaxHpSum 53
+
+# Test / debug
+playervar TestSelectedUpgrade 54
+
+# Subroutine names
 
 subroutine ChooseObjective 0
 subroutine CreateDebugEffectsAndHUD 1
@@ -136,6 +170,11 @@ subroutine ResurrectMe 3
 subroutine SetMaximumCharge 4
 subroutine BuySelectedUpgrade 5
 subroutine UpdateMoveSpeed 6
+subroutine InitialiseTelemetry 7
+subroutine InitialiseCombatState 8
+subroutine InitialiseChargeSystem 9
+subroutine InitialisePlayerSystems 10
+subroutine InitialisePlayerHUDAndEffects 11
 
 #Activated extensions
 
@@ -146,6 +185,136 @@ subroutine UpdateMoveSpeed 6
 #!optimizeStrict
 
 #!setupTags
+
+enum ScriptedDamageSource:
+    NONE = 0
+    PRIMARY_BONUS
+    MELEE_BONUS
+    JOYRIDE_BONUS
+
+macro NativeAttackAbilities = [
+    Button.PRIMARY_FIRE,
+    Button.SECONDARY_FIRE,
+    Button.ABILITY_1,
+    Button.ABILITY_2,
+    Button.ULTIMATE,
+    Button.MELEE
+]
+
+macro TelemetryEscape(value):
+    (
+        "{}".format(value)
+        .replace("%", "%25")
+        .replace("|", "%7C")
+        .replace("=", "%3D")
+        .replace("\n", "%0A")
+        .replace("\r", "%0D")
+    )
+
+macro IsNativeDamage(ability):
+    ability != null
+
+macro IsClassifiedScriptedDamage(ability, sourcePlayer, targetPlayer):
+    (
+        ability == null
+        and sourcePlayer.ActiveScriptedDamageSource
+            != ScriptedDamageSource.NONE
+        and sourcePlayer.ActiveScriptedDamageVictim == targetPlayer
+    )
+
+macro ClassifiedScriptedDamageSource(
+    ability,
+    sourcePlayer,
+    targetPlayer
+):
+    (
+        sourcePlayer.ActiveScriptedDamageSource
+        if (
+            ability == null
+            and sourcePlayer.ActiveScriptedDamageSource
+                != ScriptedDamageSource.NONE
+            and sourcePlayer.ActiveScriptedDamageVictim == targetPlayer
+        )
+        else ScriptedDamageSource.NONE
+    )
+
+macro IsScriptedBonusDamage(
+    ability,
+    sourcePlayer,
+    targetPlayer,
+    source
+):
+    (
+        ability == null
+        and sourcePlayer.ActiveScriptedDamageSource == source
+        and sourcePlayer.ActiveScriptedDamageVictim == targetPlayer
+    )
+
+macro UpgradeIndex(internalName):
+    AllBuffInternalNames.index(internalName)
+
+macro OffObjectivePrimaryBonusFactor(player):
+    (
+        0.06
+        * player.CountOfEachBuff[
+            UpgradeIndex("OFF_OBJECTIVE_PRIMARY_DAMAGE")
+        ]
+        if not player.IsCapturingObjective
+        else 0
+    )
+
+macro PrimaryVsMaxHealthBonusFactor(player, target):
+    (
+        0.000125
+        * player.CountOfEachBuff[
+            UpgradeIndex("PRIMARY_VS_MAX_HEALTH")
+        ]
+        * target.getMaxHealth()
+    )
+
+macro PrimaryBonusDamage(nativeDamage, player, target):
+    (
+        nativeDamage
+        * (
+            (
+                1 + OffObjectivePrimaryBonusFactor(player)
+            )
+            * (
+                1 + PrimaryVsMaxHealthBonusFactor(
+                    player,
+                    target
+                )
+            )
+            - 1
+        )
+    )
+
+macro Player.recordDamageUpgradeActivation(upgradeName, target):
+    self.DamageUpgradeActivationCounts[UpgradeIndex(upgradeName)]++
+    self.DamageUpgradeTargetMaxHpSum[UpgradeIndex(upgradeName)] += target.getMaxHealth()
+
+macro Player.enqueueScriptedDamage(
+    target,
+    amount,
+    source,
+    attributionUpgradeIndices=[],
+    attributionAmounts=[]
+):
+    self.ScriptedDamageQueueVictims.append(target)
+    self.ScriptedDamageQueueAmounts.append(amount)
+    self.ScriptedDamageQueueSources.append(source)
+
+    self.ScriptedDamageAttribUpgradeIds = (
+        self.ScriptedDamageAttribUpgradeIds.concat(
+            [attributionUpgradeIndices]
+        )
+    )
+
+    self.ScriptedDamageAttribAmounts = (
+        self.ScriptedDamageAttribAmounts.concat(
+            [attributionAmounts]
+        )
+    )
 
 rule "Global Setup":
     LogDamageUpgradeDiagnostics = createWorkshopSettingBool(
@@ -273,31 +442,107 @@ rule "Global Setup":
 
 rule "Initialise":
     @Event eachPlayer
-    
-    eventPlayer.MeleeBonusDamageVictims = []
-    eventPlayer.PrimaryBonusDamageVictims = []
-    #Max Ammo does not work on Shion
+    @Condition eventPlayer.TelemetryPlayerId == 0
+    @Condition eventPlayer.hasSpawned() == true
+
+    InitialiseTelemetry()
+    InitialiseCombatState()
+    InitialiseChargeSystem()
+    InitialisePlayerSystems()
+    InitialisePlayerHUDAndEffects()
+
+
+def InitialiseTelemetry():
+    NextTelemetryPlayerId++
+    eventPlayer.TelemetryPlayerId = NextTelemetryPlayerId
+
+    logToInspector(
+        "SFFA|v=1|t={0}|e=PLAYER_MAP|pid={1}|name={2}".format(
+            getTotalTimeElapsed(),
+            eventPlayer.TelemetryPlayerId,
+            TelemetryEscape(eventPlayer)
+        )
+    )
+
+    eventPlayer.NativeDamageByAttackType = NativeAttackAbilities.map(lambda _: 0)
+    eventPlayer.NativeHitCountsByAttackType = NativeAttackAbilities.map(lambda _: 0)
+
+    eventPlayer.OtherNativeDamage = 0
+    eventPlayer.OtherNativeHitCount = 0
+
+    eventPlayer.ScriptedBonusDamageBySource = ScriptedDamageSource.toArray().map(lambda _: 0)
+
+    eventPlayer.DamageUpgradeActivationCounts = AllBuffInternalNames.map(lambda _: 0)
+    eventPlayer.DamageUpgradePureDamage = AllBuffInternalNames.map(lambda _: 0)
+    eventPlayer.DamageUpgradeTargetMaxHpSum = AllBuffInternalNames.map(lambda _: 0)
+
+    eventPlayer.FinalBlowCount = 0
+
+    eventPlayer.ScriptedDamageQueueVictims = []
+    eventPlayer.ScriptedDamageQueueAmounts = []
+    eventPlayer.ScriptedDamageQueueSources = []
+
+    eventPlayer.ScriptedDamageAttribUpgradeIds = []
+    eventPlayer.ScriptedDamageAttribAmounts = []
+
+    eventPlayer.ActiveScriptedDamageSource = ScriptedDamageSource.NONE
+    eventPlayer.ActiveScriptedDamageVictim = null
+
+
+def InitialiseCombatState():
+    # Max Ammo does not work on Shion
     eventPlayer.MaxAmmo = 18
-    #Shots per second
+
+    # Shots per second
     eventPlayer.FireRate = 4
+
     eventPlayer.RechargePerTick = 0.088
-    SetMaximumCharge()
-    eventPlayer.Charge = eventPlayer.MaximumCharge
-    eventPlayer.disableRespawn()
-    #CreateDebugEffectsAndHUD()
-    eventPlayer.LastObjectiveCountdownSound = ObjectiveCountdownSound
-    chaseAtRate(eventPlayer.MantleTimer, 0, 1, ChaseRateReeval.NONE)
-    chaseAtRate(eventPlayer.ObjectiveCaptureFraction, 1, MaximumObjectiveCaptureRate / max(1, len(getAllPlayers().filter(lambda player: player.IsCapturingObjective))) if eventPlayer.IsCapturingObjective else 0)
+
     eventPlayer.Ability2ChargeCost = 150
     eventPlayer.Ability1ChargeCost = 30
     eventPlayer.AmmoChargeCost = 9
     eventPlayer.MeleeChargeCost = 10
     eventPlayer.UltimateChargeCost = 270
     eventPlayer.SecondaryChargeCost = 14 * eventPlayer.AmmoChargeCost
-    chaseAtRate(eventPlayer.RegenMultiplier, min(1, 0.1 + 0.06 * eventPlayer.Charge), 100)
-    startHealingModification(eventPlayer, eventPlayer, 100 * eventPlayer.RegenMultiplier)
+
+
+def InitialiseChargeSystem():
+    SetMaximumCharge()
+    eventPlayer.Charge = eventPlayer.MaximumCharge
+
+    chaseAtRate(
+        eventPlayer.RegenMultiplier,
+        min(1, 0.1 + 0.06 * eventPlayer.Charge),
+        100
+    )
+
+    startHealingModification(
+        eventPlayer,
+        eventPlayer,
+        100 * eventPlayer.RegenMultiplier
+    )
+
+
+def InitialisePlayerSystems():
+    eventPlayer.disableRespawn()
+
+    eventPlayer.LastObjectiveCountdownSound = ObjectiveCountdownSound
+
+    chaseAtRate(eventPlayer.MantleTimer, 0, 1, ChaseRateReeval.NONE)
+
+    chaseAtRate(
+        eventPlayer.ObjectiveCaptureFraction,
+        1,
+        MaximumObjectiveCaptureRate / max(1, len(getAllPlayers().filter(lambda player: player.IsCapturingObjective))) if eventPlayer.IsCapturingObjective else 0
+    )
+
     chaseAtRate(eventPlayer.RespawnTimer, 0, 1, ChaseRateReeval.NONE)
-    #Doesn't use localPlayer as I want to be able to see it in replays
+
+
+def InitialisePlayerHUDAndEffects():
+    # CreateDebugEffectsAndHUD()
+
+    # Doesn't use localPlayer as I want to be able to see it in replays
     progressBarHud(
         eventPlayer,
         100 * (eventPlayer.Charge / eventPlayer.MaximumCharge),
@@ -318,10 +563,9 @@ rule "Initialise":
             255 * min(1, (eventPlayer.Charge - 2 * RestoreChargeTo) / RestoreChargeTo)
         )
     )
+
     createEffect(
-        getAllPlayers().filter(
-            lambda player: eventPlayer in player.JoyrideImpactVictims
-        ),
+        getAllPlayers().filter(lambda player: eventPlayer in player.JoyrideImpactVictims),
         Effect.BAD_AURA,
         Color.PURPLE,
         eventPlayer.getEyePosition(),
@@ -330,15 +574,14 @@ rule "Initialise":
     )
 
     createEffect(
-        getAllPlayers().filter(
-            lambda player: eventPlayer in player.JoyrideImpactVictims
-        ),
+        getAllPlayers().filter(lambda player: eventPlayer in player.JoyrideImpactVictims),
         Effect.SPHERE,
         Color.PURPLE,
         eventPlayer.getEyePosition() + 0.5 * Vector.UP,
         0.15,
         EffectReeval.VISIBILITY_POSITION_AND_RADIUS
     )
+
 
 rule "Local UX Setup":
     @Condition len(AllBuffNames) > 1
@@ -981,8 +1224,20 @@ def TrySpawnNewShop():
     if CapturedObjectives % 2 == 1:
         PreviousObjective = ObjectivePositions[CurrentObjectiveIndex]
         CurrentShopPosition = random.choice(ObjectivePositions.filter(lambda x: distance(vect(x.x, 0, x.z), vect(PreviousObjective.x, 0, PreviousObjective.z)) > ObjectiveRadius * 2))
-        BuffIndicesInShop = random.shuffle(AllBuffDescriptions.map(lambda _, i_: i_)).slice(0, 3)
+        BuffIndicesInShop = random.shuffle(AllBuffDescriptions.map(lambda _, i_: i_)).slice(0, createWorkshopSettingInt("General", "Upgrades per Shop", 3, 1, 6))
         getAllPlayers().HasBoughtFromShop = false
+
+        CurrentShopId++
+
+        for j in range(len(BuffIndicesInShop)):
+            logToInspector(
+                "SFFA|v=1|t={0}|e=SHOP_OFFER|shop={1}|slot={2}|upgrade={3}".format(
+                    getTotalTimeElapsed(),
+                    CurrentShopId,
+                    j,
+                    AllBuffInternalNames[BuffIndicesInShop[j]]
+                )
+            )
 
 
 rule "Player Is Alive":
@@ -1313,14 +1568,19 @@ def BuySelectedUpgrade():
 
     eventPlayer.CountOfEachBuff[BuffIndicesInShop[eventPlayer.SelectedShopIndex]]++
 
-    for j in range(len(AllBuffInternalNames)):
-        logToInspector(
-            "{0}: {1} ×{2}".format(
-                eventPlayer,
-                AllBuffInternalNames[j],
-                eventPlayer.CountOfEachBuff[j]
-            )
+    logToInspector(
+        "SFFA|v=1|t={0}|e=UPGRADE_BUY|pid={1}|shop={2}|upgrade={3}|stack={4}".format(
+            getTotalTimeElapsed(),
+            eventPlayer.TelemetryPlayerId,
+            CurrentShopId,
+            AllBuffInternalNames[
+                BuffIndicesInShop[eventPlayer.SelectedShopIndex]
+            ],
+            eventPlayer.CountOfEachBuff[
+                BuffIndicesInShop[eventPlayer.SelectedShopIndex]
+            ]
         )
+    )
 
     smallMessage(
         getAllPlayers(),
@@ -1373,8 +1633,6 @@ rule "Melee Damage":
     @Condition eventAbility == Button.MELEE
     @Condition attacker.CountOfEachBuff[8] > 0
 
-    attacker.MeleeBonusDamageVictims.append(victim)
-
     if LogDamageUpgradeDiagnostics:
         logToInspector(
             "BONUS_REQ|t={0}|type=MELEE|atk={1}|vic={2}|input={3}|joyActive={4}|joyStacks={5}|meleeStacks={6}|requested={7}".format(
@@ -1390,21 +1648,29 @@ rule "Melee Damage":
                 * attacker.CountOfEachBuff[8]
             )
         )
-
-    damage(
+    
+    attacker.enqueueScriptedDamage(
         victim,
-        attacker,
-        eventDamage * 0.2 * attacker.CountOfEachBuff[8]
+        eventDamage
+        * 0.2
+        * attacker.CountOfEachBuff[
+            UpgradeIndex("MELEE_DAMAGE")
+        ],
+        ScriptedDamageSource.MELEE_BONUS
     )
-
-    wait()
-
-    attacker.MeleeBonusDamageVictims.remove(victim)
 
 
 rule "Melee Lifesteal":
     @Event playerDealtDamage
-    @Condition (eventAbility == Button.MELEE or (eventAbility == null and victim in attacker.MeleeBonusDamageVictims)) == true
+    @Condition (
+        eventAbility == Button.MELEE
+        or IsScriptedBonusDamage(
+            eventAbility,
+            attacker,
+            victim,
+            ScriptedDamageSource.MELEE_BONUS
+        )
+    ) == true
     @Condition attacker.CountOfEachBuff[7] > 0
 
     heal(
@@ -1421,8 +1687,8 @@ rule "Primary Fire Upgrade Damage":
     @Event playerDealtDamage
     @Condition eventAbility == Button.PRIMARY_FIRE
     @Condition (
-        attacker.CountOfEachBuff[1] > 0
-        or attacker.CountOfEachBuff[5] > 0
+        OffObjectivePrimaryBonusFactor(attacker) > 0
+        or PrimaryVsMaxHealthBonusFactor(attacker, victim) > 0
     ) == true
 
     if LogDamageUpgradeDiagnostics:
@@ -1438,56 +1704,40 @@ rule "Primary Fire Upgrade Damage":
                 attacker.CountOfEachBuff[5],
                 attacker.IsCapturingObjective,
                 victim.getMaxHealth(),
-                eventDamage * (
-                    (
-                        1 + (
-                            0.06 * attacker.CountOfEachBuff[1]
-                            if not attacker.IsCapturingObjective
-                            else 0
-                        )
-                    )
-                    * (
-                        1
-                        + 0.000125
-                        * attacker.CountOfEachBuff[5]
-                        * victim.getMaxHealth()
-                    )
-                    - 1
-                )
+                PrimaryBonusDamage(eventDamage, attacker, victim)
             )
         )
-    
-    attacker.PrimaryBonusDamageVictims.append(victim)
 
-    damage(
+    if OffObjectivePrimaryBonusFactor(attacker) > 0:
+        attacker.recordDamageUpgradeActivation(
+            "OFF_OBJECTIVE_PRIMARY_DAMAGE",
+            victim
+        )
+
+    if PrimaryVsMaxHealthBonusFactor(attacker, victim) > 0:
+        attacker.recordDamageUpgradeActivation(
+            "PRIMARY_VS_MAX_HEALTH",
+            victim
+        )
+
+    attacker.enqueueScriptedDamage(
         victim,
-        attacker,
-        eventDamage * (
-            (
-                1 + (
-                    0.06 * attacker.CountOfEachBuff[1]
-                    if not attacker.IsCapturingObjective
-                    else 0
-                )
-            )
-            * (
-                1
-                + 0.000125
-                * attacker.CountOfEachBuff[5]
-                * victim.getMaxHealth()
-            )
-            - 1
-        )
+        PrimaryBonusDamage(eventDamage, attacker, victim),
+        ScriptedDamageSource.PRIMARY_BONUS,
+        [
+            UpgradeIndex("OFF_OBJECTIVE_PRIMARY_DAMAGE"),
+            UpgradeIndex("PRIMARY_VS_MAX_HEALTH")
+        ],
+        [
+            eventDamage * OffObjectivePrimaryBonusFactor(attacker),
+            eventDamage * PrimaryVsMaxHealthBonusFactor(attacker, victim)
+        ]
     )
-
-    wait()
-
-    attacker.PrimaryBonusDamageVictims.remove(victim)
 
 
 rule "Joyride Impact Bonus Damage":
     @Event playerDealtDamage
-    @Condition eventAbility != null
+    @Condition IsNativeDamage(eventAbility)
     @Condition victim in attacker.JoyrideImpactVictims
     @Condition attacker.CountOfEachBuff[2] > 0
 
@@ -1504,11 +1754,106 @@ rule "Joyride Impact Bonus Damage":
             )
         )
 
-    damage(
+    attacker.enqueueScriptedDamage(
         victim,
-        attacker,
-        eventDamage * 0.08 * attacker.CountOfEachBuff[2]
+        eventDamage * 0.08 * attacker.CountOfEachBuff[2],
+        ScriptedDamageSource.JOYRIDE_BONUS
     )
+
+
+rule "Dispatch Scripted Bonus Damage":
+    @Event eachPlayer
+    @Condition len(eventPlayer.ScriptedDamageQueueSources) > 0
+    @Condition eventPlayer.ActiveScriptedDamageSource == ScriptedDamageSource.NONE
+
+    eventPlayer.ActiveScriptedDamageVictim = (
+        eventPlayer.ScriptedDamageQueueVictims[0]
+    )
+
+    eventPlayer.ActiveScriptedDamageSource = (
+        eventPlayer.ScriptedDamageQueueSources[0]
+    )
+
+    if LogDamageUpgradeDiagnostics:
+        logToInspector(
+            "BONUS_DISPATCH|t={0}|atk={1}|vic={2}|source={3}|requested={4}|queue={5}".format(
+                getTotalTimeElapsed(),
+                eventPlayer,
+                eventPlayer.ActiveScriptedDamageVictim,
+                eventPlayer.ActiveScriptedDamageSource,
+                eventPlayer.ScriptedDamageQueueAmounts[0],
+                len(eventPlayer.ScriptedDamageQueueSources)
+            )
+        )
+
+    damage(
+        eventPlayer.ActiveScriptedDamageVictim,
+        eventPlayer,
+        eventPlayer.ScriptedDamageQueueAmounts[0]
+    )
+
+    wait()
+
+    del eventPlayer.ScriptedDamageQueueVictims[0]
+    del eventPlayer.ScriptedDamageQueueAmounts[0]
+    del eventPlayer.ScriptedDamageQueueSources[0]
+    del eventPlayer.ScriptedDamageAttribUpgradeIds[0]
+    del eventPlayer.ScriptedDamageAttribAmounts[0]
+
+    eventPlayer.ActiveScriptedDamageSource = ScriptedDamageSource.NONE
+    eventPlayer.ActiveScriptedDamageVictim = null
+
+    if len(eventPlayer.ScriptedDamageQueueSources) > 0:
+        loop()
+
+
+rule "Accxmulate Combat Damage Counters":
+    @Event playerDealtDamage
+    @Condition attacker != null
+    @Condition attacker != victim
+    @Condition attacker.TelemetryPlayerId > 0
+
+    if IsNativeDamage(eventAbility):
+        if eventAbility in NativeAttackAbilities:
+            attacker.NativeDamageByAttackType[
+                NativeAttackAbilities.index(eventAbility)
+            ] += eventDamage
+
+            attacker.NativeHitCountsByAttackType[
+                NativeAttackAbilities.index(eventAbility)
+            ]++
+        else:
+            attacker.OtherNativeDamage += eventDamage
+            attacker.OtherNativeHitCount++
+
+    elif IsClassifiedScriptedDamage(
+        eventAbility,
+        attacker,
+        victim
+    ):
+        attacker.ScriptedBonusDamageBySource[
+            attacker.ActiveScriptedDamageSource
+        ] += eventDamage
+    
+        if attacker.ScriptedDamageQueueAmounts[0] > 0:
+            attacker.DamageUpgradePureDamage = (
+                attacker.DamageUpgradePureDamage.map(
+                    lambda currentDamage, upgradeIndex:
+                        currentDamage
+                        + (
+                            attacker.ScriptedDamageAttribAmounts[0][
+                                attacker.ScriptedDamageAttribUpgradeIds[
+                                    0
+                                ].index(upgradeIndex)
+                            ]
+                            * eventDamage
+                            / attacker.ScriptedDamageQueueAmounts[0]
+                            if upgradeIndex
+                            in attacker.ScriptedDamageAttribUpgradeIds[0]
+                            else 0
+                        )
+                )
+            )
 
 
 rule "Log Damage Upgrade Diagnostic":
@@ -1516,7 +1861,7 @@ rule "Log Damage Upgrade Diagnostic":
     @Condition LogDamageUpgradeDiagnostics == true
 
     logToInspector(
-        "DMG|t={0}|atk={1}|vic={2}|ability={3}|damage={4}|joyActive={5}|joyStacks={6}|offStacks={7}|maxHpStacks={8}|meleeStacks={9}|capturing={10}|targetMaxHp={11}|primaryBonus={12}|meleeBonus={13}".format(
+        "DMG|t={0}|atk={1}|vic={2}|ability={3}|damage={4}|joyActive={5}|joyStacks={6}|offStacks={7}|maxHpStacks={8}|meleeStacks={9}|capturing={10}|targetMaxHp={11}|native={12}|scriptedSource={13}".format(
             getTotalTimeElapsed(),
             attacker,
             victim,
@@ -1529,8 +1874,12 @@ rule "Log Damage Upgrade Diagnostic":
             attacker.CountOfEachBuff[8],
             attacker.IsCapturingObjective,
             victim.getMaxHealth(),
-            eventAbility == null && victim in attacker.PrimaryBonusDamageVictims,
-            eventAbility == null && victim in attacker.MeleeBonusDamageVictims
+            IsNativeDamage(eventAbility),
+            ClassifiedScriptedDamageSource(
+                eventAbility,
+                attacker,
+                victim
+            )
         )
     )
 
@@ -1596,33 +1945,38 @@ rule "Remove Expired Joyride Impacts":
     if ruleCondition:
         loop()
 
-rule "Restore on Elimination":
+rule "Player Final Blow":
     @Event playerDealtFinalBlow
-    @Condition eventPlayer.CountOfEachBuff[3] > 0
+    @Condition attacker != null
+    @Condition attacker != victim
 
-    heal(
-        eventPlayer,
-        null,
-        20 * eventPlayer.CountOfEachBuff[3]
-    )
+    if attacker.TelemetryPlayerId > 0:
+        attacker.FinalBlowCount++
 
-    eventPlayer.setAbilityCooldown(
-        Button.SECONDARY_FIRE,
-        eventPlayer.getAbilityCooldown(Button.SECONDARY_FIRE)
-        * max(0, 1 - eventPlayer.CountOfEachBuff[3] / 5)
-    )
+    if attacker.CountOfEachBuff[3] > 0:
+        heal(
+            attacker,
+            null,
+            20 * attacker.CountOfEachBuff[3]
+        )
 
-    eventPlayer.setAbilityCooldown(
-        Button.ABILITY_1,
-        eventPlayer.getAbilityCooldown(Button.ABILITY_1)
-        * max(0, 1 - eventPlayer.CountOfEachBuff[3] / 5)
-    )
+        attacker.setAbilityCooldown(
+            Button.SECONDARY_FIRE,
+            attacker.getAbilityCooldown(Button.SECONDARY_FIRE)
+            * max(0, 1 - attacker.CountOfEachBuff[3] / 5)
+        )
 
-    eventPlayer.setAbilityCooldown(
-        Button.ABILITY_2,
-        eventPlayer.getAbilityCooldown(Button.ABILITY_2)
-        * max(0, 1 - eventPlayer.CountOfEachBuff[3] / 5)
-    )
+        attacker.setAbilityCooldown(
+            Button.ABILITY_1,
+            attacker.getAbilityCooldown(Button.ABILITY_1)
+            * max(0, 1 - attacker.CountOfEachBuff[3] / 5)
+        )
+
+        attacker.setAbilityCooldown(
+            Button.ABILITY_2,
+            attacker.getAbilityCooldown(Button.ABILITY_2)
+            * max(0, 1 - attacker.CountOfEachBuff[3] / 5)
+        )
 
 
 rule "Resurrect players once objective captured":
@@ -1692,6 +2046,7 @@ rule "Reset Low Charge Warning":
 
     eventPlayer.LowChargeWarningActive = false
 
+
 rule "Player Is In Sanctuary":
     @Event eachPlayer
     @Condition eventPlayer.isAlive() == true
@@ -1710,6 +2065,7 @@ rule "Player Is In Sanctuary":
 
     eventPlayer.IsInSanctuary = true
 
+
 rule "Player Is Not In Sanctuary":
     @Event eachPlayer
     @Condition eventPlayer.IsOnChargingStation == false
@@ -1725,6 +2081,7 @@ rule "Player Is Not In Sanctuary":
 
     eventPlayer.IsInSanctuary = false
 
+
 rule "Apply Sanctuary Status":
     @Event eachPlayer
     @Condition eventPlayer.IsInSanctuary == true
@@ -1737,11 +2094,13 @@ rule "Apply Sanctuary Status":
     eventPlayer.disallowButton(Button.SECONDARY_FIRE)
     eventPlayer.disallowButton(Button.ULTIMATE)
 
+
 rule "Remove Sanctuary Status":
     @Event eachPlayer
     @Condition eventPlayer.IsInSanctuary == false
 
     eventPlayer.clearStatusEffect(Status.PHASED_OUT)
+
 
 rule "Open Upgrade Selection":
     @Event eachPlayer
@@ -1751,6 +2110,14 @@ rule "Open Upgrade Selection":
 
     eventPlayer.SelectedShopIndex = -1
     eventPlayer.IsSelectingUpgrade = true
+
+    logToInspector(
+        "SFFA|v=1|t={0}|e=SHOP_OPEN|pid={1}|shop={2}".format(
+            getTotalTimeElapsed(),
+            eventPlayer.TelemetryPlayerId,
+            CurrentShopId
+        )
+    )
 
 
 rule "Close Upgrade Selection":
