@@ -30,7 +30,8 @@ settings {
         },
         "general": {
             "heroLimit": "off",
-            "enableKillCam": false
+            "enableKillCam": false,
+            "enableRandomHeroes": true
         }
     },
     "heroes": {
@@ -85,6 +86,7 @@ globalvar j 33
 globalvar LogDamageUpgradeDiagnostics 34
 globalvar EnableTestingControls 35
 globalvar NextTelemetryPlayerId 36
+globalvar EnablePlaytestTelemetry 37
 
 #Player variables
 
@@ -143,23 +145,27 @@ playervar ScriptedDamageQueueAmounts 38
 playervar ScriptedDamageQueueSources 39
 playervar ScriptedDamageAttribUpgradeIds 40
 playervar ScriptedDamageAttribAmounts 41
-playervar ActiveScriptedDamageSource 42
-playervar ActiveScriptedDamageVictim 43
+playervar ScriptedDamageAttribPureTotal 42
+playervar ActiveScriptedDamageSource 43
+playervar ActiveScriptedDamageVictim 44
 
 # Telemetry identity / aggregate combat counters
-playervar TelemetryPlayerId 44
-playervar NativeDamageByAttackType 45
-playervar NativeHitCountsByAttackType 46
-playervar OtherNativeDamage 47
-playervar OtherNativeHitCount 48
-playervar ScriptedBonusDamageBySource 49
-playervar FinalBlowCount 50
-playervar DamageUpgradeActivationCounts 51
-playervar DamageUpgradePureDamage 52
-playervar DamageUpgradeTargetMaxHpSum 53
+playervar TelemetryPlayerId 45
+playervar NativeDamageByAttackType 46
+playervar NativeHitCountsByAttackType 47
+playervar OtherNativeDamage 48
+playervar OtherNativeHitCount 49
+playervar ScriptedBonusDamageBySource 50
+playervar ScriptedInteractionDamage 51
+
+playervar DamageUpgradeActivationCounts 53
+playervar DamageUpgradePureDamage 54
+playervar DamageUpgradeTargetMaxHpSum 55
+playervar TotalNativeDamage 56
+playervar TotalScriptedBonusDamage 57
 
 # Test / debug
-playervar TestSelectedUpgrade 54
+playervar TestSelectedUpgrade 58
 
 # Subroutine names
 
@@ -209,6 +215,36 @@ macro TelemetryEscape(value):
         .replace("=", "%3D")
         .replace("\n", "%0A")
         .replace("\r", "%0D")
+    )
+
+macro LogTelemetry(value):
+    if EnablePlaytestTelemetry:
+        logToInspector(value)
+
+macro Player.TelemetryBuild():
+    arrayToString(
+        AllBuffInternalNames.map(
+            lambda upgradeId, upgradeIndex:
+                "{}:{}".format(upgradeId, self.CountOfEachBuff[upgradeIndex])
+                if self.CountOfEachBuff[upgradeIndex] > 0
+                else null
+        ).filter(lambda entry: entry != null)
+    )
+
+macro Player.LogCheckpointSummary(kind, checkpoint):
+    LogTelemetry(
+        "SFFA|v=1|t={0}|e=PLAYER_SUMMARY|pid={1}|kind={2}|cp={3}|build={4}|score={5}|fb={6}|deaths={7}|native={8}|scripted={9}".format(
+            getTotalTimeElapsed(),
+            self.TelemetryPlayerId,
+            kind,
+            checkpoint,
+            TelemetryEscape(self.TelemetryBuild()),
+            self.getScore(),
+            self.getNumberOfFinalBlows(),
+            self.getNumberOfDeaths(),
+            self.TotalNativeDamage,
+            self.TotalScriptedBonusDamage
+        )
     )
 
 macro IsNativeDamage(ability):
@@ -265,7 +301,7 @@ macro OffObjectivePrimaryBonusFactor(player):
 
 macro PrimaryVsMaxHealthBonusFactor(player, target):
     (
-        0.000125
+        0.00013
         * player.CountOfEachBuff[
             UpgradeIndex("PRIMARY_VS_MAX_HEALTH")
         ]
@@ -298,7 +334,8 @@ macro Player.enqueueScriptedDamage(
     amount,
     source,
     attributionUpgradeIndices=[],
-    attributionAmounts=[]
+    attributionAmounts=[],
+    attributionPureTotal=0
 ):
     self.ScriptedDamageQueueVictims.append(target)
     self.ScriptedDamageQueueAmounts.append(amount)
@@ -316,28 +353,39 @@ macro Player.enqueueScriptedDamage(
         )
     )
 
+    self.ScriptedDamageAttribPureTotal.append(attributionPureTotal)
+
+macro SuperJumpChargeMoveSpeed(player):
+    1 - 0.4 * 0.75 ** player.CountOfEachBuff[UpgradeIndex("IMPROVED_SUPER_JUMP")]
+
+
 rule "Global Setup":
     LogDamageUpgradeDiagnostics = createWorkshopSettingBool(
         "Testing",
         "Log Damage Upgrade Diagnostics",
-        false
+        true
     )
     EnableTestingControls = createWorkshopSettingBool(
         "Testing",
         "Enable Testing Controls",
         false
     )
+    EnablePlaytestTelemetry = createWorkshopSettingBool(
+        "Testing",
+        "Enable Playtest Telemetry",
+        true
+    )
     UpgradeChoiceButtons = [Button.PRIMARY_FIRE, Button.JUMP, Button.MELEE, Button.RELOAD, Button.ABILITY_1, Button.CROUCH]
     MaximumObjectiveCaptureRate = 1 / createWorkshopSettingInt("General", "Minimum Time To Capture Objective", 10, 1, 900)
     RestoreChargeTo = createWorkshopSettingInt("General", "Restore Charge To", 200, 0, 1000)
-    StartImmediately = createWorkshopSettingBool("General", "Start Immediately", true)
+    StartImmediately = createWorkshopSettingBool("General", "Start Immediately", false)
     PreventGameFromEnding = createWorkshopSettingBool("General", "Prevent game from ending", false)
     CanContestedObjectivesBeCaptured = createWorkshopSettingBool("General", "Can Contested Objectives be Captured", true)
     ObjectiveRadius = createWorkshopSettingInt("General", "Objective Diameter", 19, 2, 40) * 0.5
     CurrentObjectiveIndex = -1
     disableScoring()
-    createEffect(getAllPlayers() if CurrentObjective else null, Effect.LIGHT_SHAFT, Color.TURQUOISE if IsObjectiveUnlocked else Color.GRAY, CurrentObjective + 20 * Vector.DOWN, ObjectiveRadius)
-    createIcon(getAllPlayers() if IsObjectiveVisible else null, CurrentObjective + 1.9 * Vector.UP, Icon.ARROW_DOWN, IconReeval.VISIBILITY_POSITION_AND_COLOR, Color.TURQUOISE if IsObjectiveUnlocked else [30 * sinDeg(300 * getTotalTimeElapsed()) + 170].map(lambda x: rgb(x, x, x)))
+    createEffect(getAllPlayers() if CurrentObjective else null, Effect.LIGHT_SHAFT, Color.AQUA if IsObjectiveUnlocked else Color.GRAY, CurrentObjective + 20 * Vector.DOWN, ObjectiveRadius)
+    createIcon(getAllPlayers() if IsObjectiveVisible else null, CurrentObjective + 1.9 * Vector.UP, Icon.ARROW_DOWN, IconReeval.VISIBILITY_POSITION_AND_COLOR, Color.AQUA if IsObjectiveUnlocked else [30 * sinDeg(300 * getTotalTimeElapsed()) + 170].map(lambda x: rgb(x, x, x)))
     createEffect(
         getAllPlayers() if TemporarySanctuaryPosition else null,
         Effect.LIGHT_SHAFT,
@@ -364,7 +412,7 @@ rule "Global Setup":
     setMatchTime(900)
     disableAnnouncer()
     hudSubtext(getAllPlayers(), "Controls", HudPosition.LEFT, -1, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
-    hudSubheader(getAllPlayers(), "{0}\n{1}".format("[{0}] twice in air — Dash Down\n[{1}] during Ground Dash — Dash Jump".format(inputBindingString(Button.CROUCH), inputBindingString(Button.JUMP)), "[{0}] near a ledge — Mantle\nHold [{1}] while bike on ground — Brake + Charge Super Jump\nEarly Respawn with [{0}] Disabled".format(inputBindingString(Button.JUMP), inputBindingString(Button.CROUCH))), HudPosition.LEFT, 0, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
+    hudSubheader(getAllPlayers(), "{0}\n{1}".format("[{0}] twice in air — Dash Down\n[{1}] during Ground Dash — Dash Jump".format(inputBindingString(Button.CROUCH), inputBindingString(Button.JUMP)), "[{0}] near a ledge — Mantle\nHold [{1}] while bike on ground — Charge Super Jump\nEarly Respawn with [{0}] Disabled".format(inputBindingString(Button.JUMP), inputBindingString(Button.CROUCH))), HudPosition.LEFT, 0, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
     
     hudSubtext(
         getAllPlayers(),
@@ -414,7 +462,7 @@ rule "Global Setup":
         c"Increase Primary Fire damage while you are not contesting the objective.",
         c"Enemies damaged by Joyride temporarily take increased damage from you.",
         c"Eliminations restore health and reduce your remaining ability cooldowns.",
-        c"Charge Super Jump faster.",
+        c"Charge Super Jump faster, jump higher, and move faster while charging.",
         c"Primary Fire deals more damage to enemies with higher maximum health.",
         c"Increase Secondary Fire knockback.",
         c"Heal for a portion of the damage dealt by Quick Melee.",
@@ -456,7 +504,7 @@ def InitialiseTelemetry():
     NextTelemetryPlayerId++
     eventPlayer.TelemetryPlayerId = NextTelemetryPlayerId
 
-    logToInspector(
+    LogTelemetry(
         "SFFA|v=1|t={0}|e=PLAYER_MAP|pid={1}|name={2}".format(
             getTotalTimeElapsed(),
             eventPlayer.TelemetryPlayerId,
@@ -471,12 +519,14 @@ def InitialiseTelemetry():
     eventPlayer.OtherNativeHitCount = 0
 
     eventPlayer.ScriptedBonusDamageBySource = ScriptedDamageSource.toArray().map(lambda _: 0)
+    eventPlayer.ScriptedInteractionDamage = ScriptedDamageSource.toArray().map(lambda _: 0)
 
     eventPlayer.DamageUpgradeActivationCounts = AllBuffInternalNames.map(lambda _: 0)
     eventPlayer.DamageUpgradePureDamage = AllBuffInternalNames.map(lambda _: 0)
     eventPlayer.DamageUpgradeTargetMaxHpSum = AllBuffInternalNames.map(lambda _: 0)
 
-    eventPlayer.FinalBlowCount = 0
+    eventPlayer.TotalNativeDamage = 0
+    eventPlayer.TotalScriptedBonusDamage = 0
 
     eventPlayer.ScriptedDamageQueueVictims = []
     eventPlayer.ScriptedDamageQueueAmounts = []
@@ -484,6 +534,7 @@ def InitialiseTelemetry():
 
     eventPlayer.ScriptedDamageAttribUpgradeIds = []
     eventPlayer.ScriptedDamageAttribAmounts = []
+    eventPlayer.ScriptedDamageAttribPureTotal = []
 
     eventPlayer.ActiveScriptedDamageSource = ScriptedDamageSource.NONE
     eventPlayer.ActiveScriptedDamageVictim = null
@@ -524,6 +575,16 @@ def InitialiseChargeSystem():
 
 
 def InitialisePlayerSystems():
+    if createWorkshopSettingBool(
+        "General",
+        "Initial Spawn On Charging Station",
+        true
+    ):
+        if ChargingStationPosition:
+            eventPlayer.teleport(ChargingStationPosition)
+        else:
+            printLog("No Charging Station to spawn on!")
+
     eventPlayer.disableRespawn()
 
     eventPlayer.LastObjectiveCountdownSound = ObjectiveCountdownSound
@@ -581,6 +642,8 @@ def InitialisePlayerHUDAndEffects():
         0.15,
         EffectReeval.VISIBILITY_POSITION_AND_RADIUS
     )
+
+    eventPlayer.disableGamemodeHud()
 
 
 rule "Local UX Setup":
@@ -1015,8 +1078,16 @@ def UpdateMoveSpeed():
     eventPlayer.setMoveSpeed(
         100 * (
             (
-                (0.6 if eventPlayer.IsSelectingUpgrade else 1)
-                * (0.6 if eventPlayer.isOnGround() and eventPlayer.isHoldingButton(Button.CROUCH) else 1)
+                0.6
+                if eventPlayer.IsSelectingUpgrade
+                else (
+                    SuperJumpChargeMoveSpeed(eventPlayer)
+                    if (
+                        eventPlayer.isOnGround()
+                        and eventPlayer.isHoldingButton(Button.CROUCH)
+                    )
+                    else 1
+                )
             )
             if eventPlayer.isUsingAbility2()
             else 1
@@ -1037,6 +1108,7 @@ def ChooseObjective():
         RemainingObjectiveIndices = ObjectivePositions.map(lambda _, i_: i_)
         wait()
         loop()
+
     CurrentObjectiveIndex = random.choice(AllowedObjectiveIndices)
     RemainingObjectiveIndices.remove(CurrentObjectiveIndex)
     CurrentObjective = ObjectivePositions[CurrentObjectiveIndex]
@@ -1116,9 +1188,32 @@ rule "Capture Objective":
             )
         )
     CapturedObjectives++
+    
+    for i in range(getNumberOfSlots(Team.ALL)):
+        PlayerToEvaluate = getPlayersInSlot(i, Team.ALL)[0]
+    
+        if PlayerToEvaluate and PlayerToEvaluate.TelemetryPlayerId > 0:
+            PlayerToEvaluate.LogCheckpointSummary(
+                "OBJ",
+                CapturedObjectives
+            )
+
     CurrentObjective = null
     getAllPlayers().ObjectiveCaptureFraction = 0
     PlayersToResurrect.RespawnAtTemporarySanctuary = true
+
+
+rule "Log Match End Summaries":
+    @Condition isMatchComplete() == true
+
+    for i in range(getNumberOfSlots(Team.ALL)):
+        PlayerToEvaluate = getPlayersInSlot(i, Team.ALL)[0]
+
+        if PlayerToEvaluate and PlayerToEvaluate.TelemetryPlayerId > 0:
+            PlayerToEvaluate.LogCheckpointSummary(
+                "END",
+                CapturedObjectives
+            )
 
 
 rule "Shorter Hero Select":
@@ -1137,6 +1232,7 @@ rule "Objective Unlock Sound":
 rule "Player Is Capturing Objective":
     @Event eachPlayer
     @Condition IsObjectiveUnlocked == true
+    @Condition eventPlayer.IsCapturingObjective == false
     @Condition distance(vect(eventPlayer.getPosition().x, 0, eventPlayer.getPosition().z), vect(CurrentObjective.x, 0, CurrentObjective.z)) < ObjectiveRadius
     @Condition eventPlayer.getPosition().y > CurrentObjective.y - 20
     @Condition eventPlayer.getPosition().y < CurrentObjective.y + 10
@@ -1147,6 +1243,7 @@ rule "Player Is Capturing Objective":
 
 rule "Player Outside of Objective Radius":
     @Event eachPlayer
+    @Condition eventPlayer.IsCapturingObjective == true
     @Condition distance(vect(eventPlayer.getPosition().x, 0, eventPlayer.getPosition().z), vect(CurrentObjective.x, 0, CurrentObjective.z)) >= ObjectiveRadius
     
     eventPlayer.IsCapturingObjective = false
@@ -1154,6 +1251,7 @@ rule "Player Outside of Objective Radius":
 
 rule "Vertically outside of the zone":
     @Event eachPlayer
+    @Condition eventPlayer.IsCapturingObjective == true
     @Condition (eventPlayer.getPosition().y > CurrentObjective.y - 20 and eventPlayer.getPosition().y < CurrentObjective.y + 10) == false
     
     eventPlayer.IsCapturingObjective = false
@@ -1230,7 +1328,7 @@ def TrySpawnNewShop():
         CurrentShopId++
 
         for j in range(len(BuffIndicesInShop)):
-            logToInspector(
+            LogTelemetry(
                 "SFFA|v=1|t={0}|e=SHOP_OFFER|shop={1}|slot={2}|upgrade={3}".format(
                     getTotalTimeElapsed(),
                     CurrentShopId,
@@ -1359,7 +1457,7 @@ rule "Is jumping":
 
 rule "Not enough charge for primary fire":
     @Event eachPlayer
-    @Condition eventPlayer.Charge < eventPlayer.AmmoChargeCost
+    @Condition (eventPlayer.Charge < eventPlayer.AmmoChargeCost and not eventPlayer.isUsingUltimate())
     @Condition eventPlayer.isUsingAbility2() == false
     
     eventPlayer.setPrimaryFireEnabled(false)
@@ -1371,7 +1469,7 @@ rule "Enough charge for primary fire":
     @Condition (
         eventPlayer.isUsingAbility2()
         or (
-            eventPlayer.Charge >= eventPlayer.AmmoChargeCost
+            (eventPlayer.Charge >= eventPlayer.AmmoChargeCost or eventPlayer.isUsingUltimate())
             and not eventPlayer.IsInSanctuary
         )
     ) == true
@@ -1391,14 +1489,14 @@ rule "Firing primary uses charge":
 
 rule "Not enough charge for secondary fire":
     @Event eachPlayer
-    @Condition eventPlayer.Charge < eventPlayer.SecondaryChargeCost
+    @Condition (eventPlayer.Charge < eventPlayer.SecondaryChargeCost and not eventPlayer.isUsingUltimate())
     
     eventPlayer.disallowButton(Button.SECONDARY_FIRE)
 
 
 rule "Enough charge for secondary fire":
     @Event eachPlayer
-    @Condition eventPlayer.Charge >= eventPlayer.SecondaryChargeCost
+    @Condition (eventPlayer.Charge >= eventPlayer.SecondaryChargeCost or eventPlayer.isUsingUltimate())
     @Condition eventPlayer.IsInSanctuary == false
 
     eventPlayer.allowButton(Button.SECONDARY_FIRE)
@@ -1458,6 +1556,7 @@ rule "Is using ult":
 
 rule "Player is in charging station":
     @Event eachPlayer
+    @Condition eventPlayer.IsOnChargingStation == false
     @Condition eventPlayer.hasSpawned() == true
     @Condition eventPlayer.isAlive() == true
     @Condition eventPlayer.getPosition().y > ChargingStationPosition.y - 20
@@ -1476,15 +1575,19 @@ rule "Record Amount of Health Regenerated":
 
 rule "Regen uses charge":
     @Event eachPlayer
+    @Condition eventPlayer.AccxmulatedHealing > 0
     
     eventPlayer.Charge -= eventPlayer.AccxmulatedHealing / 4
     eventPlayer.AccxmulatedHealing = 0
-    wait()
-    loop()
+    wait(0.016, Wait.ABORT_WHEN_FALSE)
+    
+    if(ruleCondition):
+        loop()
 
 
 rule "Regain Charge in Charging Station":
     @Event eachPlayer
+    @Condition (eventPlayer.Charge < eventPlayer.MaximumCharge)
     @Condition (eventPlayer.IsOnChargingStation or eventPlayer.isDummy()) == true
     
     eventPlayer.Charge = min(eventPlayer.MaximumCharge, eventPlayer.Charge + (0.016 * createWorkshopSettingInt("General", "Charge Rate from Charging Station", 100, 0, 300)))
@@ -1495,6 +1598,7 @@ rule "Regain Charge in Charging Station":
 
 rule "Too far away from Charging Station vertically":
     @Event eachPlayer
+    @Condition eventPlayer.IsOnChargingStation == true
     @Condition (eventPlayer.getPosition().y > ChargingStationPosition.y - 20 and eventPlayer.getPosition().y < ChargingStationPosition.y + 10) == false
     
     eventPlayer.IsOnChargingStation = false
@@ -1502,12 +1606,13 @@ rule "Too far away from Charging Station vertically":
 
 rule "Outside of Charging Station radius":
     @Event eachPlayer
+    @Condition eventPlayer.IsOnChargingStation == true
     @Condition magnitude(vectorTowards(ChargingStationPosition, eventPlayer).map(lambda x: vect(x.x, 0, x.z))) >= ChargingStationRadius
     
     eventPlayer.IsOnChargingStation = false
 
 
-rule "Charge Jump":
+rule "Charge Super Jump":
     @Event eachPlayer
     @Hero shion
     @Condition eventPlayer.isUsingAbility2() == true
@@ -1517,10 +1622,10 @@ rule "Charge Jump":
     UpdateMoveSpeed()
     eventPlayer.JumpCharge = 0
     eventPlayer.JumpChargeCost = 9
-    chaseAtRate(eventPlayer.JumpCharge, 1, 0.4 + eventPlayer.CountOfEachBuff[4] * 0.17)
+    chaseAtRate(eventPlayer.JumpCharge, 1, 0.4 + eventPlayer.CountOfEachBuff[UpgradeIndex("IMPROVED_SUPER_JUMP")] * 0.17)
 
 
-rule "Reset Move Speed While Not holding crouch on ground":
+rule "Reset Move Speed While Not Charging Super Jump"::
     @Event eachPlayer
     @Condition (eventPlayer.isOnGround() and eventPlayer.isHoldingButton(Button.CROUCH) and eventPlayer.isUsingAbility2()) == false
     
@@ -1533,7 +1638,7 @@ rule "Player Leaves Ground":
     
     if eventPlayer.isUsingAbility2() and eventPlayer.isJumping() and eventPlayer.JumpCharge > 0:
         eventPlayer.setGravity(100 - 50 * eventPlayer.JumpCharge)
-        eventPlayer.setJumpVerticalSpeed(100 * (sqrt((1 + (0.03 * eventPlayer.CountOfEachBuff[4] - 0.5) * eventPlayer.JumpCharge) / (1 - 0.6 * eventPlayer.JumpCharge))))
+        eventPlayer.setJumpVerticalSpeed(100 * (sqrt((1 + (0.03 * eventPlayer.CountOfEachBuff[UpgradeIndex("IMPROVED_SUPER_JUMP")] - 0.5) * eventPlayer.JumpCharge) / (1 - 0.6 * eventPlayer.JumpCharge))))
         playEffect(getAllPlayers(), DynamicEffect.RING_EXPLOSION_SOUND, Color.WHITE, eventPlayer.getEyePosition(), 30 + 70 * eventPlayer.JumpCharge)
     stopChasing(eventPlayer.JumpCharge)
     eventPlayer.JumpCharge = 0
@@ -1568,7 +1673,7 @@ def BuySelectedUpgrade():
 
     eventPlayer.CountOfEachBuff[BuffIndicesInShop[eventPlayer.SelectedShopIndex]]++
 
-    logToInspector(
+    LogTelemetry(
         "SFFA|v=1|t={0}|e=UPGRADE_BUY|pid={1}|shop={2}|upgrade={3}|stack={4}".format(
             getTotalTimeElapsed(),
             eventPlayer.TelemetryPlayerId,
@@ -1593,11 +1698,13 @@ def BuySelectedUpgrade():
     )
 
     eventPlayer.HasBoughtFromShop = true
+    UpdateMoveSpeed()
 
 
 rule "Player Is In Shop":
     @Event eachPlayer
     @Condition CurrentShopPosition != null
+    @Condition eventPlayer.IsInShop == false
     @Condition distance(vect(eventPlayer.getPosition().x, 0, eventPlayer.getPosition().z), vect(CurrentShopPosition.x, 0, CurrentShopPosition.z)) < ObjectiveRadius
     @Condition eventPlayer.getPosition().y > CurrentShopPosition.y - 20
     @Condition eventPlayer.getPosition().y < CurrentShopPosition.y + 10
@@ -1608,6 +1715,7 @@ rule "Player Is In Shop":
 
 rule "Player Is Not In Shop":
     @Event eachPlayer
+    @Condition eventPlayer.IsInShop == true
     @Condition (CurrentShopPosition and distance(vect(eventPlayer.getPosition().x, 0, eventPlayer.getPosition().z), vect(CurrentShopPosition.x, 0, CurrentShopPosition.z)) < ObjectiveRadius and eventPlayer.getPosition().y > CurrentShopPosition.y - 20 and eventPlayer.getPosition().y < CurrentShopPosition.y + 10 and eventPlayer.isAlive()) == false
     
     eventPlayer.IsInShop = false
@@ -1644,7 +1752,7 @@ rule "Melee Damage":
                 attacker.CountOfEachBuff[2],
                 attacker.CountOfEachBuff[8],
                 eventDamage
-                * 0.2
+                * 0.25
                 * attacker.CountOfEachBuff[8]
             )
         )
@@ -1652,7 +1760,7 @@ rule "Melee Damage":
     attacker.enqueueScriptedDamage(
         victim,
         eventDamage
-        * 0.2
+        * 0.25
         * attacker.CountOfEachBuff[
             UpgradeIndex("MELEE_DAMAGE")
         ],
@@ -1731,7 +1839,11 @@ rule "Primary Fire Upgrade Damage":
         [
             eventDamage * OffObjectivePrimaryBonusFactor(attacker),
             eventDamage * PrimaryVsMaxHealthBonusFactor(attacker, victim)
-        ]
+        ],
+        eventDamage * (
+            OffObjectivePrimaryBonusFactor(attacker)
+            + PrimaryVsMaxHealthBonusFactor(attacker, victim)
+        )
     )
 
 
@@ -1754,10 +1866,22 @@ rule "Joyride Impact Bonus Damage":
             )
         )
 
+    attacker.recordDamageUpgradeActivation(
+        "JOYRIDE_IMPACT",
+        victim
+    )
+
     attacker.enqueueScriptedDamage(
         victim,
         eventDamage * 0.08 * attacker.CountOfEachBuff[2],
-        ScriptedDamageSource.JOYRIDE_BONUS
+        ScriptedDamageSource.JOYRIDE_BONUS,
+        [
+            UpgradeIndex("JOYRIDE_IMPACT")
+        ],
+        [
+            eventDamage * 0.08 * attacker.CountOfEachBuff[2]
+        ],
+        eventDamage * 0.08 * attacker.CountOfEachBuff[2]
     )
 
 
@@ -1799,6 +1923,7 @@ rule "Dispatch Scripted Bonus Damage":
     del eventPlayer.ScriptedDamageQueueSources[0]
     del eventPlayer.ScriptedDamageAttribUpgradeIds[0]
     del eventPlayer.ScriptedDamageAttribAmounts[0]
+    del eventPlayer.ScriptedDamageAttribPureTotal[0]
 
     eventPlayer.ActiveScriptedDamageSource = ScriptedDamageSource.NONE
     eventPlayer.ActiveScriptedDamageVictim = null
@@ -1814,6 +1939,8 @@ rule "Accxmulate Combat Damage Counters":
     @Condition attacker.TelemetryPlayerId > 0
 
     if IsNativeDamage(eventAbility):
+        attacker.TotalNativeDamage += eventDamage
+
         if eventAbility in NativeAttackAbilities:
             attacker.NativeDamageByAttackType[
                 NativeAttackAbilities.index(eventAbility)
@@ -1831,6 +1958,8 @@ rule "Accxmulate Combat Damage Counters":
         attacker,
         victim
     ):
+        attacker.TotalScriptedBonusDamage += eventDamage
+
         attacker.ScriptedBonusDamageBySource[
             attacker.ActiveScriptedDamageSource
         ] += eventDamage
@@ -1854,6 +1983,18 @@ rule "Accxmulate Combat Damage Counters":
                         )
                 )
             )
+
+            if len(attacker.ScriptedDamageAttribUpgradeIds[0]) > 0:
+                attacker.ScriptedInteractionDamage[
+                    attacker.ActiveScriptedDamageSource
+                ] += (
+                    eventDamage
+                    * (
+                        1
+                        - attacker.ScriptedDamageAttribPureTotal[0]
+                        / attacker.ScriptedDamageQueueAmounts[0]
+                    )
+                )
 
 
 rule "Log Damage Upgrade Diagnostic":
@@ -1921,10 +2062,7 @@ rule "Player Buffs Setup":
     eventPlayer.addHealthPool(
         Health.NORMAL,
         50
-        + 100 * min(eventPlayer.CountOfEachBuff[0], 5)
-        + 75 * min(max(eventPlayer.CountOfEachBuff[0] - 5, 0), 5)
-        + 50 * min(max(eventPlayer.CountOfEachBuff[0] - 10, 0), 5)
-        + 25 * max(eventPlayer.CountOfEachBuff[0] - 15, 0),
+        + 75 * eventPlayer.CountOfEachBuff[0],
         true
     )
 
@@ -1949,9 +2087,6 @@ rule "Player Final Blow":
     @Event playerDealtFinalBlow
     @Condition attacker != null
     @Condition attacker != victim
-
-    if attacker.TelemetryPlayerId > 0:
-        attacker.FinalBlowCount++
 
     if attacker.CountOfEachBuff[3] > 0:
         heal(
@@ -2049,6 +2184,7 @@ rule "Reset Low Charge Warning":
 
 rule "Player Is In Sanctuary":
     @Event eachPlayer
+    @Condition eventPlayer.IsInSanctuary == false
     @Condition eventPlayer.isAlive() == true
     @Condition (
         eventPlayer.IsOnChargingStation
@@ -2068,6 +2204,7 @@ rule "Player Is In Sanctuary":
 
 rule "Player Is Not In Sanctuary":
     @Event eachPlayer
+    @Condition eventPlayer.IsInSanctuary == true
     @Condition eventPlayer.IsOnChargingStation == false
     @Condition (
         TemporarySanctuaryPosition
@@ -2111,7 +2248,7 @@ rule "Open Upgrade Selection":
     eventPlayer.SelectedShopIndex = -1
     eventPlayer.IsSelectingUpgrade = true
 
-    logToInspector(
+    LogTelemetry(
         "SFFA|v=1|t={0}|e=SHOP_OPEN|pid={1}|shop={2}".format(
             getTotalTimeElapsed(),
             eventPlayer.TelemetryPlayerId,
