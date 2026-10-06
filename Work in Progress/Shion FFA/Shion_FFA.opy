@@ -29,6 +29,7 @@ settings {
             ]
         },
         "general": {
+            "gamemodeStartTrigger": "manual",
             "heroLimit": "off",
             "enableKillCam": false,
             "enableRandomHeroes": true
@@ -49,138 +50,179 @@ settings {
 
 #Global variables
 
-globalvar ObjectivePositions 0
-globalvar IsObjectiveUnlocked 1
-globalvar ObjectiveUnlockTime 2
-globalvar AllowedObjectiveIndices 3
-globalvar i 4
-globalvar CapturingPlayers 5
-globalvar PreviousObjective 6
-globalvar CurrentObjectiveIndex 7
-globalvar CurrentObjective 8
-globalvar RemainingObjectiveIndices 9
-globalvar ObjectiveRadius 10
-globalvar StartImmediately 11
-globalvar PreventGameFromEnding 12
-globalvar CanContestedObjectivesBeCaptured 13
-globalvar ChargingStationPosition 14
-globalvar ChargingStationRadius 15
-globalvar CapturedObjectives 16
-globalvar CurrentShopPosition 17
-globalvar AllBuffDescriptions 18
-globalvar BuffIndicesInShop 19
-globalvar PlayersToResurrect 20
-globalvar PlayerToEvaluate 21
-globalvar CurrentShopId 22
-globalvar IsObjectiveVisible 23
-globalvar PlayersWhoCapturedTheObjective 24
-globalvar RestoreChargeTo 25
-globalvar PlayersInTheObjectiveWhenCapture 26
-globalvar MaximumObjectiveCaptureRate 27
-globalvar ObjectiveCountdownSound 28
-globalvar TemporarySanctuaryPosition 29
-globalvar UpgradeChoiceButtons 30
-globalvar AllBuffInternalNames 31
-globalvar AllBuffNames 32
-globalvar j 33
-globalvar LogDamageUpgradeDiagnostics 34
-globalvar EnableTestingControls 35
-globalvar NextTelemetryPlayerId 36
-globalvar EnablePlaytestTelemetry 37
+globalvar ObjectivePositions
+globalvar IsObjectiveUnlocked
+globalvar ObjectiveUnlockTime
+globalvar AllowedObjectiveIndices
+globalvar i
+globalvar CapturingPlayers
+globalvar PreviousObjective
+globalvar CurrentObjectiveIndex
+globalvar CurrentObjective
+globalvar RemainingObjectiveIndices
+globalvar ObjectiveRadius
+globalvar StartImmediately
+globalvar PreventGameFromEnding
+globalvar CanContestedObjectivesBeCaptured
+globalvar ChargingStationPosition
+globalvar ChargingStationRadius
+globalvar CapturedObjectives
+globalvar CurrentShopPosition
+globalvar AllBuffDescriptions
+globalvar BuffIndicesInShop
+globalvar PlayersToResurrect
+globalvar PlayerToEvaluate
+globalvar CurrentShopId
+globalvar IsObjectiveVisible
+globalvar PlayersWhoCapturedTheObjective
+globalvar RestoreChargeTo
+globalvar PlayersInTheObjectiveWhenCapture
+globalvar MaximumObjectiveCaptureRate
+globalvar ObjectiveCountdownSound
+globalvar TemporarySanctuaryPosition
+globalvar UpgradeChoiceButtons
+globalvar AllBuffInternalNames
+globalvar AllBuffNames
+globalvar j
+globalvar LogDamageUpgradeDiagnostics
+globalvar EnableTestingControls
+globalvar NextTelemetryPlayerId
+globalvar EnablePlaytestTelemetry
+globalvar ChargingStationCandidateIndex
+globalvar ChargingStationRayIndex
+globalvar ChargingStationCandidatePosition
+globalvar ChargingStationCandidateScore
+globalvar ChargingStationBestScore
+
+globalvar SetupSpawnReferencePosition
+globalvar SetupSpawnForwardDirection
+globalvar SetupSpawnLineDirection
+globalvar SetupSpawnLineStart
+globalvar SetupSpawnLineEnd
+
+globalvar SetupSpawnSearchMinIndex
+globalvar SetupSpawnSearchMaxIndex
+globalvar SetupSpawnSearchIndex
+
+globalvar SetupSpawnCandidateCenter
+globalvar SetupSpawnCandidateHalfWidth
+globalvar SetupSpawnCandidateStart
+globalvar SetupSpawnCandidateEnd
+
+globalvar SetupSpawnSamplePosition
+globalvar SetupSpawnPreviousPosition
+globalvar SetupSpawnSampleDistance
+globalvar SetupSpawnSampleValid
+globalvar SetupSpawnRayHit
+
+globalvar InitialSetupSpawnPositions
+globalvar SetupSpawnLineLength
+globalvar SetupSpawnFirstOffset
+globalvar SetupSpawnPositionSpacing
+globalvar SetupSpawnPositionIndex
+globalvar SetupSpawnCandidatePosition
+globalvar SetupSpawnWalkablePosition
+globalvar SetupSpawnEndpointDistance
+globalvar SetupSpawnCandidateValid
+globalvar InitialSetupPlayers
 
 #Player variables
 
 # Movement / traversal
-playervar CrouchCounter 0
-playervar MantleState 1
-playervar MantleTimer 2
-playervar TryingToMantle 3
-playervar CanDashJump 4
-playervar IsDashJumping 5
-playervar JumpCharge 6
+playervar CrouchCounter
+playervar MantleState
+playervar MantleTimer
+playervar TryingToMantle
+playervar CanDashJump
+playervar IsDashJumping
+playervar JumpCharge
 
 # Objective / sanctuary / respawn state
-playervar ObjectiveCaptureFraction 7
-playervar IsCapturingObjective 8
-playervar IsOnChargingStation 9
-playervar IsInSanctuary 10
-playervar RespawnAtTemporarySanctuary 11
-playervar RespawnTimer 12
-playervar LastObjectiveCountdownSound 13
+playervar ObjectiveCaptureFraction
+playervar IsCapturingObjective
+playervar IsOnChargingStation
+playervar IsInSanctuary
+playervar RespawnAtTemporarySanctuary
+playervar RespawnTimer
+playervar LastObjectiveCountdownSound
+playervar SetupSpawnPosition
 
 # Charge / resource system
-playervar Charge 14
-playervar MaximumCharge 15
-playervar RechargePerTick 16
-playervar Ability2ChargeCost 17
-playervar Ability1ChargeCost 18
-playervar JumpChargeCost 19
-playervar AmmoChargeCost 20
-playervar MeleeChargeCost 21
-playervar UltimateChargeCost 22
-playervar SecondaryChargeCost 23
-playervar MaxAmmo 24
-playervar LowChargeWarningActive 25
+playervar Charge
+playervar MaximumCharge
+playervar RechargePerTick
+playervar Ability2ChargeCost
+playervar Ability1ChargeCost
+playervar JumpChargeCost
+playervar AmmoChargeCost
+playervar MeleeChargeCost
+playervar UltimateChargeCost
+playervar SecondaryChargeCost
+playervar MaxAmmo
+playervar LowChargeWarningActive
 
 # Combat / regeneration tuning
-playervar AccxmulatedHealing 26
-playervar RegenMultiplier 27
-playervar FireRate 28
+playervar AccxmulatedHealing
+playervar RegenMultiplier
+playervar FireRate
 
 # Upgrades / shop
-playervar CountOfEachBuff 29
-playervar HasBoughtFromShop 30
-playervar IsInShop 31
-playervar IsSelectingUpgrade 32
-playervar SelectedShopIndex 33
+playervar CountOfEachBuff
+playervar HasBoughtFromShop
+playervar IsInShop
+playervar IsSelectingUpgrade
+playervar SelectedShopIndex
 
 # Joyride Impact state
-playervar JoyrideImpactVictims 34
-playervar JoyrideImpactExpiryTimes 35
-playervar ExpiredJoyrideImpactIndex 36
+playervar JoyrideImpactVictims
+playervar JoyrideImpactExpiryTimes
+playervar ExpiredJoyrideImpactIndex
 
 # Scripted damage dispatcher
-playervar ScriptedDamageQueueVictims 37
-playervar ScriptedDamageQueueAmounts 38
-playervar ScriptedDamageQueueSources 39
-playervar ScriptedDamageAttribUpgradeIds 40
-playervar ScriptedDamageAttribAmounts 41
-playervar ScriptedDamageAttribPureTotal 42
-playervar ActiveScriptedDamageSource 43
-playervar ActiveScriptedDamageVictim 44
+playervar ScriptedDamageQueueVictims
+playervar ScriptedDamageQueueAmounts
+playervar ScriptedDamageQueueSources
+playervar ScriptedDamageAttribUpgradeIds
+playervar ScriptedDamageAttribAmounts
+playervar ScriptedDamageAttribPureTotal
+playervar ActiveScriptedDamageSource
+playervar ActiveScriptedDamageVictim
 
 # Telemetry identity / aggregate combat counters
-playervar TelemetryPlayerId 45
-playervar NativeDamageByAttackType 46
-playervar NativeHitCountsByAttackType 47
-playervar OtherNativeDamage 48
-playervar OtherNativeHitCount 49
-playervar ScriptedBonusDamageBySource 50
-playervar ScriptedInteractionDamage 51
+playervar TelemetryPlayerId
+playervar NativeDamageByAttackType
+playervar NativeHitCountsByAttackType
+playervar OtherNativeDamage
+playervar OtherNativeHitCount
+playervar ScriptedBonusDamageBySource
+playervar ScriptedInteractionDamage
 
-playervar DamageUpgradeActivationCounts 53
-playervar DamageUpgradePureDamage 54
-playervar DamageUpgradeTargetMaxHpSum 55
-playervar TotalNativeDamage 56
-playervar TotalScriptedBonusDamage 57
+playervar DamageUpgradeActivationCounts
+playervar DamageUpgradePureDamage
+playervar DamageUpgradeTargetMaxHpSum
+playervar TotalNativeDamage
+playervar TotalScriptedBonusDamage
 
 # Test / debug
-playervar TestSelectedUpgrade 58
+playervar TestSelectedUpgrade
 
 # Subroutine names
 
-subroutine ChooseObjective 0
-subroutine CreateDebugEffectsAndHUD 1
-subroutine TrySpawnNewShop 2
-subroutine ResurrectMe 3
-subroutine SetMaximumCharge 4
-subroutine BuySelectedUpgrade 5
-subroutine UpdateMoveSpeed 6
-subroutine InitialiseTelemetry 7
-subroutine InitialiseCombatState 8
-subroutine InitialiseChargeSystem 9
-subroutine InitialisePlayerSystems 10
-subroutine InitialisePlayerHUDAndEffects 11
+subroutine ChooseObjective
+subroutine CreateDebugEffectsAndHUD
+subroutine TrySpawnNewShop
+subroutine ResurrectMe
+subroutine SetMaximumCharge
+subroutine BuySelectedUpgrade
+subroutine UpdateMoveSpeed
+subroutine InitialiseTelemetry
+subroutine InitialiseCombatState
+subroutine InitialiseChargeSystem
+subroutine InitialisePlayerSystems
+subroutine InitialisePlayerHUDAndEffects
+subroutine ChooseChargingStation
+subroutine ValidateSetupSpawnSample
+subroutine ValidateSetupSpawnCandidate
 
 #Activated extensions
 
@@ -191,6 +233,23 @@ subroutine InitialisePlayerHUDAndEffects 11
 #!optimizeStrict
 
 #!setupTags
+
+macro TIME_BETWEEN_SHOP_AND_OBJECTIVE = 4
+macro INITIAL_COUNTDOWN_TIME = 5
+macro CHARGING_STATION_SCORE_RAYS = 16
+
+macro SETUP_SPAWN_RAY_HEIGHT = 1
+macro SETUP_SPAWN_CANDIDATE_SPACING = 0.5
+macro SETUP_SPAWN_SAMPLE_SPACING = 0.5
+macro SETUP_SPAWN_MAX_DROP = 0.5
+macro SETUP_SPAWN_FORWARD_CLEARANCE = 3.4
+macro PLAYER_RADIUS = 0.5
+macro PADDED_PLAYER_RADIUS = PLAYER_RADIUS + 0.02
+macro SETUP_SPAWN_SIDE_SUPPORT_OFFSET = PADDED_PLAYER_RADIUS
+macro SETUP_SPAWN_MAX_PROJECTION = 0.5
+
+macro AtSpawnRayHeight(position):
+    position + Vector.UP * SETUP_SPAWN_RAY_HEIGHT
 
 enum ScriptedDamageSource:
     NONE = 0
@@ -360,92 +419,90 @@ macro SuperJumpChargeMoveSpeed(player):
 
 
 rule "Global Setup":
+    # ========================================================
+    # WORKSHOP SETTINGS
+    # ========================================================
+
     LogDamageUpgradeDiagnostics = createWorkshopSettingBool(
         "Testing",
         "Log Damage Upgrade Diagnostics",
-        true
+        false
     )
+
     EnableTestingControls = createWorkshopSettingBool(
         "Testing",
         "Enable Testing Controls",
         false
     )
+
     EnablePlaytestTelemetry = createWorkshopSettingBool(
         "Testing",
         "Enable Playtest Telemetry",
-        true
-    )
-    UpgradeChoiceButtons = [Button.PRIMARY_FIRE, Button.JUMP, Button.MELEE, Button.RELOAD, Button.ABILITY_1, Button.CROUCH]
-    MaximumObjectiveCaptureRate = 1 / createWorkshopSettingInt("General", "Minimum Time To Capture Objective", 10, 1, 900)
-    RestoreChargeTo = createWorkshopSettingInt("General", "Restore Charge To", 200, 0, 1000)
-    StartImmediately = createWorkshopSettingBool("General", "Start Immediately", false)
-    PreventGameFromEnding = createWorkshopSettingBool("General", "Prevent game from ending", false)
-    CanContestedObjectivesBeCaptured = createWorkshopSettingBool("General", "Can Contested Objectives be Captured", true)
-    ObjectiveRadius = createWorkshopSettingInt("General", "Objective Diameter", 19, 2, 40) * 0.5
-    CurrentObjectiveIndex = -1
-    disableScoring()
-    createEffect(getAllPlayers() if CurrentObjective else null, Effect.LIGHT_SHAFT, Color.AQUA if IsObjectiveUnlocked else Color.GRAY, CurrentObjective + 20 * Vector.DOWN, ObjectiveRadius)
-    createIcon(getAllPlayers() if IsObjectiveVisible else null, CurrentObjective + 1.9 * Vector.UP, Icon.ARROW_DOWN, IconReeval.VISIBILITY_POSITION_AND_COLOR, Color.AQUA if IsObjectiveUnlocked else [30 * sinDeg(300 * getTotalTimeElapsed()) + 170].map(lambda x: rgb(x, x, x)))
-    createEffect(
-        getAllPlayers() if TemporarySanctuaryPosition else null,
-        Effect.LIGHT_SHAFT,
-        Color.WHITE,
-        TemporarySanctuaryPosition + 20 * Vector.DOWN,
-        ObjectiveRadius,
-        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
-    )
-    createIcon(
-        getAllPlayers() if TemporarySanctuaryPosition else null,
-        TemporarySanctuaryPosition + 1.9 * Vector.UP,
-        Icon.HALO,
-        IconReeval.VISIBILITY_AND_POSITION,
-        Color.WHITE,
         false
     )
-    if PreventGameFromEnding:
-        disableGamemodeCompletion()
-    if StartImmediately:
-        while not isGameInProgress():
-            startGamemode()
-            wait(1)
-    waitUntil(isGameInProgress(), 99999)
-    setMatchTime(900)
-    disableAnnouncer()
-    hudSubtext(getAllPlayers(), "Controls", HudPosition.LEFT, -1, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
-    hudSubheader(getAllPlayers(), "{0}\n{1}".format("[{0}] twice in air — Dash Down\n[{1}] during Ground Dash — Dash Jump".format(inputBindingString(Button.CROUCH), inputBindingString(Button.JUMP)), "[{0}] near a ledge — Mantle\nHold [{1}] while bike on ground — Charge Super Jump\nEarly Respawn with [{0}] Disabled".format(inputBindingString(Button.JUMP), inputBindingString(Button.CROUCH))), HudPosition.LEFT, 0, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
-    
-    hudSubtext(
-        getAllPlayers(),
-        "\nCapture Progress",
-        HudPosition.LEFT,
-        1,
-        Color.WHITE if IsObjectiveUnlocked else Color.LIGHT_GRAY,
-        HudReeval.VISIBILITY_STRING_AND_COLOR
+
+    StartImmediately = createWorkshopSettingBool(
+        "General",
+        "Start Immediately",
+        false
     )
 
-    for i in range(12):
-        hudSubheader(
-            getAllPlayers(),
-            CapturingPlayers[evalOnce(i)].map(
-                lambda x: "{0}  {1} {2}%".format(
-                    heroIcon(x.getHero()),
-                    x,
-                    floor(100 * x.ObjectiveCaptureFraction)
-                )
-            ) if CapturingPlayers[evalOnce(i)] else " ",
-            HudPosition.LEFT,
-            2 + evalOnce(i),
-            Color.WHITE,
-            HudReeval.VISIBILITY_AND_STRING
-        )
+    PreventGameFromEnding = createWorkshopSettingBool(
+        "General",
+        "Prevent game from ending",
+        false
+    )
 
-    if PreventGameFromEnding:
-        disableMusic()
-    createEffect(getAllPlayers(), Effect.LIGHT_SHAFT, Color.YELLOW, ChargingStationPosition + 20 * Vector.DOWN, ChargingStationRadius, EffectReeval.VISIBILITY_POSITION_AND_RADIUS)
-    createIcon(getAllPlayers(), ChargingStationPosition + 1.9 * Vector.UP, Icon.BOLT, IconReeval.VISIBILITY_AND_POSITION, Color.WHITE)
-    ChargingStationRadius = 9.5
-    createEffect(getAllPlayers().filter(lambda player: not player.HasBoughtFromShop) if CurrentShopPosition else null, Effect.LIGHT_SHAFT, Color.GREEN, CurrentShopPosition + 20 * Vector.DOWN, ObjectiveRadius, EffectReeval.VISIBILITY_POSITION_AND_RADIUS)
-    createIcon(getAllPlayers().filter(lambda player: not player.HasBoughtFromShop) if CurrentShopPosition else null, CurrentShopPosition + 1.9 * Vector.UP, Icon.QUESTION_MARK, IconReeval.VISIBILITY_AND_POSITION, Color.LIME_GREEN)
+    CanContestedObjectivesBeCaptured = createWorkshopSettingBool(
+        "General",
+        "Can Contested Objectives be Captured",
+        true
+    )
+
+    MaximumObjectiveCaptureRate = (
+        1
+        / createWorkshopSettingInt(
+            "General",
+            "Minimum Time To Capture Objective",
+            10,
+            1,
+            900
+        )
+    )
+
+    RestoreChargeTo = createWorkshopSettingInt(
+        "General",
+        "Restore Charge To",
+        200,
+        0,
+        1000
+    )
+
+    ObjectiveRadius = (
+        createWorkshopSettingInt(
+            "General",
+            "Objective Diameter",
+            19,
+            2,
+            40
+        )
+        * 0.5
+    )
+
+
+    # ========================================================
+    # STATIC GAME DATA
+    # ========================================================
+
+    UpgradeChoiceButtons = [
+        Button.PRIMARY_FIRE,
+        Button.JUMP,
+        Button.MELEE,
+        Button.RELOAD,
+        Button.ABILITY_1,
+        Button.CROUCH
+    ]
+
     AllBuffInternalNames = [
         "MAX_HEALTH",
         "OFF_OBJECTIVE_PRIMARY_DAMAGE",
@@ -457,6 +514,7 @@ rule "Global Setup":
         "MELEE_LIFESTEAL",
         "MELEE_DAMAGE"
     ]
+
     AllBuffDescriptions = [
         c"Increase your maximum health.",
         c"Increase Primary Fire damage while you are not contesting the objective.",
@@ -468,6 +526,7 @@ rule "Global Setup":
         c"Heal for a portion of the damage dealt by Quick Melee.",
         c"Increase Quick Melee damage."
     ]
+
     AllBuffNames = [
         "MAX HEALTH",
         "Off-Objective {0} Damage".format(
@@ -488,6 +547,547 @@ rule "Global Setup":
         "Melee Damage"
     ]
 
+
+    # ========================================================
+    # INITIAL GLOBAL STATE
+    # ========================================================
+
+    CurrentObjectiveIndex = -1
+    ChargingStationRadius = 9.5
+
+    disableScoring()
+
+    if PreventGameFromEnding:
+        disableGamemodeCompletion()
+
+
+    # ========================================================
+    # MAP SETUP
+    #
+    # Establish this before the first wait so that player
+    # initialization can use ChargingStationPosition during
+    # the pre-match phase.
+    # ========================================================
+
+    ObjectivePositions = getSpawnPoints(Team.ALL).map(
+        lambda spawnPoint: spawnPoint.getPosition()
+    )
+
+    ChooseChargingStation()
+
+    for i in range(
+        createWorkshopSettingInt(
+            "Testing",
+            "Number of Dummy Bots",
+            0,
+            0,
+            10
+        )
+    ):
+        createDummy(
+            Hero.SHION,
+            Team.ALL,
+            i + 1,
+            ChargingStationPosition,
+            Vector.FORWARD
+        )
+
+    # Keep objectives sufficiently far from the Charging Station.
+    ObjectivePositions = ObjectivePositions.filter(
+        lambda position:
+            distance(
+                vect(position.x, 0, position.z),
+                vect(
+                    ChargingStationPosition.x,
+                    0,
+                    ChargingStationPosition.z
+                )
+            )
+            + ObjectiveRadius
+            - ChargingStationRadius
+            > 30
+    )
+
+    RemainingObjectiveIndices = ObjectivePositions.map(
+        lambda _, index: index
+    )
+
+
+    # ========================================================
+    # ALWAYS-AVAILABLE WORLD EFFECTS
+    # ========================================================
+
+    # Current objective
+    createEffect(
+        getAllPlayers() if CurrentObjective else null,
+        Effect.LIGHT_SHAFT,
+        Color.AQUA if IsObjectiveUnlocked else Color.GRAY,
+        CurrentObjective + 20 * Vector.DOWN,
+        ObjectiveRadius
+    )
+
+    createIcon(
+        getAllPlayers() if IsObjectiveVisible else null,
+        CurrentObjective + 1.9 * Vector.UP,
+        Icon.ARROW_DOWN,
+        IconReeval.VISIBILITY_POSITION_AND_COLOR,
+        Color.AQUA
+        if IsObjectiveUnlocked
+        else [30 * sinDeg(300 * getTotalTimeElapsed()) + 170].map(
+            lambda x: rgb(x, x, x)
+        )
+    )
+
+    # Temporary Sanctuary
+    createEffect(
+        getAllPlayers() if TemporarySanctuaryPosition else null,
+        Effect.LIGHT_SHAFT,
+        Color.WHITE,
+        TemporarySanctuaryPosition + 20 * Vector.DOWN,
+        ObjectiveRadius,
+        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+    )
+
+    createIcon(
+        getAllPlayers() if TemporarySanctuaryPosition else null,
+        TemporarySanctuaryPosition + 1.9 * Vector.UP,
+        Icon.HALO,
+        IconReeval.VISIBILITY_AND_POSITION,
+        Color.WHITE,
+        false
+    )
+
+    # Charging Station
+    createEffect(
+        getAllPlayers(),
+        Effect.LIGHT_SHAFT,
+        Color.YELLOW,
+        ChargingStationPosition + 20 * Vector.DOWN,
+        ChargingStationRadius,
+        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+    )
+
+    createIcon(
+        getAllPlayers(),
+        ChargingStationPosition + 1.9 * Vector.UP,
+        Icon.BOLT,
+        IconReeval.VISIBILITY_AND_POSITION,
+        Color.WHITE
+    )
+
+    # Shop
+    createEffect(
+        (
+            getAllPlayers().filter(
+                lambda player: not player.HasBoughtFromShop
+            )
+            if CurrentShopPosition
+            else null
+        ),
+        Effect.LIGHT_SHAFT,
+        Color.GREEN,
+        CurrentShopPosition + 20 * Vector.DOWN,
+        ObjectiveRadius,
+        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+    )
+
+    createIcon(
+        (
+            getAllPlayers().filter(
+                lambda player: not player.HasBoughtFromShop
+            )
+            if CurrentShopPosition
+            else null
+        ),
+        CurrentShopPosition + 1.9 * Vector.UP,
+        Icon.QUESTION_MARK,
+        IconReeval.VISIBILITY_AND_POSITION,
+        Color.LIME_GREEN
+    )
+
+
+    # ========================================================
+    # ALWAYS-AVAILABLE HUD
+    # ========================================================
+
+    hudSubtext(
+        getAllPlayers(),
+        "Controls",
+        HudPosition.LEFT,
+        -1,
+        Color.WHITE,
+        HudReeval.VISIBILITY_AND_STRING
+    )
+
+    hudSubheader(
+        getAllPlayers(),
+        "{0}\n{1}".format(
+            "[{0}] twice in air — Dash Down\n[{1}] during Ground Dash — Dash Jump".format(
+                inputBindingString(Button.CROUCH),
+                inputBindingString(Button.JUMP)
+            ),
+            "[{0}] near a ledge — Mantle\nHold [{1}] while bike on ground — Charge Super Jump\nEarly Respawn with [{0}] Disabled".format(
+                inputBindingString(Button.JUMP),
+                inputBindingString(Button.CROUCH)
+            )
+        ),
+        HudPosition.LEFT,
+        0,
+        Color.WHITE,
+        HudReeval.VISIBILITY_AND_STRING
+    )
+
+
+    # ========================================================
+    # START MATCH / WAIT FOR NORMAL FFA START
+    # ========================================================
+
+    if StartImmediately:
+        while not (isInSetup() or isGameInProgress()):
+            startGamemode()
+            wait(1)
+
+    waitUntil(isInSetup() or isGameInProgress(), 99999)
+
+    # ========================================================
+    # MATCH-ONLY SETUP
+    # ========================================================
+
+    if PreventGameFromEnding:
+        disableMusic()
+
+    disableAnnouncer()
+
+    # ========================================================
+    # OBJECTIVE-SPECIFIC HUD
+    # ========================================================
+
+    hudSubtext(
+        getAllPlayers(),
+        "\nCapture Progress",
+        HudPosition.LEFT,
+        1,
+        Color.WHITE if IsObjectiveUnlocked else Color.LIGHT_GRAY,
+        HudReeval.VISIBILITY_STRING_AND_COLOR
+    )
+
+    for i in range(12):
+        hudSubheader(
+            getAllPlayers(),
+            (
+                CapturingPlayers[evalOnce(i)].map(
+                    lambda player:
+                        "{0}  {1} {2}%".format(
+                            heroIcon(player.getHero()),
+                            player,
+                            floor(
+                                100
+                                * player.ObjectiveCaptureFraction
+                            )
+                        )
+                )
+                if CapturingPlayers[evalOnce(i)]
+                else " "
+            ),
+            HudPosition.LEFT,
+            2 + evalOnce(i),
+            Color.WHITE,
+            HudReeval.VISIBILITY_AND_STRING
+        )
+
+    waitUntil(isGameInProgress(), 99999)
+    setMatchTime(900)
+
+
+def ChooseChargingStation():
+    @Name "Choose Charging Station"
+
+    ChargingStationBestScore = -1
+
+    for ChargingStationCandidateIndex in range(len(ObjectivePositions)):
+        ChargingStationCandidatePosition = ObjectivePositions[ChargingStationCandidateIndex]
+        ChargingStationCandidatePosition = raycastHitPosition(
+            ChargingStationCandidatePosition + Vector.UP,
+            ChargingStationCandidatePosition + Vector.DOWN * 3,
+            null,
+            null,
+            false
+        )
+        ChargingStationCandidateScore = 0
+
+        for ChargingStationRayIndex in range(CHARGING_STATION_SCORE_RAYS):
+            SetupSpawnRayHit = raycastHitPosition(
+                AtSpawnRayHeight(ChargingStationCandidatePosition),
+                AtSpawnRayHeight(
+                    ChargingStationCandidatePosition
+                    + angleToDirection(ChargingStationRayIndex * (360 / CHARGING_STATION_SCORE_RAYS), 0) * ChargingStationRadius
+                ),
+                null,
+                null,
+                false
+            )
+
+            ChargingStationCandidateScore += distance(AtSpawnRayHeight(ChargingStationCandidatePosition), SetupSpawnRayHit)
+
+        ChargingStationCandidateScore /= CHARGING_STATION_SCORE_RAYS
+
+        if ChargingStationCandidateScore > ChargingStationBestScore:
+            ChargingStationBestScore = ChargingStationCandidateScore
+            ChargingStationPosition = ChargingStationCandidatePosition
+
+
+rule "Set Up Initial Spawn Line":
+    @Condition isInSetup() == true
+
+    waitUntil(SetupSpawnReferencePosition != null, 99999)
+
+    SetupSpawnForwardDirection = angleToDirection(horizontalAngleOfDirection(SetupSpawnReferencePosition - ChargingStationPosition), 0)
+    SetupSpawnLineDirection = vect(-SetupSpawnForwardDirection.z, 0, SetupSpawnForwardDirection.x)
+
+    # Find the longitudinal range within which candidate line centres may be tested.
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(ChargingStationPosition),
+        AtSpawnRayHeight(ChargingStationPosition - SetupSpawnForwardDirection * ChargingStationRadius),
+        null,
+        null,
+        false
+    )
+    SetupSpawnSearchMinIndex = ceil(
+        -distance(AtSpawnRayHeight(ChargingStationPosition), SetupSpawnRayHit) / SETUP_SPAWN_CANDIDATE_SPACING
+    )
+
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(ChargingStationPosition),
+        AtSpawnRayHeight(ChargingStationPosition + SetupSpawnForwardDirection * ChargingStationRadius),
+        null,
+        null,
+        false
+    )
+    SetupSpawnSearchMaxIndex = floor(
+        distance(AtSpawnRayHeight(ChargingStationPosition), SetupSpawnRayHit) / SETUP_SPAWN_CANDIDATE_SPACING
+    )
+
+    # Known-valid fallback if every candidate somehow fails.
+    SetupSpawnLineStart = ChargingStationPosition
+    SetupSpawnLineEnd = ChargingStationPosition
+
+    for SetupSpawnSearchIndex in range(SetupSpawnSearchMinIndex, SetupSpawnSearchMaxIndex + 1):
+        SetupSpawnCandidateCenter = ChargingStationPosition + SetupSpawnForwardDirection * (SetupSpawnSearchIndex * SETUP_SPAWN_CANDIDATE_SPACING)
+        SetupSpawnCandidateHalfWidth = sqrt(max(0, ChargingStationRadius ** 2 - (SetupSpawnSearchIndex * SETUP_SPAWN_CANDIDATE_SPACING) ** 2))
+
+        SetupSpawnCandidateStart = SetupSpawnCandidateCenter
+        SetupSpawnCandidateEnd = SetupSpawnCandidateCenter
+
+        # The centre itself must be a valid part of the line.
+        SetupSpawnSamplePosition = SetupSpawnCandidateCenter
+        SetupSpawnPreviousPosition = SetupSpawnCandidateCenter
+        ValidateSetupSpawnSample()
+
+        if SetupSpawnSampleValid:
+            # Search left.
+            SetupSpawnSampleDistance = SETUP_SPAWN_SAMPLE_SPACING
+
+            while SetupSpawnSampleDistance <= SetupSpawnCandidateHalfWidth and SetupSpawnSampleValid:
+                SetupSpawnSamplePosition = SetupSpawnCandidateCenter - SetupSpawnLineDirection * SetupSpawnSampleDistance
+                SetupSpawnPreviousPosition = SetupSpawnCandidateStart
+                ValidateSetupSpawnSample()
+
+                if SetupSpawnSampleValid:
+                    SetupSpawnCandidateStart = SetupSpawnSamplePosition
+                    SetupSpawnSampleDistance += SETUP_SPAWN_SAMPLE_SPACING
+
+            # Search right independently.
+            SetupSpawnSampleDistance = SETUP_SPAWN_SAMPLE_SPACING
+            SetupSpawnSampleValid = true
+
+            while SetupSpawnSampleDistance <= SetupSpawnCandidateHalfWidth and SetupSpawnSampleValid:
+                SetupSpawnSamplePosition = SetupSpawnCandidateCenter + SetupSpawnLineDirection * SetupSpawnSampleDistance
+                SetupSpawnPreviousPosition = SetupSpawnCandidateEnd
+                ValidateSetupSpawnSample()
+
+                if SetupSpawnSampleValid:
+                    SetupSpawnCandidateEnd = SetupSpawnSamplePosition
+                    SetupSpawnSampleDistance += SETUP_SPAWN_SAMPLE_SPACING
+
+            if distance(SetupSpawnCandidateStart, SetupSpawnCandidateEnd) > distance(SetupSpawnLineStart, SetupSpawnLineEnd):
+                SetupSpawnLineStart = SetupSpawnCandidateStart
+                SetupSpawnLineEnd = SetupSpawnCandidateEnd
+
+    InitialSetupPlayers = random.shuffle(getAllPlayers())
+    InitialSetupSpawnPositions = []
+    SetupSpawnLineLength = distance(SetupSpawnLineStart, SetupSpawnLineEnd)
+
+    if SetupSpawnLineLength >= len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2:
+        SetupSpawnPositionSpacing = (
+            PADDED_PLAYER_RADIUS * 2
+            + (SetupSpawnLineLength - len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) + 1)
+        )
+        SetupSpawnFirstOffset = (
+            PADDED_PLAYER_RADIUS
+            + (SetupSpawnLineLength - len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) + 1)
+        )
+    else:
+        SetupSpawnPositionSpacing = (SetupSpawnLineLength - PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) - 1)
+        SetupSpawnFirstOffset = PADDED_PLAYER_RADIUS
+
+    for SetupSpawnPositionIndex in range(len(InitialSetupPlayers)):
+        SetupSpawnCandidatePosition = (
+            SetupSpawnLineStart
+            + SetupSpawnLineDirection
+            * (SetupSpawnFirstOffset + SetupSpawnPositionIndex * SetupSpawnPositionSpacing)
+        )
+
+        ValidateSetupSpawnCandidate()
+
+        if SetupSpawnCandidateValid:
+            InitialSetupSpawnPositions.append(SetupSpawnWalkablePosition)
+    
+    if len(InitialSetupSpawnPositions) != len(InitialSetupPlayers):
+        LogTelemetry("SETUP_SPAWN_COUNT_MISMATCH|players={}|positions={}".format(
+            len(InitialSetupPlayers), len(InitialSetupSpawnPositions)
+        ))
+
+    for SetupSpawnPositionIndex in range(len(InitialSetupSpawnPositions)):
+        InitialSetupPlayers[SetupSpawnPositionIndex].SetupSpawnPosition = InitialSetupSpawnPositions[SetupSpawnPositionIndex]
+
+
+rule "Move Player To Setup Spawn Position":
+    @Event eachPlayer
+    @Condition isInSetup() == true
+    @Condition eventPlayer.SetupSpawnPosition != null
+    @Condition distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition) > 0.25
+
+    eventPlayer.disableEnvironmentCollision(false)
+    eventPlayer.teleport(eventPlayer.SetupSpawnPosition)
+    eventPlayer.setFacing(vectorTowards(eventPlayer, SetupSpawnReferencePosition), Relativity.TO_WORLD)
+
+
+rule "Log Distance From Setup Spawn Position":
+    @Event eachPlayer
+    @Condition isGameInProgress() == true
+
+    printLog(distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition))
+
+
+rule "Log Player Missing Initial Setup":
+    @Event eachPlayer
+    @Condition isInSetup() == true
+    @Condition InitialSetupPlayers != null
+    @Condition eventPlayer not in InitialSetupPlayers
+
+    LogTelemetry("SETUP_SPAWN_PLAYER_NOT_INITIAL|player={}".format(eventPlayer))
+
+
+def ValidateSetupSpawnSample():
+    @Name "Validate Setup Spawn Sample"
+
+    SetupSpawnSampleValid = false
+
+    # Stop at normal walls between the previous valid point and this sample.
+    if distance(SetupSpawnPreviousPosition, SetupSpawnSamplePosition) > 0:
+        SetupSpawnRayHit = raycastHitPosition(
+            AtSpawnRayHeight(SetupSpawnPreviousPosition),
+            AtSpawnRayHeight(SetupSpawnSamplePosition),
+            null,
+            null,
+            false
+        )
+
+        if distance(AtSpawnRayHeight(SetupSpawnPreviousPosition), SetupSpawnRayHit) < distance(SetupSpawnPreviousPosition, SetupSpawnSamplePosition):
+            return
+
+    # Require supporting ground no more than 0.5 m below the nominal line height.
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(SetupSpawnSamplePosition),
+        SetupSpawnSamplePosition - Vector.UP * (SETUP_SPAWN_MAX_DROP + 0.01),
+        null,
+        null,
+        false
+    )
+
+    if SetupSpawnRayHit.y < SetupSpawnSamplePosition.y - SETUP_SPAWN_MAX_DROP:
+        return
+
+    # Require supporting ground in front of the line
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(SetupSpawnSamplePosition + SetupSpawnForwardDirection * SETUP_SPAWN_SIDE_SUPPORT_OFFSET),
+        SetupSpawnSamplePosition + SetupSpawnForwardDirection * SETUP_SPAWN_SIDE_SUPPORT_OFFSET - Vector.UP * (SETUP_SPAWN_MAX_DROP + 0.01),
+        null,
+        null,
+        false
+    )
+
+    if SetupSpawnRayHit.y < SetupSpawnSamplePosition.y - SETUP_SPAWN_MAX_DROP:
+        return
+    
+    # Require supporting ground behind the line
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(SetupSpawnSamplePosition - SetupSpawnForwardDirection * SETUP_SPAWN_SIDE_SUPPORT_OFFSET),
+        SetupSpawnSamplePosition - SetupSpawnForwardDirection * SETUP_SPAWN_SIDE_SUPPORT_OFFSET - Vector.UP * (SETUP_SPAWN_MAX_DROP + 0.01),
+        null,
+        null,
+        false
+    )
+
+    if SetupSpawnRayHit.y < SetupSpawnSamplePosition.y - SETUP_SPAWN_MAX_DROP:
+        return
+
+    # Require a short amount of unobstructed space towards the first objective.
+    SetupSpawnRayHit = raycastHitPosition(
+        AtSpawnRayHeight(SetupSpawnSamplePosition),
+        AtSpawnRayHeight(SetupSpawnSamplePosition + SetupSpawnForwardDirection * SETUP_SPAWN_FORWARD_CLEARANCE),
+        null,
+        null,
+        false
+    )
+
+    if distance(AtSpawnRayHeight(SetupSpawnSamplePosition), SetupSpawnRayHit) < SETUP_SPAWN_FORWARD_CLEARANCE:
+        return
+
+    SetupSpawnSampleValid = true
+
+
+def ValidateSetupSpawnCandidate():
+    @Name "Validate Setup Spawn Candidate"
+
+    SetupSpawnCandidateValid = false
+
+    SetupSpawnEndpointDistance = min(
+        distance(vect(SetupSpawnCandidatePosition.x, 0, SetupSpawnCandidatePosition.z), vect(SetupSpawnLineStart.x, 0, SetupSpawnLineStart.z)),
+        distance(vect(SetupSpawnCandidatePosition.x, 0, SetupSpawnCandidatePosition.z), vect(SetupSpawnLineEnd.x, 0, SetupSpawnLineEnd.z))
+    )
+
+    if SetupSpawnEndpointDistance < PLAYER_RADIUS:
+        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=candidate_endpoint|distance={}|required={}".format(
+            SetupSpawnCandidatePosition, SetupSpawnEndpointDistance, PLAYER_RADIUS
+        ))
+        return
+
+    SetupSpawnWalkablePosition = nearestWalkablePosition(SetupSpawnCandidatePosition)
+
+    if distance(SetupSpawnCandidatePosition, SetupSpawnWalkablePosition) > SETUP_SPAWN_MAX_PROJECTION:
+        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=projection|walkable={}|distance={}|max={}".format(
+            SetupSpawnCandidatePosition,
+            SetupSpawnWalkablePosition,
+            distance(SetupSpawnCandidatePosition, SetupSpawnWalkablePosition),
+            SETUP_SPAWN_MAX_PROJECTION
+        ))
+        return
+
+    SetupSpawnEndpointDistance = min(
+        distance(vect(SetupSpawnWalkablePosition.x, 0, SetupSpawnWalkablePosition.z), vect(SetupSpawnLineStart.x, 0, SetupSpawnLineStart.z)),
+        distance(vect(SetupSpawnWalkablePosition.x, 0, SetupSpawnWalkablePosition.z), vect(SetupSpawnLineEnd.x, 0, SetupSpawnLineEnd.z))
+    )
+
+    if SetupSpawnEndpointDistance < PLAYER_RADIUS:
+        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=walkable_endpoint|walkable={}|distance={}|required={}".format(
+            SetupSpawnCandidatePosition, SetupSpawnWalkablePosition, SetupSpawnEndpointDistance, PLAYER_RADIUS
+        ))
+        return
+
+    SetupSpawnCandidateValid = true
+
+    
 rule "Initialise":
     @Event eachPlayer
     @Condition eventPlayer.TelemetryPlayerId == 0
@@ -601,7 +1201,7 @@ def InitialisePlayerSystems():
 
 
 def InitialisePlayerHUDAndEffects():
-    # CreateDebugEffectsAndHUD()
+    CreateDebugEffectsAndHUD()
 
     # Doesn't use localPlayer as I want to be able to see it in replays
     progressBarHud(
@@ -629,7 +1229,7 @@ def InitialisePlayerHUDAndEffects():
         getAllPlayers().filter(lambda player: eventPlayer in player.JoyrideImpactVictims),
         Effect.BAD_AURA,
         Color.PURPLE,
-        eventPlayer.getEyePosition(),
+        updateEveryFrame(eventPlayer.getEyePosition()),
         0.85,
         EffectReeval.VISIBILITY_POSITION_AND_RADIUS
     )
@@ -638,12 +1238,12 @@ def InitialisePlayerHUDAndEffects():
         getAllPlayers().filter(lambda player: eventPlayer in player.JoyrideImpactVictims),
         Effect.SPHERE,
         Color.PURPLE,
-        eventPlayer.getEyePosition() + 0.5 * Vector.UP,
+        updateEveryFrame(eventPlayer.getEyePosition() + 0.5 * Vector.UP),
         0.15,
         EffectReeval.VISIBILITY_POSITION_AND_RADIUS
     )
 
-    eventPlayer.disableGamemodeHud()
+    # eventPlayer.disableGamemodeHud()
 
 
 rule "Local UX Setup":
@@ -922,7 +1522,45 @@ rule "Local UX Setup":
         Color.WHITE if len(localPlayer.CountOfEachBuff.filter(lambda x: x > 0)) > 0 else Color.LIGHT_GRAY,
         HudReeval.VISIBILITY_STRING_AND_COLOR
     )
-    
+
+    hudText(
+        localPlayer,
+        updateEveryFrame(
+            raycastHitPosition(
+                localPlayer.getEyePosition(),
+                localPlayer.getEyePosition() + localPlayer.getFacingDirection() * 1000,
+                null,
+                null,
+                false
+            )
+        ),
+        null,
+        "Ray Cast Hit Position",
+        HudPosition.LEFT,
+        0,
+        Color.WHITE,
+        Color.WHITE,
+        Color.WHITE,
+        HudReeval.VISIBILITY_AND_STRING
+    )
+
+    createEffect(
+        localPlayer,
+        Effect.SPHERE,
+        Color.GREEN,
+        updateEveryFrame(
+            raycastHitPosition(
+                localPlayer.getEyePosition(),
+                localPlayer.getEyePosition() + localPlayer.getFacingDirection() * 1000,
+                null,
+                null,
+                false
+            )
+        ),
+        0.1,
+        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+    )
+        
     for i in range(len(UpgradeChoiceButtons)):
         hudText(
             localPlayer if localPlayer.IsSelectingUpgrade and len(BuffIndicesInShop) >= evalOnce(i + 1) else null,
@@ -1039,37 +1677,18 @@ rule "Mantle - Reset":
 
 
 rule "Teleport Dummy To Initial Objective":
+    @Disabled
     @Event eachPlayer
     @Condition eventPlayer.isDummy() == true
     @Condition CurrentObjective != null
     @Condition distance(eventPlayer, CurrentObjective) > ObjectiveRadius
+    @Condition IsObjectiveUnlocked
 
     eventPlayer.teleport(CurrentObjective)
     wait(1)
 
     if ruleCondition:
         loop()
-
-
-rule "Set Objective Positions":
-    @Condition getCurrentGamemode() == Gamemode.FFA
-    @Condition ObjectiveRadius > 0
-    @Condition ChargingStationRadius > 0
-    
-    ObjectivePositions = getSpawnPoints(Team.ALL).map(lambda x: x.getPosition())
-    ChargingStationPosition = random.choice(ObjectivePositions)
-    if createWorkshopSettingBool("Testing", "Spawn Dummy Bot", false):
-        createDummy(Hero.SHION, Team.ALL, 1, ChargingStationPosition, Vector.FORWARD)
-
-    #Keep objectives sufficiently far from the charging station
-    ObjectivePositions = ObjectivePositions.filter(
-        lambda x:
-            distance(
-                vect(x.x, 0, x.z),
-                vect(ChargingStationPosition.x, 0, ChargingStationPosition.z)
-            ) + ObjectiveRadius - ChargingStationRadius > 30
-    )
-    RemainingObjectiveIndices = ObjectivePositions.map(lambda _, i_: i_)
 
 
 def UpdateMoveSpeed():
@@ -1097,35 +1716,88 @@ def UpdateMoveSpeed():
     
 def ChooseObjective():
     @Name "Choose Objective"
-    
+
     AllowedObjectiveIndices = RemainingObjectiveIndices.map(lambda x: x)
+
     if CurrentObjectiveIndex > -1:
         PreviousObjective = ObjectivePositions[CurrentObjectiveIndex]
-        AllowedObjectiveIndices = AllowedObjectiveIndices.filter(lambda x: magnitude(vect((ObjectivePositions[x] - PreviousObjective).x, 0, (ObjectivePositions[x] - PreviousObjective).z)) > 2 * ObjectiveRadius)
+        AllowedObjectiveIndices = AllowedObjectiveIndices.filter(
+            lambda x:
+                magnitude(
+                    vect(
+                        (ObjectivePositions[x] - PreviousObjective).x,
+                        0,
+                        (ObjectivePositions[x] - PreviousObjective).z
+                    )
+                ) > 2 * ObjectiveRadius
+        )
+
     if CurrentShopPosition:
-        AllowedObjectiveIndices = AllowedObjectiveIndices.filter(lambda x: magnitude(vect((ObjectivePositions[x] - CurrentShopPosition).x, 0, (ObjectivePositions[x] - CurrentShopPosition).z)) > 2 * ObjectiveRadius)
+        AllowedObjectiveIndices = AllowedObjectiveIndices.filter(
+            lambda x:
+                magnitude(
+                    vect(
+                        (ObjectivePositions[x] - CurrentShopPosition).x,
+                        0,
+                        (ObjectivePositions[x] - CurrentShopPosition).z
+                    )
+                ) > 2 * ObjectiveRadius
+        )
+
     if len(AllowedObjectiveIndices) == 0:
         RemainingObjectiveIndices = ObjectivePositions.map(lambda _, i_: i_)
         wait()
         loop()
 
-    CurrentObjectiveIndex = random.choice(AllowedObjectiveIndices)
+    if CapturedObjectives == 0:
+        CurrentObjectiveIndex = sorted(
+            AllowedObjectiveIndices,
+            lambda x: distance(ObjectivePositions[x], ChargingStationPosition)
+        ).last()
+    else:
+        CurrentObjectiveIndex = random.choice(AllowedObjectiveIndices)
+
     RemainingObjectiveIndices.remove(CurrentObjectiveIndex)
     CurrentObjective = ObjectivePositions[CurrentObjectiveIndex]
+
+    if CapturedObjectives == 0:
+        SetupSpawnReferencePosition = CurrentObjective
+
     getAllPlayers().filter(lambda player: player.isDummy()).teleport(CurrentObjective)
 
 
 rule "Choose And Unlock New Objective":
-    @Condition isGameInProgress() == true
+    @Condition isInSetup() or isGameInProgress()
     @Condition CurrentObjective == null
     
     IsObjectiveVisible = false
     IsObjectiveUnlocked = false
+
     TrySpawnNewShop()
     ChooseObjective()
-    ObjectiveUnlockTime = getTotalTimeElapsed() + max(createWorkshopSettingInt("General", "Minimum Time Between Objectives", 11, 0, 50), 4 + (distance(CurrentObjective, PreviousObjective) / 13 + 1 if PreviousObjective else 0))
-    setObjectiveDescription(getAllPlayers(), "Next Objective Unlocks In {0}".format(max(0, ObjectiveUnlockTime - getTotalTimeElapsed())), HudReeval.VISIBILITY_AND_STRING)
-    wait(4)
+
+    ObjectiveUnlockTime = getTotalTimeElapsed() + max(
+        createWorkshopSettingInt(
+            "General",
+            "Minimum Time Between Objectives",
+            11,
+            0,
+            50
+        ),
+        TIME_BETWEEN_SHOP_AND_OBJECTIVE + distance(CurrentObjective, PreviousObjective if PreviousObjective else ChargingStationPosition) / 13 + 1
+    ) + (INITIAL_COUNTDOWN_TIME if isInSetup() else 0)
+
+    setObjectiveDescription(
+        getAllPlayers(),
+        "Next Objective Unlocks In {0}".format(
+            max(0, ObjectiveUnlockTime - getTotalTimeElapsed())
+        ),
+        HudReeval.VISIBILITY_AND_STRING
+    )
+
+    if PreviousObjective:
+        wait(TIME_BETWEEN_SHOP_AND_OBJECTIVE)
+
     IsObjectiveVisible = true
     
     waitUntil(getTotalTimeElapsed() >= ObjectiveUnlockTime - 3, 99999)
@@ -1260,7 +1932,7 @@ rule "Vertically outside of the zone":
 def CreateDebugEffectsAndHUD():
     @Name "Debug"
     
-    hudHeader(eventPlayer, eventPlayer.getThrottle(), HudPosition.RIGHT, 0, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
+    /* hudHeader(eventPlayer, eventPlayer.getThrottle(), HudPosition.RIGHT, 0, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
     hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true))), null, "Upper Distance", HudPosition.TOP, 0, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
     hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 1, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 1, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1, 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true))), null, "1m Distance", HudPosition.TOP, 1, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
     hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 0.25, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 0.25, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 0.25, 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true))), null, "0.25m Distance", HudPosition.TOP, 2, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
@@ -1271,7 +1943,17 @@ def CreateDebugEffectsAndHUD():
     createBeam(getAllPlayers(), Beam.GRAPPLE, worldVector(vect(0, 1, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1, 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), Color.WHITE, EffectReeval.VISIBILITY_POSITION_AND_RADIUS)
     hudText(eventPlayer, "{0}".format(eventPlayer.getThrottle().z > 0.5), null, "Forward Input", HudPosition.TOP, 5, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
     hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 1, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 1, 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1, 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true)) < 1.4), null, "1m Ray Condition", HudPosition.TOP, 6, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
-    hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true)) > 1.5), null, "Upper Ray Condition", HudPosition.TOP, 7, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING)
+    hudText(eventPlayer, "{0}".format(distance(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), raycastHitPosition(worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 0), eventPlayer, Transform.ROTATION_AND_TRANSLATION), worldVector(vect(0, 1.5 * (eventPlayer.getEyePosition().y - eventPlayer.getPosition().y), 2), eventPlayer, Transform.ROTATION_AND_TRANSLATION), null, eventPlayer, true)) > 1.5), null, "Upper Ray Condition", HudPosition.TOP, 7, Color.WHITE, Color.WHITE, Color.WHITE, HudReeval.VISIBILITY_AND_STRING) */
+    createBeam(
+        getAllPlayers(),
+        Beam.GRAPPLE,
+        SetupSpawnLineStart + Vector.UP * 0.1,
+        SetupSpawnLineEnd + Vector.UP * 0.1,
+        Color.WHITE,
+        EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+    )
+    createEffect(getAllPlayers(), Effect.LIGHT_SHAFT, Color.RED, SetupSpawnLineStart, 0.1, EffectReeval.VISIBILITY_POSITION_AND_RADIUS)
+    createEffect(getAllPlayers(), Effect.LIGHT_SHAFT, Color.RED, SetupSpawnLineEnd, 0.1, EffectReeval.VISIBILITY_POSITION_AND_RADIUS)
 
 
 rule "Set Capturing Players":
@@ -1590,7 +2272,20 @@ rule "Regain Charge in Charging Station":
     @Condition (eventPlayer.Charge < eventPlayer.MaximumCharge)
     @Condition (eventPlayer.IsOnChargingStation or eventPlayer.isDummy()) == true
     
-    eventPlayer.Charge = min(eventPlayer.MaximumCharge, eventPlayer.Charge + (0.016 * createWorkshopSettingInt("General", "Charge Rate from Charging Station", 100, 0, 300)))
+    eventPlayer.Charge = min(
+        eventPlayer.MaximumCharge,
+        eventPlayer.Charge + 0.016 * (
+            eventPlayer.MaximumCharge / INITIAL_COUNTDOWN_TIME
+            if isInSetup()
+            else createWorkshopSettingInt(
+                "General",
+                "Charge Rate from Charging Station",
+                100,
+                0,
+                300
+            )
+        )
+    )
     wait(0.016, Wait.ABORT_WHEN_FALSE)
     if ruleCondition:
         loop()
@@ -2140,6 +2835,8 @@ def ResurrectMe():
         eventPlayer.teleport(TemporarySanctuaryPosition)
     else:
         eventPlayer.teleport(ChargingStationPosition)
+        if IsObjectiveVisible and CurrentObjective:
+            eventPlayer.setFacing(vectorTowards(eventPlayer, CurrentObjective), Relativity.TO_WORLD)
     
     eventPlayer.RespawnAtTemporarySanctuary = false    
     eventPlayer.resurrect()
