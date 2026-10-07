@@ -126,6 +126,31 @@ globalvar SetupSpawnEndpointDistance
 globalvar SetupSpawnCandidateValid
 globalvar InitialSetupPlayers
 
+globalvar SetupSpawnIntervalStarts
+globalvar SetupSpawnIntervalEnds
+globalvar SetupSpawnIntervalPlayers
+globalvar SetupSpawnIntervalSpace
+globalvar SetupSpawnIntervalIndex
+globalvar SetupSpawnIntervalOpen
+globalvar SetupSpawnIntervalStart
+globalvar SetupSpawnLastValidOffset
+globalvar SetupSpawnIntervalSteps
+globalvar SetupSpawnIntervalStep
+globalvar SetupSpawnTotalIntervalLength
+globalvar SetupSpawnPlayersAssigned
+globalvar SetupSpawnBestInterval
+globalvar SetupSpawnBestSpace
+globalvar SetupSpawnIntervalSampleIndex
+globalvar SetupSpawnIntervalLength
+globalvar SetupSpawnBodyRayIndex
+globalvar SetupSpawnCheckDirection
+globalvar SetupSpawnBodyHeightIndex
+globalvar SetupSpawnBodyHeight
+
+globalvar SetupSpawnCandidateScore
+globalvar SetupSpawnBestScore
+globalvar SetupSpawnBestLine
+
 #Player variables
 
 # Movement / traversal
@@ -221,8 +246,14 @@ subroutine InitialiseChargeSystem
 subroutine InitialisePlayerSystems
 subroutine InitialisePlayerHUDAndEffects
 subroutine ChooseChargingStation
-subroutine ValidateSetupSpawnSample
-subroutine ValidateSetupSpawnCandidate
+subroutine FindSetupSpawnLine
+subroutine FindSetupSpawnIntervals
+subroutine ShowSetupSpawnIntervals
+subroutine AllocateSetupSpawnPlayers
+subroutine CreateSetupSpawnPositions
+subroutine AssignSetupSpawnPositions
+subroutine CheckSetupSpawnLineSample
+subroutine CheckSetupSpawnPosition
 
 #Activated extensions
 
@@ -238,6 +269,7 @@ macro TIME_BETWEEN_SHOP_AND_OBJECTIVE = 4
 macro INITIAL_COUNTDOWN_TIME = 5
 macro CHARGING_STATION_SCORE_RAYS = 16
 
+macro MAX_ALLOWED_DISTANCE_FROM_SPAWN_DURING_SETUP = 1
 macro SETUP_SPAWN_RAY_HEIGHT = 1
 macro SETUP_SPAWN_CANDIDATE_SPACING = 0.5
 macro SETUP_SPAWN_SAMPLE_SPACING = 0.5
@@ -245,8 +277,12 @@ macro SETUP_SPAWN_MAX_DROP = 0.5
 macro SETUP_SPAWN_FORWARD_CLEARANCE = 3.4
 macro PLAYER_RADIUS = 0.5
 macro PADDED_PLAYER_RADIUS = PLAYER_RADIUS + 0.02
-macro SETUP_SPAWN_SIDE_SUPPORT_OFFSET = PADDED_PLAYER_RADIUS
+macro SETUP_SPAWN_SIDE_SUPPORT_OFFSET = 1
 macro SETUP_SPAWN_MAX_PROJECTION = 0.5
+macro SETUP_SPAWN_BODY_RAYS = 8
+macro SETUP_SPAWN_BODY_RAY_LEVELS = 3
+macro SETUP_SPAWN_BODY_RAY_MIN_HEIGHT = 0.2
+macro SETUP_SPAWN_BODY_RAY_HEIGHT_STEP = 0.35
 
 macro AtSpawnRayHeight(position):
     position + Vector.UP * SETUP_SPAWN_RAY_HEIGHT
@@ -836,7 +872,7 @@ def ChooseChargingStation():
             ChargingStationPosition = ChargingStationCandidatePosition
 
 
-rule "Set Up Initial Spawn Line":
+rule "Set Up Initial Spawns":
     @Condition isInSetup() == true
 
     waitUntil(SetupSpawnReferencePosition != null, 99999)
@@ -844,7 +880,33 @@ rule "Set Up Initial Spawn Line":
     SetupSpawnForwardDirection = angleToDirection(horizontalAngleOfDirection(SetupSpawnReferencePosition - ChargingStationPosition), 0)
     SetupSpawnLineDirection = vect(-SetupSpawnForwardDirection.z, 0, SetupSpawnForwardDirection.x)
 
-    # Find the longitudinal range within which candidate line centres may be tested.
+    FindSetupSpawnLine()
+
+    InitialSetupPlayers = random.shuffle(getAllPlayers())
+    InitialSetupSpawnPositions = []
+
+    FindSetupSpawnIntervals()
+    ShowSetupSpawnIntervals()
+
+    if len(SetupSpawnIntervalStarts) == 0:
+        LogTelemetry("SETUP_SPAWN_NO_VALID_INTERVALS|lineStart={}|lineEnd={}".format(SetupSpawnLineStart, SetupSpawnLineEnd))
+
+        for SetupSpawnPositionIndex in range(len(InitialSetupPlayers)):
+            InitialSetupPlayers[SetupSpawnPositionIndex].SetupSpawnPosition = ChargingStationPosition
+
+        return
+
+    AllocateSetupSpawnPlayers()
+    CreateSetupSpawnPositions()
+    AssignSetupSpawnPositions()
+
+
+def FindSetupSpawnLine():
+    @Name "Find Setup Spawn Line"
+
+    # Find the broad line within the Charging Station. These checks are
+    # deliberately coarse: local obstructions are handled later as intervals.
+
     SetupSpawnRayHit = raycastHitPosition(
         AtSpawnRayHeight(ChargingStationPosition),
         AtSpawnRayHeight(ChargingStationPosition - SetupSpawnForwardDirection * ChargingStationRadius),
@@ -867,9 +929,9 @@ rule "Set Up Initial Spawn Line":
         distance(AtSpawnRayHeight(ChargingStationPosition), SetupSpawnRayHit) / SETUP_SPAWN_CANDIDATE_SPACING
     )
 
-    # Known-valid fallback if every candidate somehow fails.
-    SetupSpawnLineStart = ChargingStationPosition
-    SetupSpawnLineEnd = ChargingStationPosition
+    # Keep the best candidate found during the search.
+    SetupSpawnBestScore = -1
+    SetupSpawnBestLine = [ChargingStationPosition, ChargingStationPosition]
 
     for SetupSpawnSearchIndex in range(SetupSpawnSearchMinIndex, SetupSpawnSearchMaxIndex + 1):
         SetupSpawnCandidateCenter = ChargingStationPosition + SetupSpawnForwardDirection * (SetupSpawnSearchIndex * SETUP_SPAWN_CANDIDATE_SPACING)
@@ -878,10 +940,10 @@ rule "Set Up Initial Spawn Line":
         SetupSpawnCandidateStart = SetupSpawnCandidateCenter
         SetupSpawnCandidateEnd = SetupSpawnCandidateCenter
 
-        # The centre itself must be a valid part of the line.
+        # The centre itself must be a valid part of the broad line.
         SetupSpawnSamplePosition = SetupSpawnCandidateCenter
         SetupSpawnPreviousPosition = SetupSpawnCandidateCenter
-        ValidateSetupSpawnSample()
+        CheckSetupSpawnLineSample()
 
         if SetupSpawnSampleValid:
             # Search left.
@@ -890,7 +952,7 @@ rule "Set Up Initial Spawn Line":
             while SetupSpawnSampleDistance <= SetupSpawnCandidateHalfWidth and SetupSpawnSampleValid:
                 SetupSpawnSamplePosition = SetupSpawnCandidateCenter - SetupSpawnLineDirection * SetupSpawnSampleDistance
                 SetupSpawnPreviousPosition = SetupSpawnCandidateStart
-                ValidateSetupSpawnSample()
+                CheckSetupSpawnLineSample()
 
                 if SetupSpawnSampleValid:
                     SetupSpawnCandidateStart = SetupSpawnSamplePosition
@@ -903,70 +965,351 @@ rule "Set Up Initial Spawn Line":
             while SetupSpawnSampleDistance <= SetupSpawnCandidateHalfWidth and SetupSpawnSampleValid:
                 SetupSpawnSamplePosition = SetupSpawnCandidateCenter + SetupSpawnLineDirection * SetupSpawnSampleDistance
                 SetupSpawnPreviousPosition = SetupSpawnCandidateEnd
-                ValidateSetupSpawnSample()
+                CheckSetupSpawnLineSample()
 
                 if SetupSpawnSampleValid:
                     SetupSpawnCandidateEnd = SetupSpawnSamplePosition
                     SetupSpawnSampleDistance += SETUP_SPAWN_SAMPLE_SPACING
 
-            if distance(SetupSpawnCandidateStart, SetupSpawnCandidateEnd) > distance(SetupSpawnLineStart, SetupSpawnLineEnd):
-                SetupSpawnLineStart = SetupSpawnCandidateStart
-                SetupSpawnLineEnd = SetupSpawnCandidateEnd
+            # Check how much of this broad candidate is actually usable by Shion.
+            SetupSpawnLineStart = SetupSpawnCandidateStart
+            SetupSpawnLineEnd = SetupSpawnCandidateEnd
+            SetupSpawnCandidateScore = 0
+            SetupSpawnPositionIndex = -1
 
-    InitialSetupPlayers = random.shuffle(getAllPlayers())
-    InitialSetupSpawnPositions = []
+            if distance(SetupSpawnLineStart, SetupSpawnLineEnd) >= PADDED_PLAYER_RADIUS * 2:
+                SetupSpawnIntervalSteps = max(
+                    1,
+                    ceil((distance(SetupSpawnLineStart, SetupSpawnLineEnd) - PADDED_PLAYER_RADIUS * 2) / SETUP_SPAWN_SAMPLE_SPACING)
+                )
+                SetupSpawnIntervalStep = (
+                    distance(SetupSpawnLineStart, SetupSpawnLineEnd) - PADDED_PLAYER_RADIUS * 2
+                ) / SetupSpawnIntervalSteps
+
+                for SetupSpawnIntervalSampleIndex in range(SetupSpawnIntervalSteps + 1):
+                    SetupSpawnSampleDistance = PADDED_PLAYER_RADIUS + SetupSpawnIntervalSampleIndex * SetupSpawnIntervalStep
+                    SetupSpawnCandidatePosition = SetupSpawnLineStart + SetupSpawnLineDirection * SetupSpawnSampleDistance
+                    CheckSetupSpawnPosition()
+
+                    if SetupSpawnCandidateValid:
+                        SetupSpawnCandidateScore += 1
+            
+            LogTelemetry(
+                "SETUP_SPAWN_LINE_CANDIDATE|search={}|score={}|length={}|start={}|end={}".format(
+                    SetupSpawnSearchIndex,
+                    SetupSpawnCandidateScore,
+                    distance(SetupSpawnLineStart, SetupSpawnLineEnd),
+                    SetupSpawnLineStart,
+                    SetupSpawnLineEnd
+                )
+            )
+
+            if SetupSpawnCandidateScore > SetupSpawnBestScore or (
+                SetupSpawnCandidateScore == SetupSpawnBestScore
+                and distance(SetupSpawnLineStart, SetupSpawnLineEnd) > distance(SetupSpawnBestLine[0], SetupSpawnBestLine[1])
+            ):
+                SetupSpawnBestScore = SetupSpawnCandidateScore
+                SetupSpawnBestLine = [SetupSpawnLineStart, SetupSpawnLineEnd]
+
+        wait()
+    
+    SetupSpawnLineStart = SetupSpawnBestLine[0]
+    SetupSpawnLineEnd = SetupSpawnBestLine[1]
+
+    LogTelemetry(
+        "SETUP_SPAWN_LINE_SELECTED|score={}|length={}|start={}|end={}".format(
+            SetupSpawnBestScore,
+            distance(SetupSpawnLineStart, SetupSpawnLineEnd),
+            SetupSpawnLineStart,
+            SetupSpawnLineEnd
+        )
+    )
+
+
+def FindSetupSpawnIntervals():
+    @Name "Find Setup Spawn Intervals"
+
+    # Scan the broad line for contiguous ranges where an actual Shion
+    # position passes the stricter spawn-position checks.
+
     SetupSpawnLineLength = distance(SetupSpawnLineStart, SetupSpawnLineEnd)
+    SetupSpawnIntervalStarts = []
+    SetupSpawnIntervalEnds = []
+    SetupSpawnIntervalOpen = false
 
-    if SetupSpawnLineLength >= len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2:
-        SetupSpawnPositionSpacing = (
-            PADDED_PLAYER_RADIUS * 2
-            + (SetupSpawnLineLength - len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) + 1)
-        )
-        SetupSpawnFirstOffset = (
-            PADDED_PLAYER_RADIUS
-            + (SetupSpawnLineLength - len(InitialSetupPlayers) * PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) + 1)
-        )
-    else:
-        SetupSpawnPositionSpacing = (SetupSpawnLineLength - PADDED_PLAYER_RADIUS * 2) / (len(InitialSetupPlayers) - 1)
-        SetupSpawnFirstOffset = PADDED_PLAYER_RADIUS
+    # Suppress final-position rejection telemetry during this exploratory scan.
+    SetupSpawnPositionIndex = -1
 
-    for SetupSpawnPositionIndex in range(len(InitialSetupPlayers)):
-        SetupSpawnCandidatePosition = (
-            SetupSpawnLineStart
-            + SetupSpawnLineDirection
-            * (SetupSpawnFirstOffset + SetupSpawnPositionIndex * SetupSpawnPositionSpacing)
-        )
+    SetupSpawnIntervalSteps = max(
+        1,
+        ceil((SetupSpawnLineLength - PADDED_PLAYER_RADIUS * 2) / SETUP_SPAWN_SAMPLE_SPACING)
+    )
+    SetupSpawnIntervalStep = (
+        SetupSpawnLineLength - PADDED_PLAYER_RADIUS * 2
+    ) / SetupSpawnIntervalSteps
 
-        ValidateSetupSpawnCandidate()
+    for SetupSpawnIntervalSampleIndex in range(SetupSpawnIntervalSteps + 1):
+        SetupSpawnSampleDistance = PADDED_PLAYER_RADIUS + SetupSpawnIntervalSampleIndex * SetupSpawnIntervalStep
+        SetupSpawnCandidatePosition = SetupSpawnLineStart + SetupSpawnLineDirection * SetupSpawnSampleDistance
+        CheckSetupSpawnPosition()            
 
         if SetupSpawnCandidateValid:
-            InitialSetupSpawnPositions.append(SetupSpawnWalkablePosition)
-    
+            if not SetupSpawnIntervalOpen:
+                SetupSpawnIntervalStart = SetupSpawnSampleDistance
+                SetupSpawnIntervalOpen = true
+
+            SetupSpawnLastValidOffset = SetupSpawnSampleDistance
+
+        elif SetupSpawnIntervalOpen:
+            SetupSpawnIntervalStarts.append(SetupSpawnIntervalStart)
+            SetupSpawnIntervalEnds.append(SetupSpawnLastValidOffset)
+            SetupSpawnIntervalOpen = false
+
+    if SetupSpawnIntervalOpen:
+        SetupSpawnIntervalStarts.append(SetupSpawnIntervalStart)
+        SetupSpawnIntervalEnds.append(SetupSpawnLastValidOffset)
+
+    LogTelemetry(
+        "SETUP_SPAWN_INTERVALS|starts={}|ends={}".format(
+            arrayToString(SetupSpawnIntervalStarts),
+            arrayToString(SetupSpawnIntervalEnds)
+        )
+    )
+
+
+def ShowSetupSpawnIntervals():
+    @Name "Show Setup Spawn Intervals"
+
+    # Debug display: green beam = physical interval, aqua shafts = boundaries.
+
+    for SetupSpawnIntervalIndex in range(len(SetupSpawnIntervalStarts)):
+        createBeam(
+            getAllPlayers(),
+            Beam.GOOD,
+            evalOnce(
+                SetupSpawnLineStart
+                + SetupSpawnLineDirection * max(0, SetupSpawnIntervalStarts[SetupSpawnIntervalIndex] - PADDED_PLAYER_RADIUS)
+                + Vector.UP * 0.15
+            ),
+            evalOnce(
+                SetupSpawnLineStart
+                + SetupSpawnLineDirection * min(SetupSpawnLineLength, SetupSpawnIntervalEnds[SetupSpawnIntervalIndex] + PADDED_PLAYER_RADIUS)
+                + Vector.UP * 0.15
+            ),
+            Color.GREEN,
+            EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+        )
+
+        createEffect(
+            getAllPlayers(),
+            Effect.LIGHT_SHAFT,
+            Color.AQUA,
+            evalOnce(
+                SetupSpawnLineStart
+                + SetupSpawnLineDirection * max(0, SetupSpawnIntervalStarts[SetupSpawnIntervalIndex] - PADDED_PLAYER_RADIUS)
+            ),
+            0.1,
+            EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+        )
+
+        createEffect(
+            getAllPlayers(),
+            Effect.LIGHT_SHAFT,
+            Color.AQUA,
+            evalOnce(
+                SetupSpawnLineStart
+                + SetupSpawnLineDirection * min(SetupSpawnLineLength, SetupSpawnIntervalEnds[SetupSpawnIntervalIndex] + PADDED_PLAYER_RADIUS)
+            ),
+            0.1,
+            EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+        )
+
+
+def AllocateSetupSpawnPlayers():
+    @Name "Allocate Setup Spawn Players"
+
+    # First allocate proportionally to physical interval length. Then give
+    # players left by flooring to the interval with the most space remaining.
+
+    SetupSpawnIntervalPlayers = []
+    SetupSpawnIntervalSpace = []
+    SetupSpawnTotalIntervalLength = 0
+
+    for SetupSpawnIntervalIndex in range(len(SetupSpawnIntervalStarts)):
+        SetupSpawnIntervalLength = (
+            SetupSpawnIntervalEnds[SetupSpawnIntervalIndex]
+            - SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+            + PADDED_PLAYER_RADIUS * 2
+        )
+        SetupSpawnTotalIntervalLength += SetupSpawnIntervalLength
+
+    SetupSpawnPlayersAssigned = 0
+
+    for SetupSpawnIntervalIndex in range(len(SetupSpawnIntervalStarts)):
+        SetupSpawnIntervalLength = (
+            SetupSpawnIntervalEnds[SetupSpawnIntervalIndex]
+            - SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+            + PADDED_PLAYER_RADIUS * 2
+        )
+        SetupSpawnIntervalPlayers.append(
+            floor(len(InitialSetupPlayers) * SetupSpawnIntervalLength / SetupSpawnTotalIntervalLength)
+        )
+        SetupSpawnIntervalSpace.append(
+            SetupSpawnIntervalLength - SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] * PADDED_PLAYER_RADIUS * 2
+        )
+        SetupSpawnPlayersAssigned += SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex]
+
+    while SetupSpawnPlayersAssigned < len(InitialSetupPlayers):
+        SetupSpawnBestInterval = -1
+        SetupSpawnBestSpace = -99999
+
+        for SetupSpawnIntervalIndex in range(len(SetupSpawnIntervalStarts)):
+            if SetupSpawnIntervalSpace[SetupSpawnIntervalIndex] > SetupSpawnBestSpace:
+                SetupSpawnBestInterval = SetupSpawnIntervalIndex
+                SetupSpawnBestSpace = SetupSpawnIntervalSpace[SetupSpawnIntervalIndex]
+
+        SetupSpawnIntervalPlayers[SetupSpawnBestInterval] += 1
+        SetupSpawnIntervalSpace[SetupSpawnBestInterval] -= PADDED_PLAYER_RADIUS * 2
+        SetupSpawnPlayersAssigned += 1
+
+
+def CreateSetupSpawnPositions():
+    @Name "Create Setup Spawn Positions"
+
+    # Convert each interval's player allocation into evenly spaced exact
+    # positions, then run the strict position check again before storing them.
+
+    InitialSetupSpawnPositions = []
+
+    for SetupSpawnIntervalIndex in range(len(SetupSpawnIntervalStarts)):
+        if SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] > 0:
+            SetupSpawnIntervalLength = (
+                SetupSpawnIntervalEnds[SetupSpawnIntervalIndex]
+                - SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+                + PADDED_PLAYER_RADIUS * 2
+            )
+
+            if SetupSpawnIntervalLength >= SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] * PADDED_PLAYER_RADIUS * 2:
+                SetupSpawnFirstOffset = (
+                    SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+                    + (
+                        SetupSpawnIntervalLength
+                        - SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] * PADDED_PLAYER_RADIUS * 2
+                    ) / (SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] + 1)
+                )
+                SetupSpawnPositionSpacing = (
+                    PADDED_PLAYER_RADIUS * 2
+                    + (
+                        SetupSpawnIntervalLength
+                        - SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] * PADDED_PLAYER_RADIUS * 2
+                    ) / (SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] + 1)
+                )
+            else:
+                SetupSpawnFirstOffset = SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+                SetupSpawnPositionSpacing = (
+                    SetupSpawnIntervalEnds[SetupSpawnIntervalIndex]
+                    - SetupSpawnIntervalStarts[SetupSpawnIntervalIndex]
+                ) / (SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex] - 1)
+
+            for SetupSpawnPositionIndex in range(SetupSpawnIntervalPlayers[SetupSpawnIntervalIndex]):
+                SetupSpawnCandidatePosition = (
+                    SetupSpawnLineStart
+                    + SetupSpawnLineDirection * (SetupSpawnFirstOffset + SetupSpawnPositionIndex * SetupSpawnPositionSpacing)
+                )
+
+                CheckSetupSpawnPosition()
+
+                if SetupSpawnCandidateValid:
+                    SetupSpawnRayHit = raycastHitPosition(
+                        SetupSpawnWalkablePosition + Vector.UP,
+                        SetupSpawnWalkablePosition - Vector.UP,
+                        null,
+                        null,
+                        false
+                    )
+
+                    LogTelemetry(
+                        "SETUP_SPAWN_FINAL|position={}|floor={}|floorDelta={}".format(
+                            SetupSpawnWalkablePosition,
+                            SetupSpawnRayHit,
+                            SetupSpawnWalkablePosition.y - SetupSpawnRayHit.y
+                        )
+                    )
+
+                    InitialSetupSpawnPositions.append(SetupSpawnWalkablePosition)
+
     if len(InitialSetupSpawnPositions) != len(InitialSetupPlayers):
-        LogTelemetry("SETUP_SPAWN_COUNT_MISMATCH|players={}|positions={}".format(
-            len(InitialSetupPlayers), len(InitialSetupSpawnPositions)
-        ))
+        LogTelemetry(
+            "SETUP_SPAWN_COUNT_MISMATCH|players={}|positions={}|starts={}|ends={}|alloc={}".format(
+                len(InitialSetupPlayers),
+                len(InitialSetupSpawnPositions),
+                arrayToString(SetupSpawnIntervalStarts),
+                arrayToString(SetupSpawnIntervalEnds),
+                arrayToString(SetupSpawnIntervalPlayers)
+            )
+        )
+
+
+def AssignSetupSpawnPositions():
+    @Name "Assign Setup Spawn Positions"
+
+    # Random player order was chosen earlier; spatial positions stay ordered.
 
     for SetupSpawnPositionIndex in range(len(InitialSetupSpawnPositions)):
         InitialSetupPlayers[SetupSpawnPositionIndex].SetupSpawnPosition = InitialSetupSpawnPositions[SetupSpawnPositionIndex]
+
+        createEffect(
+            getAllPlayers(),
+            Effect.SPHERE,
+            Color.YELLOW,
+            evalOnce(InitialSetupSpawnPositions[SetupSpawnPositionIndex]),
+            0.08,
+            EffectReeval.VISIBILITY_POSITION_AND_RADIUS
+        )
 
 
 rule "Move Player To Setup Spawn Position":
     @Event eachPlayer
     @Condition isInSetup() == true
     @Condition eventPlayer.SetupSpawnPosition != null
-    @Condition distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition) > 0.25
+    @Condition distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition) > MAX_ALLOWED_DISTANCE_FROM_SPAWN_DURING_SETUP
 
-    eventPlayer.disableEnvironmentCollision(false)
+    LogTelemetry(
+        "SETUP_SPAWN_DISPLACED|player={}|target={}|actual={}|distance={}|delta={}".format(
+            eventPlayer,
+            eventPlayer.SetupSpawnPosition,
+            eventPlayer.getPosition(),
+            distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition),
+            eventPlayer.getPosition() - eventPlayer.SetupSpawnPosition
+        )
+    )
+
     eventPlayer.teleport(eventPlayer.SetupSpawnPosition)
     eventPlayer.setFacing(vectorTowards(eventPlayer, SetupSpawnReferencePosition), Relativity.TO_WORLD)
 
 
-rule "Log Distance From Setup Spawn Position":
+rule "Debug Setup Spawn Displacement":
     @Event eachPlayer
-    @Condition isGameInProgress() == true
+    @Condition isInSetup() == true
+    @Condition eventPlayer.SetupSpawnPosition != null
 
-    printLog(distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition))
+    hudText(
+        eventPlayer,
+        updateEveryFrame(
+            "Distance: {}\nDelta: {}".format(
+                distance(eventPlayer.getPosition(), eventPlayer.SetupSpawnPosition),
+                eventPlayer.getPosition() - eventPlayer.SetupSpawnPosition
+            )
+        ),
+        null,
+        "SETUP SPAWN",
+        HudPosition.LEFT,
+        0,
+        Color.WHITE,
+        Color.WHITE,
+        Color.WHITE,
+        HudReeval.VISIBILITY_AND_STRING
+    )
 
 
 rule "Log Player Missing Initial Setup":
@@ -978,8 +1321,11 @@ rule "Log Player Missing Initial Setup":
     LogTelemetry("SETUP_SPAWN_PLAYER_NOT_INITIAL|player={}".format(eventPlayer))
 
 
-def ValidateSetupSpawnSample():
-    @Name "Validate Setup Spawn Sample"
+def CheckSetupSpawnLineSample():
+    @Name "Check Setup Spawn Line Sample"
+
+    # Coarse line-search check. This decides whether the broad spawn line may
+    # extend through this sample; it does not prove that a Shion can stand here.
 
     SetupSpawnSampleValid = false
 
@@ -1047,32 +1393,48 @@ def ValidateSetupSpawnSample():
     SetupSpawnSampleValid = true
 
 
-def ValidateSetupSpawnCandidate():
-    @Name "Validate Setup Spawn Candidate"
+def CheckSetupSpawnPosition():
+    @Name "Check Setup Spawn Position"
+
+    # Strict position check. This decides whether an actual Shion spawn centre
+    # is acceptable and sets SetupSpawnWalkablePosition when successful.
 
     SetupSpawnCandidateValid = false
 
+    # Cheap endpoint rejection before asking for a walkable projection.
     SetupSpawnEndpointDistance = min(
         distance(vect(SetupSpawnCandidatePosition.x, 0, SetupSpawnCandidatePosition.z), vect(SetupSpawnLineStart.x, 0, SetupSpawnLineStart.z)),
         distance(vect(SetupSpawnCandidatePosition.x, 0, SetupSpawnCandidatePosition.z), vect(SetupSpawnLineEnd.x, 0, SetupSpawnLineEnd.z))
     )
 
     if SetupSpawnEndpointDistance < PLAYER_RADIUS:
-        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=candidate_endpoint|distance={}|required={}".format(
-            SetupSpawnCandidatePosition, SetupSpawnEndpointDistance, PLAYER_RADIUS
-        ))
+        if SetupSpawnPositionIndex >= 0:
+            LogTelemetry("SETUP_SPAWN_REJECT|interval={}|position={}|reason=candidate_endpoint|distance={}|required={}".format(
+                SetupSpawnIntervalIndex, SetupSpawnPositionIndex, SetupSpawnEndpointDistance, PLAYER_RADIUS
+            ))
         return
 
     SetupSpawnWalkablePosition = nearestWalkablePosition(SetupSpawnCandidatePosition)
 
     if distance(SetupSpawnCandidatePosition, SetupSpawnWalkablePosition) > SETUP_SPAWN_MAX_PROJECTION:
-        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=projection|walkable={}|distance={}|max={}".format(
-            SetupSpawnCandidatePosition,
-            SetupSpawnWalkablePosition,
-            distance(SetupSpawnCandidatePosition, SetupSpawnWalkablePosition),
-            SETUP_SPAWN_MAX_PROJECTION
-        ))
+        if SetupSpawnPositionIndex >= 0:
+            LogTelemetry("SETUP_SPAWN_REJECT|interval={}|position={}|reason=projection|candidate={}|walkable={}|distance={}|max={}".format(
+                SetupSpawnIntervalIndex,
+                SetupSpawnPositionIndex,
+                SetupSpawnCandidatePosition,
+                SetupSpawnWalkablePosition,
+                distance(SetupSpawnCandidatePosition, SetupSpawnWalkablePosition),
+                SETUP_SPAWN_MAX_PROJECTION
+            ))
         return
+    
+    SetupSpawnWalkablePosition = raycastHitPosition(
+        SetupSpawnWalkablePosition + Vector.UP,
+        SetupSpawnWalkablePosition - Vector.UP * 2,
+        null,
+        null,
+        false
+    )
 
     SetupSpawnEndpointDistance = min(
         distance(vect(SetupSpawnWalkablePosition.x, 0, SetupSpawnWalkablePosition.z), vect(SetupSpawnLineStart.x, 0, SetupSpawnLineStart.z)),
@@ -1080,10 +1442,65 @@ def ValidateSetupSpawnCandidate():
     )
 
     if SetupSpawnEndpointDistance < PLAYER_RADIUS:
-        LogTelemetry("SETUP_SPAWN_REJECT|candidate={}|reason=walkable_endpoint|walkable={}|distance={}|required={}".format(
-            SetupSpawnCandidatePosition, SetupSpawnWalkablePosition, SetupSpawnEndpointDistance, PLAYER_RADIUS
-        ))
+        if SetupSpawnPositionIndex >= 0:
+            LogTelemetry("SETUP_SPAWN_REJECT|interval={}|position={}|reason=walkable_endpoint|walkable={}|distance={}|required={}".format(
+                SetupSpawnIntervalIndex, SetupSpawnPositionIndex, SetupSpawnWalkablePosition, SetupSpawnEndpointDistance, PLAYER_RADIUS
+            ))
         return
+
+    # Check Shion's horizontal footprint in eight directions. Rays extend to
+    # the padded radius, but only geometry inside the real 0.5 m radius rejects.
+    for SetupSpawnBodyRayIndex in range(SETUP_SPAWN_BODY_RAYS):
+        SetupSpawnCheckDirection = angleToDirection(
+            horizontalAngleOfDirection(SetupSpawnForwardDirection)
+            + SetupSpawnBodyRayIndex * (360 / SETUP_SPAWN_BODY_RAYS),
+            0
+        )
+
+        for SetupSpawnBodyHeightIndex in range(SETUP_SPAWN_BODY_RAY_LEVELS):
+            SetupSpawnBodyHeight = SETUP_SPAWN_BODY_RAY_MIN_HEIGHT + SetupSpawnBodyHeightIndex * SETUP_SPAWN_BODY_RAY_HEIGHT_STEP
+        
+            SetupSpawnRayHit = raycastHitPosition(
+                SetupSpawnWalkablePosition + Vector.UP * SetupSpawnBodyHeight,
+                SetupSpawnWalkablePosition + Vector.UP * SetupSpawnBodyHeight + SetupSpawnCheckDirection * PADDED_PLAYER_RADIUS,
+                null,
+                null,
+                false
+            )
+        
+            if distance(SetupSpawnWalkablePosition + Vector.UP * SetupSpawnBodyHeight, SetupSpawnRayHit) < PLAYER_RADIUS:
+                if SetupSpawnPositionIndex >= 0:
+                    LogTelemetry(
+                        "SETUP_SPAWN_REJECT|interval={}|position={}|reason=body_obstruction|ray={}|height={}|hit={}|distance={}".format(
+                            SetupSpawnIntervalIndex,
+                            SetupSpawnPositionIndex,
+                            SetupSpawnBodyRayIndex,
+                            SetupSpawnBodyHeight,
+                            SetupSpawnRayHit,
+                            distance(SetupSpawnWalkablePosition + Vector.UP * SetupSpawnBodyHeight, SetupSpawnRayHit)
+                        )
+                    )
+                return
+
+        # The edge of Shion's footprint must also have supporting ground.
+        SetupSpawnRayHit = raycastHitPosition(
+            AtSpawnRayHeight(SetupSpawnWalkablePosition + SetupSpawnCheckDirection * PLAYER_RADIUS),
+            SetupSpawnWalkablePosition + SetupSpawnCheckDirection * PLAYER_RADIUS - Vector.UP * (SETUP_SPAWN_MAX_DROP + 0.01),
+            null,
+            null,
+            false
+        )
+
+        if SetupSpawnRayHit.y < SetupSpawnWalkablePosition.y - SETUP_SPAWN_MAX_DROP:
+            if SetupSpawnPositionIndex >= 0:
+                LogTelemetry("SETUP_SPAWN_REJECT|interval={}|position={}|reason=unsupported_footprint|ray={}|hit={}|maxDrop={}".format(
+                    SetupSpawnIntervalIndex,
+                    SetupSpawnPositionIndex,
+                    SetupSpawnBodyRayIndex,
+                    SetupSpawnRayHit,
+                    SETUP_SPAWN_MAX_DROP
+                ))
+            return
 
     SetupSpawnCandidateValid = true
 
@@ -1775,7 +2192,7 @@ rule "Choose And Unlock New Objective":
 
     TrySpawnNewShop()
     ChooseObjective()
-
+    
     ObjectiveUnlockTime = getTotalTimeElapsed() + max(
         createWorkshopSettingInt(
             "General",
